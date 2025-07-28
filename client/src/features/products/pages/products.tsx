@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -65,49 +66,121 @@ export default function Products() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-gray-100 rounded-lg p-4 animate-pulse">
-                  <div className="h-32 bg-gray-200 rounded mb-3"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              ))}
+            <div className="space-y-4">
+              <div className="animate-pulse">
+                <div className="h-10 bg-gray-200 rounded mb-4"></div>
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-12 bg-gray-100 rounded mb-2"></div>
+                ))}
+              </div>
             </div>
           ) : filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredProducts.map((product: any) => (
-                <Card key={product.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                      <Package className="w-12 h-12 text-gray-400" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{product.name}</h3>
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {product.category?.name || 'No Category'}
-                      </Badge>
-                      <span className="text-lg font-bold text-green-600">
-                        ${product.price || '0.00'}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">#</TableHead>
+                  <TableHead>Product Name</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Brand</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Stock</TableHead>
+                  <TableHead>Barcode</TableHead>
+                  <TableHead>Low Stock Alert</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.map((product: any, index: number) => (
+                  <TableRow key={product.id} className="hover:bg-gray-50">
+                    <TableCell className="font-medium text-gray-500">
+                      {index + 1}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <Package className="w-5 h-5 text-gray-400" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900">{product.name}</div>
+                          {product.description && (
+                            <div className="text-sm text-gray-500 truncate max-w-xs">
+                              {product.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {product.category?.name ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {product.category.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No Category</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {product.brand?.name ? (
+                        <Badge variant="outline" className="text-xs">
+                          {product.brand.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No Brand</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-semibold text-green-600">
+                        ${parseFloat(product.price || '0').toFixed(2)}
                       </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">
-                      Stock: {product.stock || 0} units
-                    </p>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <Eye className="w-3 h-3 mr-1" />
-                        View
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <Edit className="w-3 h-3 mr-1" />
-                        Edit
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <span className={`font-medium ${
+                          product.stock <= (product.lowStockAlert || 0) 
+                            ? 'text-red-600' 
+                            : product.stock <= (product.lowStockAlert || 0) * 2 
+                              ? 'text-yellow-600' 
+                              : 'text-gray-900'
+                        }`}>
+                          {product.stock || 0}
+                        </span>
+                        <span className="text-gray-500 text-sm">units</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {product.barcode ? (
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                          {product.barcode}
+                        </code>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No Barcode</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-gray-600">
+                        {product.lowStockAlert || 0} units
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end space-x-2">
+                        <Button variant="outline" size="sm">
+                          <Eye className="w-3 h-3 mr-1" />
+                          View
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Edit className="w-3 h-3 mr-1" />
+                          Edit
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
             <div className="text-center py-12">
               <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
