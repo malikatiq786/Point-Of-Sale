@@ -40,6 +40,11 @@ export interface IStorage {
     variants: (ProductVariant & { prices: ProductPrice[] })[]
   })[]>;
   searchProducts(query: string): Promise<Product[]>;
+  createProduct(product: any): Promise<Product>;
+  createCategory(category: any): Promise<any>;
+  createBrand(brand: any): Promise<any>;
+  getCategories(): Promise<any[]>;
+  getBrands(): Promise<any[]>;
   
   // Customer operations
   getCustomers(limit?: number): Promise<Customer[]>;
@@ -267,6 +272,38 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(customers, eq(sales.customerId, customers.id))
       .orderBy(desc(sales.saleDate))
       .limit(limit);
+  }
+
+  async createProduct(productData: any): Promise<Product> {
+    const [product] = await db
+      .insert(products)
+      .values(productData)
+      .returning();
+    return product;
+  }
+
+  async createCategory(categoryData: any): Promise<any> {
+    const [category] = await db
+      .insert(categories)
+      .values(categoryData)
+      .returning();
+    return category;
+  }
+
+  async createBrand(brandData: any): Promise<any> {
+    const [brand] = await db
+      .insert(brands)
+      .values(brandData)
+      .returning();
+    return brand;
+  }
+
+  async getCategories(): Promise<any[]> {
+    return await db.select().from(categories);
+  }
+
+  async getBrands(): Promise<any[]> {
+    return await db.select().from(brands);
   }
 
   async logActivity(userId: string, action: string, ipAddress?: string): Promise<void> {

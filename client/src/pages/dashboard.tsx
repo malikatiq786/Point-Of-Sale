@@ -33,42 +33,40 @@ export default function Dashboard() {
   }, [isAuthenticated, isLoading, toast]);
 
   // Fetch top products
-  const { data: topProducts } = useQuery({
+  const { data: topProducts, error: topProductsError } = useQuery({
     queryKey: ["/api/dashboard/top-products"],
     retry: false,
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-    },
   });
 
   // Fetch recent transactions
-  const { data: recentTransactions } = useQuery({
+  const { data: recentTransactions, error: transactionsError } = useQuery({
     queryKey: ["/api/dashboard/recent-transactions"],
     retry: false,
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-    },
   });
+
+  // Handle errors
+  useEffect(() => {
+    if (topProductsError && isUnauthorizedError(topProductsError as Error)) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+    if (transactionsError && isUnauthorizedError(transactionsError as Error)) {
+      toast({
+        title: "Unauthorized", 
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [topProductsError, transactionsError, toast]);
 
   if (isLoading) {
     return (
@@ -109,12 +107,43 @@ export default function Dashboard() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               </div>
 
+              {/* Initialize Sample Data Button */}
+              <Button 
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/initialize-sample-data', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' }
+                    });
+                    if (response.ok) {
+                      toast({
+                        title: "Success",
+                        description: "Sample data has been initialized successfully!",
+                      });
+                      // Refresh the page to show new data
+                      window.location.reload();
+                    }
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      description: "Failed to initialize sample data",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                variant="outline"
+                className="px-4 py-2 flex items-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:block">Add Sample Data</span>
+              </Button>
+
               {/* Quick Sale Button */}
               <Button 
                 onClick={() => setShowQuickSale(true)}
                 className="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors duration-200 flex items-center space-x-2"
               >
-                <Plus className="w-4 h-4" />
+                <ShoppingCart className="w-4 h-4" />
                 <span className="hidden sm:block">Quick Sale</span>
               </Button>
 
@@ -233,7 +262,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {topProducts?.length > 0 ? (
+                  {Array.isArray(topProducts) && topProducts.length > 0 ? (
                     topProducts.map((product: any) => (
                       <div key={product.productId} className="flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">
                         <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-secondary-100 rounded-lg flex items-center justify-center">
@@ -273,7 +302,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentTransactions?.length > 0 ? (
+                  {Array.isArray(recentTransactions) && recentTransactions.length > 0 ? (
                     recentTransactions.map((transaction: any) => (
                       <div key={transaction.id} className="border-l-4 border-success-500 pl-4 py-2">
                         <div className="flex items-center justify-between">

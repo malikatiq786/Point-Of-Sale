@@ -63,12 +63,17 @@ export default function POSTerminal() {
           : item
       ));
     } else {
+      // Set default price based on product category
+      const defaultPrice = product.category?.name === 'Electronics' ? 599.99 : 
+                           product.category?.name === 'Food & Beverages' ? 2.99 :
+                           product.category?.name === 'Clothing' ? 79.99 : 19.99;
+      
       const newItem: CartItem = {
         id: product.id,
         name: product.name,
-        price: 999.99, // This would come from product pricing
+        price: defaultPrice,
         quantity: 1,
-        total: 999.99
+        total: defaultPrice
       };
       setCart([...cart, newItem]);
     }
