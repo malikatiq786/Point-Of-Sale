@@ -56,70 +56,24 @@ export default function Registers() {
   // Fetch registers
   const { data: registers = [], isLoading } = useQuery({
     queryKey: ['/api/registers'],
-    queryFn: () => Promise.resolve([
-      {
-        id: 1,
-        name: "Register 1",
-        code: "REG001",
-        branchId: 1,
-        branchName: "Main Branch",
-        isActive: true,
-        openingBalance: 1000.00,
-        currentBalance: 1250.50,
-        lastOpened: "2025-01-28T08:00:00Z",
-        lastClosed: "2025-01-27T18:00:00Z"
-      },
-      {
-        id: 2,
-        name: "Register 2",
-        code: "REG002",
-        branchId: 1,
-        branchName: "Main Branch",
-        isActive: true,
-        openingBalance: 800.00,
-        currentBalance: 950.75,
-        lastOpened: "2025-01-28T08:00:00Z",
-        lastClosed: "2025-01-27T18:00:00Z"
-      },
-      {
-        id: 3,
-        name: "Express Register",
-        code: "REG003",
-        branchId: 2,
-        branchName: "Downtown Branch",
-        isActive: false,
-        openingBalance: 500.00,
-        currentBalance: 500.00,
-        lastOpened: "2025-01-26T08:00:00Z",
-        lastClosed: "2025-01-26T18:00:00Z"
-      },
-      {
-        id: 4,
-        name: "Self-Service",
-        code: "REG004",
-        branchId: 2,
-        branchName: "Downtown Branch",
-        isActive: true,
-        openingBalance: 300.00,
-        currentBalance: 425.30,
-        lastOpened: "2025-01-28T09:00:00Z",
-        lastClosed: "2025-01-27T17:30:00Z"
-      }
-    ]),
   });
 
   // Create register mutation
   const createRegisterMutation = useMutation({
     mutationFn: async (data: RegisterFormData) => {
-      const branch = branches.find(b => b.id === data.branchId);
-      return Promise.resolve({ 
-        id: Date.now(), 
-        ...data, 
-        branchName: branch?.name || "Unknown Branch",
-        currentBalance: data.openingBalance,
-        lastOpened: null,
-        lastClosed: null
+      const response = await fetch('/api/registers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create register');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/registers'] });
@@ -135,15 +89,19 @@ export default function Registers() {
   // Update register mutation
   const updateRegisterMutation = useMutation({
     mutationFn: async ({ id, ...data }: RegisterFormData & { id: number }) => {
-      const branch = branches.find(b => b.id === data.branchId);
-      return Promise.resolve({ 
-        id, 
-        ...data, 
-        branchName: branch?.name || "Unknown Branch",
-        currentBalance: data.openingBalance,
-        lastOpened: null,
-        lastClosed: null
+      const response = await fetch(`/api/registers/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update register');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/registers'] });
@@ -159,7 +117,15 @@ export default function Registers() {
   // Delete register mutation
   const deleteRegisterMutation = useMutation({
     mutationFn: async (id: number) => {
-      return Promise.resolve({ id });
+      const response = await fetch(`/api/registers/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete register');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/registers'] });

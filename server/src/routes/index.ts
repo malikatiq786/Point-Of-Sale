@@ -388,35 +388,25 @@ router.post('/branches', async (req: any, res: any) => {
   }
 });
 
-// Registers routes
+// Registers routes  
 router.get('/registers', async (req: any, res: any) => {
   try {
-    res.json([
-      {
-        id: 1,
-        name: "Register 1",
-        code: "REG001",
-        branchId: 1,
-        branchName: "Main Branch",
-        isActive: true,
-        openingBalance: 1000.00,
-        currentBalance: 1250.50,
-        lastOpened: "2025-01-28T08:00:00Z",
-        lastClosed: "2025-01-27T18:00:00Z"
-      },
-      {
-        id: 2,
-        name: "Register 2",
-        code: "REG002",
-        branchId: 1,
-        branchName: "Main Branch",
-        isActive: true,
-        openingBalance: 800.00,
-        currentBalance: 950.75,
-        lastOpened: "2025-01-28T08:00:00Z",
-        lastClosed: "2025-01-27T18:00:00Z"
-      }
-    ]);
+    const registers = await db.select({
+      id: schema.registers.id,
+      name: schema.registers.name,
+      branchId: schema.registers.branchId,
+      branchName: schema.branches.name,
+      isActive: sql`true`,
+      openingBalance: sql`0`,
+      currentBalance: sql`0`,
+      lastOpened: schema.registers.openedAt,
+      lastClosed: schema.registers.closedAt,
+    })
+    .from(schema.registers)
+    .leftJoin(schema.branches, eq(schema.registers.branchId, schema.branches.id))
+    .limit(50);
+    
+    res.json(registers);
   } catch (error) {
     console.error('Get registers error:', error);
     res.status(500).json({ message: 'Failed to fetch registers' });
@@ -425,16 +415,80 @@ router.get('/registers', async (req: any, res: any) => {
 
 router.post('/registers', async (req: any, res: any) => {
   try {
-    const register = { 
-      id: Date.now(), 
-      ...req.body, 
+    const [register] = await db.insert(schema.registers)
+      .values({
+        name: req.body.name,
+        branchId: req.body.branchId,
+        openedAt: new Date()
+      })
+      .returning();
+    
+    // Get branch name for the response
+    const [branch] = await db.select()
+      .from(schema.branches)
+      .where(eq(schema.branches.id, req.body.branchId))
+      .limit(1);
+    
+    const response = {
+      ...register,
+      branchName: branch?.name || "Unknown Branch",
+      isActive: req.body.isActive || true,
+      openingBalance: req.body.openingBalance || 0,
       currentBalance: req.body.openingBalance || 0,
-      branchName: "Main Branch"
+      code: req.body.code,
+      lastOpened: register.openedAt,
+      lastClosed: register.closedAt
     };
-    res.status(201).json(register);
+    
+    res.status(201).json(response);
   } catch (error) {
     console.error('Create register error:', error);
     res.status(500).json({ message: 'Failed to create register' });
+  }
+});
+
+router.put('/registers/:id', async (req: any, res: any) => {
+  try {
+    const [register] = await db.update(schema.registers)
+      .set({
+        name: req.body.name,
+        branchId: req.body.branchId
+      })
+      .where(eq(schema.registers.id, parseInt(req.params.id)))
+      .returning();
+    
+    // Get branch name for the response
+    const [branch] = await db.select()
+      .from(schema.branches)
+      .where(eq(schema.branches.id, req.body.branchId))
+      .limit(1);
+    
+    const response = {
+      ...register,
+      branchName: branch?.name || "Unknown Branch",
+      isActive: req.body.isActive || true,
+      openingBalance: req.body.openingBalance || 0,
+      currentBalance: req.body.openingBalance || 0,
+      code: req.body.code,
+      lastOpened: register.openedAt,
+      lastClosed: register.closedAt
+    };
+    
+    res.json(response);
+  } catch (error) {
+    console.error('Update register error:', error);
+    res.status(500).json({ message: 'Failed to update register' });
+  }
+});
+
+router.delete('/registers/:id', async (req: any, res: any) => {
+  try {
+    await db.delete(schema.registers)
+      .where(eq(schema.registers.id, parseInt(req.params.id)));
+    res.json({ message: 'Register deleted successfully' });
+  } catch (error) {
+    console.error('Delete register error:', error);
+    res.status(500).json({ message: 'Failed to delete register' });
   }
 });
 
