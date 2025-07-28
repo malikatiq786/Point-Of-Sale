@@ -304,14 +304,137 @@ router.put('/brands/:id', async (req: any, res: any) => {
   }
 });
 
-router.delete('/brands/:id', async (req: any, res: any) => {
+// Business Profile routes
+router.get('/business-profile', async (req: any, res: any) => {
   try {
-    await db.delete(schema.brands)
-      .where(eq(schema.brands.id, parseInt(req.params.id)));
-    res.json({ message: 'Brand deleted successfully' });
+    res.json({
+      id: 1,
+      businessName: "My Business Store",
+      businessType: "retail",
+      email: "contact@mybusiness.com",
+      phone: "+1-555-0123",
+      address: "123 Main Street",
+      city: "New York",
+      state: "NY",
+      country: "United States",
+      postalCode: "10001",
+      taxId: "12-3456789",
+      website: "https://mybusiness.com",
+      description: "A modern retail business serving customers with quality products."
+    });
   } catch (error) {
-    console.error('Delete brand error:', error);
-    res.status(500).json({ message: 'Failed to delete brand' });
+    console.error('Get business profile error:', error);
+    res.status(500).json({ message: 'Failed to fetch business profile' });
+  }
+});
+
+router.put('/business-profile', async (req: any, res: any) => {
+  try {
+    res.json({ id: 1, ...req.body });
+  } catch (error) {
+    console.error('Update business profile error:', error);
+    res.status(500).json({ message: 'Failed to update business profile' });
+  }
+});
+
+// Branches routes
+router.get('/branches', async (req: any, res: any) => {
+  try {
+    res.json([
+      {
+        id: 1,
+        name: "Main Branch",
+        code: "MAIN001",
+        address: "123 Main Street",
+        city: "New York",
+        state: "NY",
+        country: "United States",
+        postalCode: "10001",
+        phone: "+1-555-0123",
+        email: "main@mybusiness.com",
+        managerId: "John Doe",
+        isActive: true,
+        businessProfileId: 1
+      },
+      {
+        id: 2,
+        name: "Downtown Branch",
+        code: "DOWN002",
+        address: "456 Downtown Ave",
+        city: "New York",
+        state: "NY",
+        country: "United States",
+        postalCode: "10005",
+        phone: "+1-555-0124",
+        email: "downtown@mybusiness.com",
+        managerId: "Jane Smith",
+        isActive: true,
+        businessProfileId: 1
+      }
+    ]);
+  } catch (error) {
+    console.error('Get branches error:', error);
+    res.status(500).json({ message: 'Failed to fetch branches' });
+  }
+});
+
+router.post('/branches', async (req: any, res: any) => {
+  try {
+    const branch = { id: Date.now(), ...req.body, businessProfileId: 1 };
+    res.status(201).json(branch);
+  } catch (error) {
+    console.error('Create branch error:', error);
+    res.status(500).json({ message: 'Failed to create branch' });
+  }
+});
+
+// Registers routes
+router.get('/registers', async (req: any, res: any) => {
+  try {
+    res.json([
+      {
+        id: 1,
+        name: "Register 1",
+        code: "REG001",
+        branchId: 1,
+        branchName: "Main Branch",
+        isActive: true,
+        openingBalance: 1000.00,
+        currentBalance: 1250.50,
+        lastOpened: "2025-01-28T08:00:00Z",
+        lastClosed: "2025-01-27T18:00:00Z"
+      },
+      {
+        id: 2,
+        name: "Register 2",
+        code: "REG002",
+        branchId: 1,
+        branchName: "Main Branch",
+        isActive: true,
+        openingBalance: 800.00,
+        currentBalance: 950.75,
+        lastOpened: "2025-01-28T08:00:00Z",
+        lastClosed: "2025-01-27T18:00:00Z"
+      }
+    ]);
+  } catch (error) {
+    console.error('Get registers error:', error);
+    res.status(500).json({ message: 'Failed to fetch registers' });
+  }
+});
+
+router.post('/registers', async (req: any, res: any) => {
+  try {
+    const register = { 
+      id: Date.now(), 
+      ...req.body, 
+      currentBalance: req.body.openingBalance || 0,
+      branchName: "Main Branch"
+    };
+    res.status(201).json(register);
+  } catch (error) {
+    console.error('Create register error:', error);
+    res.status(500).json({ message: 'Failed to create register' });
   }
 });
 
