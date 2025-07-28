@@ -43,10 +43,21 @@ export default function StockTransfers() {
   });
 
   const createTransferMutation = useMutation({
-    mutationFn: (transferData: any) => apiRequest("/api/stock/transfers", {
-      method: "POST",
-      body: JSON.stringify(transferData),
-    }),
+    mutationFn: async (transferData: any) => {
+      const response = await fetch("/api/stock/transfers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(transferData),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to create transfer");
+      }
+      
+      return response.json();
+    },
     onSuccess: () => {
       toast({
         title: "Success",
