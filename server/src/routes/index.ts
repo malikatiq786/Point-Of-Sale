@@ -7,6 +7,7 @@ import { InventoryController } from '../controllers/InventoryController';
 import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
+import { eq } from 'drizzle-orm';
 import { isAuthenticated } from '../../replitAuth';
 
 // Initialize controllers
@@ -20,7 +21,38 @@ const inventoryController = new InventoryController();
 const router = Router();
 
 // Product routes  
-router.get('/products', isAuthenticated, productController.getProducts as any);
+router.get('/products', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const products = await db
+      .select({
+        id: schema.products.id,
+        name: schema.products.name,
+        description: schema.products.description,
+        price: schema.products.price,
+        stock: schema.products.stock,
+        barcode: schema.products.barcode,
+        lowStockAlert: schema.products.lowStockAlert,
+        image: schema.products.image,
+        category: {
+          id: schema.categories.id,
+          name: schema.categories.name,
+        },
+        brand: {
+          id: schema.brands.id,
+          name: schema.brands.name,
+        },
+      })
+      .from(schema.products)
+      .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+      .leftJoin(schema.brands, eq(schema.products.brandId, schema.brands.id))
+      .limit(50);
+    
+    res.json(products);
+  } catch (error) {
+    console.error('Get products error:', error);
+    res.status(500).json({ message: 'Failed to fetch products' });
+  }
+});
 router.post('/products', isAuthenticated, async (req: any, res: any) => {
   try {
     console.log('Direct product creation in route:', req.body);
