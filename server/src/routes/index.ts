@@ -186,43 +186,48 @@ router.get('/sales', isAuthenticated, async (req: any, res: any) => {
 router.get('/sales/:id', isAuthenticated, saleController.getSaleById as any);
 router.get('/sales/date-range', isAuthenticated, saleController.getSalesByDateRange as any);
 
+// In-memory storage for returns
+let returnsStorage: any[] = [
+  {
+    id: 1,
+    saleId: 1,
+    reason: "Defective product - screen cracked on arrival",
+    status: "processed",
+    totalAmount: "599.99",
+    customerName: "John Smith",
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    items: [{ productName: "Samsung Galaxy S23", quantity: 1 }]
+  },
+  {
+    id: 2,
+    saleId: 2,
+    reason: "Wrong size ordered",
+    status: "pending",
+    totalAmount: "129.99",
+    customerName: "Jane Doe",
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    items: [{ productName: "Nike Air Max", quantity: 1 }]
+  },
+  {
+    id: 3,
+    saleId: 3,
+    reason: "Customer changed mind - no longer needed",
+    status: "approved",
+    totalAmount: "89.99",
+    customerName: "Mike Johnson",
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    items: [{ productName: "Sony Headphones", quantity: 1 }]
+  }
+];
+
 // Returns routes
 router.get('/returns', isAuthenticated, async (req: any, res: any) => {
   try {
-    // Sample returns data
-    const returns = [
-      {
-        id: 1,
-        saleId: 1,
-        reason: "Defective product - screen cracked on arrival",
-        status: "processed",
-        totalAmount: "599.99",
-        customerName: "John Smith",
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        items: [{ productName: "Samsung Galaxy S23", quantity: 1 }]
-      },
-      {
-        id: 2,
-        saleId: 2,
-        reason: "Wrong size ordered",
-        status: "pending",
-        totalAmount: "129.99",
-        customerName: "Jane Doe",
-        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        items: [{ productName: "Nike Air Max", quantity: 1 }]
-      },
-      {
-        id: 3,
-        saleId: 3,
-        reason: "Customer changed mind - no longer needed",
-        status: "approved",
-        totalAmount: "89.99",
-        customerName: "Mike Johnson",
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        items: [{ productName: "Sony Headphones", quantity: 1 }]
-      }
-    ];
-    res.json(returns);
+    // Return all returns from storage, sorted by creation date (newest first)
+    const sortedReturns = [...returnsStorage].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    res.json(sortedReturns);
   } catch (error) {
     console.error('Get returns error:', error);
     res.status(500).json({ message: 'Failed to fetch returns' });
@@ -231,13 +236,29 @@ router.get('/returns', isAuthenticated, async (req: any, res: any) => {
 
 router.post('/returns', isAuthenticated, async (req: any, res: any) => {
   try {
+    // Find the sale details to get customer and amount info
+    const salesData = [
+      { id: 1, totalAmount: "599.99", customer: { name: "John Smith" }},
+      { id: 2, totalAmount: "129.99", customer: { name: "Jane Doe" }},
+      { id: 3, totalAmount: "89.99", customer: { name: "Mike Johnson" }},
+      { id: 4, totalAmount: "49.99", customer: { name: "Sarah Wilson" }}
+    ];
+    
+    const sale = salesData.find(s => s.id === parseInt(req.body.saleId));
+    
     const returnData = {
       id: Date.now(),
-      ...req.body,
+      saleId: parseInt(req.body.saleId),
+      reason: req.body.reason,
+      items: req.body.items || [],
       status: "pending",
-      createdAt: new Date().toISOString(),
-      customerName: "Walk-in Customer"
+      totalAmount: sale?.totalAmount || "0.00",
+      customerName: sale?.customer?.name || "Walk-in Customer",
+      createdAt: new Date().toISOString()
     };
+    
+    // Add to storage
+    returnsStorage.push(returnData);
     
     console.log('Return created:', returnData);
     res.status(201).json(returnData);
