@@ -47,6 +47,8 @@ function Router() {
         </>
       ) : (
         <>
+          {/* Allow access to login page even when authenticated for testing */}
+          <Route path="/login" component={Login} />
           <Route path="/" component={Dashboard} />
           <Route path="/pos" component={POSTerminal} />
           <Route path="/products" component={Products} />

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import LogoutButton from "@/components/logout-button";
 
 function AppHeader() {
   const { user } = useAuth();
@@ -53,6 +54,18 @@ function AppHeader() {
             >
               3
             </Badge>
+          </Button>
+
+          {/* Quick Logout Button */}
+          <LogoutButton />
+          
+          {/* Test Login Page Button */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.open('/login', '_blank')}
+          >
+            Test Login
           </Button>
 
           {/* User Menu */}
