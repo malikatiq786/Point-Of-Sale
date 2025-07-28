@@ -14,7 +14,7 @@ import { Search, Folder, Plus, DollarSign, TrendingUp, TrendingDown, Building2 }
 
 export default function Accounts() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [accountData, setAccountData] = useState({
     name: "",
@@ -78,7 +78,7 @@ export default function Accounts() {
   const filteredAccounts = accounts.filter((account: any) =>
     (account.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
      account.accountCode?.toLowerCase().includes(searchQuery.toLowerCase())) &&
-    (!typeFilter || account.accountType === typeFilter)
+    (!typeFilter || typeFilter === 'all' || account.accountType === typeFilter)
   );
 
   const getAccountTypeColor = (type: string) => {
@@ -163,7 +163,7 @@ export default function Accounts() {
             <SelectValue placeholder="All Types" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Types</SelectItem>
+            <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="asset">Assets</SelectItem>
             <SelectItem value="liability">Liabilities</SelectItem>
             <SelectItem value="equity">Equity</SelectItem>

@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export default function Transactions() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [accountFilter, setAccountFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [accountFilter, setAccountFilter] = useState("all");
 
   // Fetch transactions
   const { data: transactions = [], isLoading } = useQuery({
@@ -30,8 +30,8 @@ export default function Transactions() {
     (transaction.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
      transaction.reference?.toLowerCase().includes(searchQuery.toLowerCase())) &&
     (!dateFilter || transaction.transactionDate?.startsWith(dateFilter)) &&
-    (!typeFilter || transaction.transactionType === typeFilter) &&
-    (!accountFilter || transaction.accountId === parseInt(accountFilter))
+    (!typeFilter || typeFilter === 'all' || transaction.transactionType === typeFilter) &&
+    (!accountFilter || accountFilter === 'all' || transaction.accountId === parseInt(accountFilter))
   );
 
   const getTransactionTypeColor = (type: string) => {
@@ -146,7 +146,7 @@ export default function Transactions() {
             <SelectValue placeholder="All Types" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Types</SelectItem>
+            <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="income">Income</SelectItem>
             <SelectItem value="expense">Expense</SelectItem>
             <SelectItem value="transfer">Transfer</SelectItem>
@@ -159,7 +159,7 @@ export default function Transactions() {
             <SelectValue placeholder="All Accounts" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Accounts</SelectItem>
+            <SelectItem value="all">All Accounts</SelectItem>
             {accounts.map((account: any) => (
               <SelectItem key={account.id} value={account.id.toString()}>
                 {account.accountCode} - {account.name}

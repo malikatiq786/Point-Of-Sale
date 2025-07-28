@@ -15,7 +15,7 @@ import { Search, CreditCard, Plus, Calendar, DollarSign, User, FileText, ArrowUp
 export default function Payments() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [paymentData, setPaymentData] = useState({
     customerId: "",
@@ -86,7 +86,7 @@ export default function Payments() {
     (payment.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
      payment.reference?.toLowerCase().includes(searchQuery.toLowerCase()) ||
      payment.description?.toLowerCase().includes(searchQuery.toLowerCase())) &&
-    (!statusFilter || payment.status === statusFilter) &&
+    (!statusFilter || statusFilter === 'all' || payment.status === statusFilter) &&
     (!dateFilter || payment.paymentDate?.startsWith(dateFilter))
   );
 
@@ -161,7 +161,7 @@ export default function Payments() {
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Status</SelectItem>
+            <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="failed">Failed</SelectItem>
