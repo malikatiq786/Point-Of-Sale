@@ -119,6 +119,18 @@ export const units = pgTable("units", {
   shortName: varchar("short_name", { length: 10 }),
 });
 
+export const productAttributes = pgTable("product_attributes", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }),
+});
+
+export const productAttributeValues = pgTable("product_attribute_values", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id),
+  attributeId: integer("attribute_id").references(() => productAttributes.id),
+  value: text("value"),
+});
+
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 150 }),
@@ -153,18 +165,6 @@ export const stock = pgTable("stock", {
   productVariantId: integer("product_variant_id").references(() => productVariants.id),
   warehouseId: integer("warehouse_id").references(() => warehouses.id),
   quantity: numeric("quantity", { precision: 12, scale: 2 }).default("0"),
-});
-
-export const productAttributes = pgTable("product_attributes", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }),
-});
-
-export const productAttributeValues = pgTable("product_attribute_values", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").references(() => products.id),
-  attributeId: integer("attribute_id").references(() => productAttributes.id),
-  value: text("value"),
 });
 
 export const productBundleItems = pgTable("product_bundle_items", {

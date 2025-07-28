@@ -131,7 +131,13 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  // For development, allow test user
+  if (process.env.NODE_ENV === 'development' && !req.isAuthenticated()) {
+    req.user = { id: 'test-user', name: 'Test User', email: 'test@test.com' };
+    return next();
+  }
+
+  if (!req.isAuthenticated() || !user?.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
