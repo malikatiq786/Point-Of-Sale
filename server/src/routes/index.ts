@@ -44,8 +44,9 @@ router.delete('/users/:id', isAuthenticated, userController.deleteUser as any);
 router.patch('/users/:id/role', isAuthenticated, userController.updateUserRole as any);
 
 // Role and permission routes
-router.get('/roles', isAuthenticated, userController.getRoles as any);
-router.get('/permissions', isAuthenticated, userController.getPermissions as any);
+router.get('/roles', isAuthenticated, userController.getAllRoles as any);
+router.get('/permissions', isAuthenticated, userController.getAllPermissions as any);
 router.get('/users/:id/permissions', isAuthenticated, userController.getUserPermissions as any);
+router.put('/users/:id/permissions', isAuthenticated, userController.updateUserPermissions as any);
 
 export { router as apiRoutes };

@@ -188,4 +188,19 @@ export class UserRepository extends BaseRepository<typeof users.$inferSelect> {
       throw error;
     }
   }
+
+  // Get all roles (alias for compatibility)
+  async getAllRoles() {
+    return this.findAllRoles();
+  }
+
+  // Get all permissions (alias for compatibility)
+  async getAllPermissions() {
+    return this.findAllPermissions();
+  }
+
+  // Get user permissions (alias for compatibility)
+  async getUserPermissions(userId: string) {
+    return this.findUserPermissions(userId);
+  }
 }

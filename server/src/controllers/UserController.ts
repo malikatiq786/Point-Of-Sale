@@ -239,4 +239,99 @@ export class UserController {
       });
     }
   };
+
+  // Get all roles
+  getAllRoles = async (req: Request, res: Response) => {
+    try {
+      const result = await this.userService.getAllRoles();
+
+      if (result.success) {
+        res.status(HTTP_STATUS.OK).json(result.data);
+      } else {
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+          message: result.error || ERROR_MESSAGES.INTERNAL_ERROR
+        });
+      }
+    } catch (error) {
+      console.error('UserController: Error in getAllRoles:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
+
+  // Get all permissions
+  getAllPermissions = async (req: Request, res: Response) => {
+    try {
+      const result = await this.userService.getAllPermissions();
+
+      if (result.success) {
+        res.status(HTTP_STATUS.OK).json(result.data);
+      } else {
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+          message: result.error || ERROR_MESSAGES.INTERNAL_ERROR
+        });
+      }
+    } catch (error) {
+      console.error('UserController: Error in getAllPermissions:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
+
+  // Get user permissions
+  getUserPermissions = async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.id;
+      const result = await this.userService.getUserPermissions(userId);
+
+      if (result.success) {
+        res.status(HTTP_STATUS.OK).json(result.data);
+      } else {
+        const status = result.error === 'User not found' 
+          ? HTTP_STATUS.NOT_FOUND 
+          : HTTP_STATUS.INTERNAL_SERVER_ERROR;
+        
+        res.status(status).json({
+          message: result.error || ERROR_MESSAGES.INTERNAL_ERROR
+        });
+      }
+    } catch (error) {
+      console.error('UserController: Error in getUserPermissions:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
+
+  // Update user permissions
+  updateUserPermissions = async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.id;
+      const { permissionIds } = req.body;
+
+      const result = await this.userService.updateUserPermissions(userId, permissionIds);
+
+      if (result.success) {
+        res.status(HTTP_STATUS.OK).json({
+          message: SUCCESS_MESSAGES.UPDATED,
+          data: result.data
+        });
+      } else {
+        const status = result.error === 'User not found' 
+          ? HTTP_STATUS.NOT_FOUND 
+          : HTTP_STATUS.INTERNAL_SERVER_ERROR;
+        
+        res.status(status).json({
+          message: result.error || ERROR_MESSAGES.INTERNAL_ERROR
+        });
+      }
+    } catch (error) {
+      console.error('UserController: Error in updateUserPermissions:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
 }

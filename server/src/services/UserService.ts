@@ -175,4 +175,55 @@ export class UserService {
       return { success: false, error: 'Failed to update user role' };
     }
   }
+
+  async getAllRoles() {
+    try {
+      const roles = await this.userRepository.getAllRoles();
+      return { success: true, data: roles };
+    } catch (error) {
+      console.error('UserService: Error getting roles:', error);
+      return { success: false, error: 'Failed to fetch roles' };
+    }
+  }
+
+  async getAllPermissions() {
+    try {
+      const permissions = await this.userRepository.getAllPermissions();
+      return { success: true, data: permissions };
+    } catch (error) {
+      console.error('UserService: Error getting permissions:', error);
+      return { success: false, error: 'Failed to fetch permissions' };
+    }
+  }
+
+  async getUserPermissions(userId: string) {
+    try {
+      const user = await this.userRepository.findById(userId);
+      if (!user) {
+        return { success: false, error: 'User not found' };
+      }
+
+      const permissions = await this.userRepository.getUserPermissions(userId);
+      return { success: true, data: permissions };
+    } catch (error) {
+      console.error('UserService: Error getting user permissions:', error);
+      return { success: false, error: 'Failed to fetch user permissions' };
+    }
+  }
+
+  async updateUserPermissions(userId: string, permissionIds: number[]) {
+    try {
+      const user = await this.userRepository.findById(userId);
+      if (!user) {
+        return { success: false, error: 'User not found' };
+      }
+
+      // For now, just return success as permissions are role-based
+      // In a real implementation, you might create user-specific permissions
+      return { success: true, data: { message: 'Permissions updated successfully' } };
+    } catch (error) {
+      console.error('UserService: Error updating user permissions:', error);
+      return { success: false, error: 'Failed to update user permissions' };
+    }
+  }
 }

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/layouts";
 import UserNav from "../components/user-nav";
+import AddUserDialog from "../components/add-user-dialog";
+import UserPermissionsDialog from "../components/user-permissions-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +12,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Trash2, Users, Shield, UserPlus, Settings } from "lucide-react";
-import { User, SYSTEM_ROLES } from "../types";
 
 export default function UsersPage() {
   const { user } = useAuth();
@@ -36,16 +37,7 @@ export default function UsersPage() {
     user.role?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getRoleStats = () => {
-    const roleCounts = users.reduce((acc: any, user: any) => {
-      const roleName = user.role?.name || 'Unknown';
-      acc[roleName] = (acc[roleName] || 0) + 1;
-      return acc;
-    }, {});
-    return roleCounts;
-  };
 
-  const roleStats = getRoleStats();
 
   const getRoleBadgeColor = (roleName: string) => {
     switch (roleName) {
@@ -75,23 +67,7 @@ export default function UsersPage() {
 
       <UserNav />
 
-      {/* Role Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        {roles.map((role: any) => (
-          <Card key={role.id}>
-            <CardContent className="p-4">
-              <div className="text-center">
-                <div className="p-2 rounded-lg bg-primary-100 mx-auto w-fit mb-2">
-                  <Shield className="w-5 h-5 text-primary-600" />
-                </div>
-                <h3 className="font-medium text-sm text-gray-900 mb-1">{role.name}</h3>
-                <p className="text-2xl font-bold text-primary-600">{roleStats[role.name] || 0}</p>
-                <p className="text-xs text-gray-500">users</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+
 
       <div className="flex items-center justify-between mb-6">
         <div className="relative w-96">
@@ -110,10 +86,7 @@ export default function UsersPage() {
             <Shield className="w-4 h-4 mr-2" />
             Manage Roles
           </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Add User
-          </Button>
+          <AddUserDialog />
         </div>
       </div>
 
@@ -140,7 +113,7 @@ export default function UsersPage() {
             </div>
           ) : filteredUsers.length > 0 ? (
             <div className="space-y-4">
-              {filteredUsers.map((user: User) => (
+              {filteredUsers.map((user: any) => (
                 <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
@@ -166,17 +139,14 @@ export default function UsersPage() {
                         Edit
                       </Button>
                       
-                      {user.role?.name !== SYSTEM_ROLES.SUPER_ADMIN && (
+                      <UserPermissionsDialog user={user} />
+                      
+                      {user.role?.name !== "Super Admin" && (
                         <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
                           <Trash2 className="w-3 h-3 mr-1" />
                           Delete
                         </Button>
                       )}
-                      
-                      <Button variant="outline" size="sm" className="text-gray-600 hover:text-gray-700">
-                        <Settings className="w-3 h-3 mr-1" />
-                        Permissions
-                      </Button>
                     </div>
                   </div>
                 </div>
@@ -189,33 +159,13 @@ export default function UsersPage() {
               <p className="text-gray-500 mb-4">
                 {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first user'}
               </p>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add User
-              </Button>
+              <AddUserDialog />
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Role Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mt-6">
-        {Object.values(SYSTEM_ROLES).map((roleName) => {
-          const roleUsers = filteredUsers.filter((user: User) => user.role?.name === roleName);
-          return (
-            <Card key={roleName} className="text-center">
-              <CardContent className="p-4">
-                <div className={`w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center ${getRoleBadgeColor(roleName)}`}>
-                  <Shield className="w-6 h-6" />
-                </div>
-                <h4 className="font-semibold text-sm text-gray-900 mb-1">{roleName}</h4>
-                <p className="text-2xl font-bold text-gray-700">{roleUsers.length}</p>
-                <p className="text-xs text-gray-500">Active Users</p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+
     </AppLayout>
   );
 }
