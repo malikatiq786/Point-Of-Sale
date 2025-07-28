@@ -262,7 +262,7 @@ export default function Registers() {
                         <SelectContent>
                           {branches.map((branch: any) => (
                             <SelectItem key={branch.id} value={branch.id.toString()}>
-                              {branch.name} ({branch.code})
+                              {branch.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
