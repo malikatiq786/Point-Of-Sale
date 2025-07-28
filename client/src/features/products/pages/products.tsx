@@ -18,10 +18,10 @@ export default function Products() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [brandFilter, setBrandFilter] = useState("");
-  const [stockFilter, setStockFilter] = useState("");
-  const [priceFilter, setPriceFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [brandFilter, setBrandFilter] = useState("all");
+  const [stockFilter, setStockFilter] = useState("all");
+  const [priceFilter, setPriceFilter] = useState("all");
 
   // Fetch products
   const { data: products = [], isLoading } = useQuery({
@@ -51,20 +51,20 @@ export default function Products() {
       product.brand?.name?.toLowerCase().includes(searchQuery.toLowerCase());
 
     // Category filter
-    const matchesCategory = !categoryFilter || product.category?.id?.toString() === categoryFilter;
+    const matchesCategory = !categoryFilter || categoryFilter === "all" || product.category?.id?.toString() === categoryFilter;
 
     // Brand filter
-    const matchesBrand = !brandFilter || product.brand?.id?.toString() === brandFilter;
+    const matchesBrand = !brandFilter || brandFilter === "all" || product.brand?.id?.toString() === brandFilter;
 
     // Stock filter
-    const matchesStock = !stockFilter || 
+    const matchesStock = !stockFilter || stockFilter === "all" ||
       (stockFilter === "in-stock" && product.stock > 0) ||
       (stockFilter === "out-of-stock" && product.stock === 0) ||
       (stockFilter === "low-stock" && product.stock <= (product.lowStockAlert || 0) && product.stock > 0);
 
     // Price filter
     const price = parseFloat(product.price || '0');
-    const matchesPrice = !priceFilter ||
+    const matchesPrice = !priceFilter || priceFilter === "all" ||
       (priceFilter === "under-10" && price < 10) ||
       (priceFilter === "10-50" && price >= 10 && price <= 50) ||
       (priceFilter === "50-100" && price > 50 && price <= 100) ||
@@ -76,14 +76,18 @@ export default function Products() {
   // Clear all filters
   const clearFilters = () => {
     setSearchQuery("");
-    setCategoryFilter("");
-    setBrandFilter("");
-    setStockFilter("");
-    setPriceFilter("");
+    setCategoryFilter("all");
+    setBrandFilter("all");
+    setStockFilter("all");
+    setPriceFilter("all");
   };
 
   // Check if any filters are active
-  const hasActiveFilters = searchQuery || categoryFilter || brandFilter || stockFilter || priceFilter;
+  const hasActiveFilters = searchQuery || 
+    (categoryFilter && categoryFilter !== "all") || 
+    (brandFilter && brandFilter !== "all") || 
+    (stockFilter && stockFilter !== "all") || 
+    (priceFilter && priceFilter !== "all");
 
   return (
     <AppLayout>
@@ -144,7 +148,7 @@ export default function Products() {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((category: any) => (
                     <SelectItem key={category.id} value={category.id.toString()}>
                       {category.name}
@@ -162,7 +166,7 @@ export default function Products() {
                   <SelectValue placeholder="All Brands" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Brands</SelectItem>
+                  <SelectItem value="all">All Brands</SelectItem>
                   {brands.map((brand: any) => (
                     <SelectItem key={brand.id} value={brand.id.toString()}>
                       {brand.name}
@@ -180,7 +184,7 @@ export default function Products() {
                   <SelectValue placeholder="All Stock" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Stock</SelectItem>
+                  <SelectItem value="all">All Stock</SelectItem>
                   <SelectItem value="in-stock">In Stock</SelectItem>
                   <SelectItem value="low-stock">Low Stock</SelectItem>
                   <SelectItem value="out-of-stock">Out of Stock</SelectItem>
@@ -196,7 +200,7 @@ export default function Products() {
                   <SelectValue placeholder="All Prices" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Prices</SelectItem>
+                  <SelectItem value="all">All Prices</SelectItem>
                   <SelectItem value="under-10">Under $10</SelectItem>
                   <SelectItem value="10-50">$10 - $50</SelectItem>
                   <SelectItem value="50-100">$50 - $100</SelectItem>
@@ -219,39 +223,39 @@ export default function Products() {
                     />
                   </Badge>
                 )}
-                {categoryFilter && (
+                {categoryFilter && categoryFilter !== "all" && (
                   <Badge variant="secondary" className="text-xs">
                     Category: {categories.find((c: any) => c.id.toString() === categoryFilter)?.name}
                     <X 
                       className="w-3 h-3 ml-1 cursor-pointer" 
-                      onClick={() => setCategoryFilter("")}
+                      onClick={() => setCategoryFilter("all")}
                     />
                   </Badge>
                 )}
-                {brandFilter && (
+                {brandFilter && brandFilter !== "all" && (
                   <Badge variant="secondary" className="text-xs">
                     Brand: {brands.find((b: any) => b.id.toString() === brandFilter)?.name}
                     <X 
                       className="w-3 h-3 ml-1 cursor-pointer" 
-                      onClick={() => setBrandFilter("")}
+                      onClick={() => setBrandFilter("all")}
                     />
                   </Badge>
                 )}
-                {stockFilter && (
+                {stockFilter && stockFilter !== "all" && (
                   <Badge variant="secondary" className="text-xs">
                     Stock: {stockFilter.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     <X 
                       className="w-3 h-3 ml-1 cursor-pointer" 
-                      onClick={() => setStockFilter("")}
+                      onClick={() => setStockFilter("all")}
                     />
                   </Badge>
                 )}
-                {priceFilter && (
+                {priceFilter && priceFilter !== "all" && (
                   <Badge variant="secondary" className="text-xs">
                     Price: {priceFilter.replace('-', ' - $').replace('under', 'Under $').replace('over', 'Over $')}
                     <X 
                       className="w-3 h-3 ml-1 cursor-pointer" 
-                      onClick={() => setPriceFilter("")}
+                      onClick={() => setPriceFilter("all")}
                     />
                   </Badge>
                 )}
