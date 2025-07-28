@@ -1,54 +1,27 @@
-import { BaseRepository, eq, and, or, like } from './BaseRepository';
-import { sql } from 'drizzle-orm';
-import { products, categories, brands } from '../../../shared/schema';
-import { db } from './BaseRepository';
+import { eq, and, or, like, sql } from 'drizzle-orm';
+import * as schema from '../../../shared/schema';
+import { storage } from '../../storage';
 
-export class ProductRepository extends BaseRepository<typeof products.$inferSelect> {
-  constructor() {
-    super('products', products);
-  }
+export class ProductRepository {
 
-  // Find products with category and brand information
-  async findAllWithRelations(searchQuery?: string, categoryId?: number, brandId?: number) {
+  // Find all products
+  async findAll(searchQuery?: string, categoryId?: number, brandId?: number) {
     try {
-      let query = db.select({
-        id: products.id,
-        name: products.name,
-        description: products.description,
-        price: products.price,
-        stock: products.stock,
-        barcode: products.barcode,
-        category: {
-          id: categories.id,
-          name: categories.name,
-        },
-        brand: {
-          id: brands.id,
-          name: brands.name,
-        },
-      })
-      .from(products)
-      .leftJoin(categories, eq(products.categoryId, categories.id))
-      .leftJoin(brands, eq(products.brandId, brands.id));
+      let query = storage.db.select()
+        .from(schema.products);
 
       const conditions = [];
 
       if (searchQuery) {
-        conditions.push(
-          or(
-            like(products.name, `%${searchQuery}%`),
-            like(products.description, `%${searchQuery}%`),
-            like(products.barcode, `%${searchQuery}%`)
-          )
-        );
+        conditions.push(like(schema.products.name, `%${searchQuery}%`));
       }
 
       if (categoryId) {
-        conditions.push(eq(products.categoryId, categoryId));
+        conditions.push(eq(schema.products.categoryId, categoryId));
       }
 
       if (brandId) {
-        conditions.push(eq(products.brandId, brandId));
+        conditions.push(eq(schema.products.brandId, brandId));
       }
 
       if (conditions.length > 0) {
@@ -57,22 +30,35 @@ export class ProductRepository extends BaseRepository<typeof products.$inferSele
 
       return await query;
     } catch (error) {
-      console.error('Error finding products with relations:', error);
+      console.error('Error finding products:', error);
       throw error;
     }
   }
 
-  // Find products by barcode
-  async findByBarcode(barcode: string) {
+  // Create new product
+  async create(productData: any) {
     try {
-      const results = await db.select()
-        .from(products)
-        .where(eq(products.barcode, barcode))
+      const results = await storage.db.insert(schema.products)
+        .values(productData)
+        .returning();
+      return results[0];
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw error;
+    }
+  }
+
+  // Find product by ID
+  async findById(id: number) {
+    try {
+      const results = await storage.db.select()
+        .from(schema.products)
+        .where(eq(schema.products.id, id))
         .limit(1);
       
       return results[0] || null;
     } catch (error) {
-      console.error('Error finding product by barcode:', error);
+      console.error('Error finding product by ID:', error);
       throw error;
     }
   }

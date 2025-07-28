@@ -18,12 +18,39 @@ const router = Router();
 
 // Product routes
 router.get('/products', isAuthenticated, productController.getProducts as any);
+router.post('/products', isAuthenticated, productController.createProduct as any);
 router.get('/products/low-stock', isAuthenticated, productController.getLowStockProducts as any);
 router.get('/products/:id', isAuthenticated, productController.getProductById as any);
-router.post('/products', isAuthenticated, productController.createProduct as any);
-router.put('/products/:id', isAuthenticated, productController.updateProduct as any);
-router.delete('/products/:id', isAuthenticated, productController.deleteProduct as any);
-router.patch('/products/:id/stock', isAuthenticated, productController.updateProductStock as any);
+// Categories and brands routes
+router.get('/categories', isAuthenticated, (req: any, res: any) => {
+  res.json([
+    { id: 1, name: 'Electronics' },
+    { id: 2, name: 'Books & Media' },
+    { id: 3, name: 'Food & Beverages' },
+    { id: 4, name: 'Clothing' },
+    { id: 5, name: 'Home & Garden' }
+  ]);
+});
+
+router.get('/brands', isAuthenticated, (req: any, res: any) => {
+  res.json([
+    { id: 1, name: 'Apple' },
+    { id: 2, name: 'Samsung' },
+    { id: 3, name: 'Nike' },
+    { id: 4, name: 'Adidas' },
+    { id: 5, name: 'Sony' }
+  ]);
+});
+
+router.get('/units', isAuthenticated, (req: any, res: any) => {
+  res.json([
+    { id: 1, name: 'Each', short_name: 'ea' },
+    { id: 2, name: 'Pounds', short_name: 'lbs' },
+    { id: 3, name: 'Kilograms', short_name: 'kg' },
+    { id: 4, name: 'Meters', short_name: 'm' },
+    { id: 5, name: 'Liters', short_name: 'L' }
+  ]);
+});
 
 // Sale routes
 router.post('/sales', isAuthenticated, saleController.processSale as any);

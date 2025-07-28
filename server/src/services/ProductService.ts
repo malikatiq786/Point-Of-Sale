@@ -31,39 +31,14 @@ export class ProductService {
   }
 
   // Create new product
-  async createProduct(productData: ProductCreateRequest): Promise<DatabaseResult> {
+  async createProduct(productData: any) {
     try {
-      // Validate input
-      const validation = validateInput(productCreateSchema, productData);
-      if (!validation.success) {
-        return {
-          success: false,
-          error: `Validation failed: ${validation.errors?.join(', ')}`,
-        };
+      if (!productData.name) {
+        return { success: false, error: 'Product name is required' };
       }
 
-      // Check if category exists (if provided)
-      if (productData.categoryId) {
-        const category = await this.categoryRepository.findById(productData.categoryId);
-        if (!category) {
-          return {
-            success: false,
-            error: 'Category not found',
-          };
-        }
-      }
-
-      // Create product
-      const product = await this.productRepository.create({
-        ...validation.data,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      return {
-        success: true,
-        data: product,
-      };
+      const product = await this.productRepository.create(productData);
+      return { success: true, data: product };
     } catch (error) {
       console.error('ProductService: Error creating product:', error);
       return {

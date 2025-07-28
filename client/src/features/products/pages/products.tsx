@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Trash2, Package, Eye } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Products() {
   const { user } = useAuth();
@@ -47,10 +48,12 @@ export default function Products() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
         </div>
         
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Product
-        </Button>
+        <Link href="/products/add">
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Product
+          </Button>
+        </Link>
       </div>
 
       <Card>
@@ -112,10 +115,12 @@ export default function Products() {
               <p className="text-gray-500 mb-4">
                 {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first product'}
               </p>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Product
-              </Button>
+              <Link href="/products/add">
+                <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Product
+                </Button>
+              </Link>
             </div>
           )}
         </CardContent>

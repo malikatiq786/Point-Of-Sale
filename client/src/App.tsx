@@ -21,6 +21,7 @@ import Settings from "@/features/settings";
 import Categories from "@/features/categories";
 import Purchases from "@/features/purchases";
 import { Warehouses, StockManagement, StockTransfers, StockAdjustments } from "@/features/inventory";
+import AddProduct from "@/features/products/pages/add-product";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -34,6 +35,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/pos" component={POSTerminal} />
           <Route path="/products" component={Products} />
+          <Route path="/products/add" component={AddProduct} />
           <Route path="/categories" component={Categories} />
           <Route path="/stock" component={Stock} />
           <Route path="/customers" component={Customers} />
