@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { AppLayout } from "@/layouts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   Search, ShoppingCart, Minus, Plus, Trash2, CreditCard, DollarSign, 
   Smartphone, Percent, Calculator, Receipt, Printer, QrCode, 
-  User, Edit3, X, Check, Tag, Gift
+  User, Edit3, X, Check, Tag, Gift, AlertCircle, CheckCircle, Settings
 } from "lucide-react";
 
 interface CartItem {
@@ -40,6 +41,19 @@ interface PaymentDetails {
   method: 'cash' | 'card' | 'mobile' | 'qr';
   amountReceived: number;
   change: number;
+}
+
+interface Register {
+  id: number;
+  name: string;
+  code: string;
+  branchId: number;
+  branchName?: string;
+  openingBalance: number;
+  currentBalance: number;
+  isActive: boolean;
+  lastOpened?: string;
+  lastClosed?: string;
 }
 
 interface DiscountState {
@@ -89,11 +103,71 @@ export default function POSTerminal() {
   const [editPrice, setEditPrice] = useState<string>("");
   const [editQuantity, setEditQuantity] = useState<string>("");
 
+  // Register management state
+  const [selectedRegisterId, setSelectedRegisterId] = useState<number | null>(null);
+  const [registerStatus, setRegisterStatus] = useState<'closed' | 'opening' | 'open'>('closed');
+  const [cashDrawerBalance, setCashDrawerBalance] = useState(0);
+  const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(false);
+
   // Fetch products
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [], isLoading } = useQuery<any[]>({
     queryKey: searchQuery ? ["/api/products?search=" + encodeURIComponent(searchQuery)] : ["/api/products"],
     retry: false,
   });
+
+  // Fetch registers
+  const { data: registers = [] } = useQuery<Register[]>({
+    queryKey: ['/api/registers'],
+  });
+
+  // Get selected register info
+  const selectedRegister = registers.find((r) => r.id === selectedRegisterId);
+
+  // Register opening balance validation
+  const openRegister = (registerId: number, openingBalance: number) => {
+    const register = registers.find((r) => r.id === registerId);
+    if (!register) {
+      toast({
+        title: "Error",
+        description: "Register not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate opening balance matches register's expected opening balance
+    if (Math.abs(openingBalance - register.openingBalance) > 0.01) {
+      toast({
+        title: "Opening Balance Mismatch",
+        description: `Expected: $${register.openingBalance.toFixed(2)}, Entered: $${openingBalance.toFixed(2)}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedRegisterId(registerId);
+    setCashDrawerBalance(openingBalance);
+    setRegisterStatus('open');
+    setIsRegisterSetupOpen(false);
+    
+    toast({
+      title: "Register Opened",
+      description: `${register.name} is now open with $${openingBalance.toFixed(2)}`,
+    });
+  };
+
+  const closeRegister = () => {
+    if (!selectedRegister) return;
+    
+    setSelectedRegisterId(null);
+    setCashDrawerBalance(0);
+    setRegisterStatus('closed');
+    
+    toast({
+      title: "Register Closed",
+      description: `${selectedRegister.name} has been closed`,
+    });
+  };
 
   // Process sale mutation
   const processSaleMutation = useMutation({
@@ -255,6 +329,16 @@ export default function POSTerminal() {
   };
 
   const processSale = () => {
+    if (registerStatus !== 'open' || !selectedRegister) {
+      toast({
+        title: "Register Closed",
+        description: "Please open a register before processing sales",
+        variant: "destructive",
+      });
+      setIsRegisterSetupOpen(true);
+      return;
+    }
+
     if (cart.length === 0) {
       toast({
         title: "Empty Cart",
@@ -279,7 +363,7 @@ export default function POSTerminal() {
       date: new Date().toLocaleDateString(),
       time: new Date().toLocaleTimeString(),
       cashier: user?.name || 'Cashier',
-      customer: customer.name ? customer : undefined,
+      customer: customer?.name ? customer : undefined,
       items: cart,
       subtotal: getSubtotal(),
       totalDiscount: getItemDiscountTotal() + getGlobalDiscountAmount(),
@@ -297,7 +381,7 @@ export default function POSTerminal() {
       paidAmount: paymentMethod === 'cash' ? amountReceived : getGrandTotal(),
       status: "completed",
       paymentMethod,
-      customer: customer.name ? customer : undefined,
+      customer: customer?.name ? customer : undefined,
       items: cart.map(item => ({
         productId: item.id,
         quantity: item.quantity,
@@ -361,7 +445,8 @@ export default function POSTerminal() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <AppLayout>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Modern Header */}
         <div className="bg-white rounded-2xl shadow-lg border-0 p-6 mb-6">
@@ -376,6 +461,30 @@ export default function POSTerminal() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {/* Register Status */}
+              <div className="flex items-center space-x-2">
+                {registerStatus === 'open' && selectedRegister ? (
+                  <Badge variant="default" className="bg-green-500 text-white px-3 py-1">
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    {selectedRegister.name} - ${cashDrawerBalance.toFixed(2)}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 px-3 py-1">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    Register Closed
+                  </Badge>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => registerStatus === 'open' ? closeRegister() : setIsRegisterSetupOpen(true)}
+                  className="flex items-center space-x-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>{registerStatus === 'open' ? 'Close Register' : 'Open Register'}</span>
+                </Button>
+              </div>
+              
               <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 px-3 py-1">
                 {user?.name || 'Cashier'} • Staff
               </Badge>
@@ -1040,7 +1149,85 @@ export default function POSTerminal() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Register Setup Dialog */}
+        <Dialog open={isRegisterSetupOpen} onOpenChange={setIsRegisterSetupOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <Settings className="w-5 h-5 mr-2" />
+                Open Register
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div>
+                <Label>Select Register</Label>
+                <Select 
+                  value={selectedRegisterId?.toString() || ""} 
+                  onValueChange={(value) => setSelectedRegisterId(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a register" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {registers
+                      .filter((register) => register.isActive)
+                      .map((register) => (
+                      <SelectItem key={register.id} value={register.id.toString()}>
+                        {register.name} ({register.branchName}) - Expected: ${register.openingBalance.toFixed(2)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedRegisterId && (
+                <div>
+                  <Label>Opening Balance Verification</Label>
+                  <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                    <div className="text-sm text-blue-800">
+                      <strong>Expected Opening Balance:</strong> ${selectedRegister?.openingBalance.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      Please count the cash drawer and confirm this amount matches
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Enter actual cash amount"
+                      value={cashDrawerBalance}
+                      onChange={(e) => setCashDrawerBalance(parseFloat(e.target.value) || 0)}
+                      className="text-lg font-semibold text-center"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsRegisterSetupOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => openRegister(selectedRegisterId!, cashDrawerBalance)}
+                  disabled={!selectedRegisterId || cashDrawerBalance === 0}
+                  className="flex-1"
+                >
+                  Open Register
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
+    </AppLayout>
   );
 }
