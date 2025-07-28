@@ -30,25 +30,36 @@ export default function UsersPage() {
     retry: false,
   });
 
-  const filteredUsers = users.filter((user: User) =>
+  const filteredUsers = users.filter((user: any) =>
     user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.role?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const getRoleStats = () => {
+    const roleCounts = users.reduce((acc: any, user: any) => {
+      const roleName = user.role?.name || 'Unknown';
+      acc[roleName] = (acc[roleName] || 0) + 1;
+      return acc;
+    }, {});
+    return roleCounts;
+  };
+
+  const roleStats = getRoleStats();
+
   const getRoleBadgeColor = (roleName: string) => {
     switch (roleName) {
-      case SYSTEM_ROLES.SUPER_ADMIN:
+      case "Super Admin":
         return "bg-red-100 text-red-800 border-red-200";
-      case SYSTEM_ROLES.ADMIN_OWNER:
+      case "Admin / Owner":
         return "bg-purple-100 text-purple-800 border-purple-200";
-      case SYSTEM_ROLES.MANAGER:
+      case "Manager":
         return "bg-blue-100 text-blue-800 border-blue-200";
-      case SYSTEM_ROLES.CASHIER:
+      case "Cashier":
         return "bg-green-100 text-green-800 border-green-200";
-      case SYSTEM_ROLES.ACCOUNTANT:
+      case "Accountant":
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case SYSTEM_ROLES.WAREHOUSE_STAFF:
+      case "Warehouse Staff":
         return "bg-gray-100 text-gray-800 border-gray-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
@@ -63,6 +74,24 @@ export default function UsersPage() {
       </div>
 
       <UserNav />
+
+      {/* Role Statistics */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        {roles.map((role: any) => (
+          <Card key={role.id}>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <div className="p-2 rounded-lg bg-primary-100 mx-auto w-fit mb-2">
+                  <Shield className="w-5 h-5 text-primary-600" />
+                </div>
+                <h3 className="font-medium text-sm text-gray-900 mb-1">{role.name}</h3>
+                <p className="text-2xl font-bold text-primary-600">{roleStats[role.name] || 0}</p>
+                <p className="text-xs text-gray-500">users</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       <div className="flex items-center justify-between mb-6">
         <div className="relative w-96">
