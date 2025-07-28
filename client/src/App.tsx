@@ -14,6 +14,9 @@ import Suppliers from "@/features/suppliers";
 import Expenses from "@/features/expenses";
 import { Employees } from "@/features/hr";
 import Users from "@/features/users/pages/users";
+import Roles from "@/features/users/pages/roles";
+import ActivityLogs from "@/features/users/pages/activity-logs";
+import Notifications from "@/features/users/pages/notifications";
 import Settings from "@/features/settings";
 import Categories from "@/features/categories";
 import Purchases from "@/features/purchases";
@@ -39,6 +42,9 @@ function Router() {
           <Route path="/expenses" component={Expenses} />
           <Route path="/employees" component={Employees} />
           <Route path="/users" component={Users} />
+          <Route path="/roles" component={Roles} />
+          <Route path="/activity-logs" component={ActivityLogs} />
+          <Route path="/notifications" component={Notifications} />
           <Route path="/settings" component={Settings} />
         </>
       )}

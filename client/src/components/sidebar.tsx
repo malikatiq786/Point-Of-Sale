@@ -175,7 +175,7 @@ export default function Sidebar({ user }: SidebarProps) {
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
+      <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto max-h-[calc(100vh-200px)]">
         {/* Dashboard */}
         <Link href="/">
           <Button

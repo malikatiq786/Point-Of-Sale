@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/layouts";
+import UserNav from "../components/user-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,8 @@ export default function UsersPage() {
         <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
         <p className="text-gray-600">Manage system users, roles, and permissions</p>
       </div>
+
+      <UserNav />
 
       <div className="flex items-center justify-between mb-6">
         <div className="relative w-96">
