@@ -6,18 +6,16 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
-import Dashboard from "@/pages/dashboard";
-import POSTerminal from "@/pages/pos-terminal";
-import Products from "@/pages/products";
-import Customers from "@/pages/customers";
-import Sales from "@/pages/sales";
-import Suppliers from "@/pages/suppliers";
-import Expenses from "@/pages/expenses";
-import Employees from "@/pages/employees";
-import Settings from "@/pages/settings";
-import Categories from "@/pages/categories";
-import Stock from "@/pages/stock";
-import Purchases from "@/pages/purchases";
+import Dashboard from "@/features/dashboard";
+import { POSTerminal, Sales } from "@/features/sales";
+import { Products, Stock } from "@/features/products";
+import Customers from "@/features/customers";
+import Suppliers from "@/features/suppliers";
+import Expenses from "@/features/expenses";
+import { Employees } from "@/features/hr";
+import Settings from "@/features/settings";
+import Categories from "@/features/categories";
+import Purchases from "@/features/purchases";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
