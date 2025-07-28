@@ -107,7 +107,7 @@ export default function POSTerminal() {
   const [selectedRegisterId, setSelectedRegisterId] = useState<number | null>(null);
   const [registerStatus, setRegisterStatus] = useState<'closed' | 'opening' | 'open'>('closed');
   const [cashDrawerBalance, setCashDrawerBalance] = useState(0);
-  const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(false);
+  const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(true); // Open by default
 
   // Fetch products
   const { data: products = [], isLoading } = useQuery<any[]>({
@@ -448,7 +448,7 @@ export default function POSTerminal() {
   return (
     <AppLayout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-7xl mx-auto">
+      <div className={`max-w-7xl mx-auto ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
         {/* Modern Header */}
         <div className="bg-white rounded-2xl shadow-lg border-0 p-6 mb-6">
           <div className="flex items-center justify-between">
@@ -1151,14 +1151,22 @@ export default function POSTerminal() {
           </DialogContent>
         </Dialog>
 
-        {/* Register Setup Dialog */}
-        <Dialog open={isRegisterSetupOpen} onOpenChange={setIsRegisterSetupOpen}>
+        {/* Register Setup Dialog - Required on POS Terminal Load */}
+        <Dialog open={isRegisterSetupOpen} onOpenChange={(open) => {
+          // Only allow closing if register is open
+          if (!open && registerStatus === 'open') {
+            setIsRegisterSetupOpen(false);
+          }
+        }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center">
-                <Settings className="w-5 h-5 mr-2" />
-                Open Register
+              <DialogTitle className="flex items-center text-lg">
+                <AlertCircle className="w-6 h-6 mr-2 text-red-500" />
+                Register Setup Required
               </DialogTitle>
+              <div className="text-sm text-gray-600 mt-2">
+                You must open a register with verified opening balance before using the POS terminal.
+              </div>
             </DialogHeader>
             
             <div className="space-y-4">
@@ -1210,18 +1218,13 @@ export default function POSTerminal() {
 
               <div className="flex space-x-2">
                 <Button
-                  variant="outline"
-                  onClick={() => setIsRegisterSetupOpen(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
                   onClick={() => openRegister(selectedRegisterId!, cashDrawerBalance)}
                   disabled={!selectedRegisterId || cashDrawerBalance === 0}
-                  className="flex-1"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  size="lg"
                 >
-                  Open Register
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Open Register & Start POS
                 </Button>
               </div>
             </div>
