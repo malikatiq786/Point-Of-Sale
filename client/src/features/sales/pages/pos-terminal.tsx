@@ -448,6 +448,181 @@ export default function POSTerminal() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Shopping Cart Table */}
+            <Card className="rounded-2xl shadow-lg border-0">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center">
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    Cart Items ({cart.length} items)
+                  </span>
+                  <Badge variant="secondary" className="text-xs">
+                    Subtotal: ${getSubtotal().toFixed(2)}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {cart.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>Cart is empty</p>
+                    <p className="text-xs">Add products to get started</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 px-2 text-sm font-medium text-gray-600">Product</th>
+                          <th className="text-center py-2 px-2 text-sm font-medium text-gray-600">Qty</th>
+                          <th className="text-right py-2 px-2 text-sm font-medium text-gray-600">Price</th>
+                          <th className="text-right py-2 px-2 text-sm font-medium text-gray-600">Total</th>
+                          <th className="text-center py-2 px-2 text-sm font-medium text-gray-600">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cart.map((item) => (
+                          <tr key={item.id} className="border-b hover:bg-gray-50">
+                            <td className="py-3 px-2">
+                              <div>
+                                <div className="font-medium text-sm text-gray-900">{item.name}</div>
+                                <div className="text-xs text-gray-500">{item.category}</div>
+                                {item.discount && item.discount > 0 && (
+                                  <div className="text-xs text-green-600 mt-1">
+                                    -{item.discountType === 'percentage' ? `${item.discount}%` : `$${item.discount}`} discount
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 text-center">
+                              <div className="flex items-center justify-center space-x-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => updateQuantity(item.id, -1)}
+                                  className="w-6 h-6 p-0 rounded-full"
+                                >
+                                  <Minus className="w-3 h-3" />
+                                </Button>
+                                
+                                {editingItem === item.id ? (
+                                  <Input
+                                    value={editQuantity}
+                                    onChange={(e) => setEditQuantity(e.target.value)}
+                                    onBlur={() => {
+                                      const newQty = parseInt(editQuantity) || 1;
+                                      updateQuantity(item.id, newQty - item.quantity);
+                                      setEditingItem(null);
+                                    }}
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter') {
+                                        const newQty = parseInt(editQuantity) || 1;
+                                        updateQuantity(item.id, newQty - item.quantity);
+                                        setEditingItem(null);
+                                      }
+                                    }}
+                                    className="w-12 h-6 text-center text-sm rounded-lg"
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span 
+                                    className="w-8 text-center font-medium text-sm cursor-pointer hover:bg-gray-200 rounded px-1 min-w-[32px]"
+                                    onClick={() => {
+                                      setEditingItem(item.id);
+                                      setEditQuantity(item.quantity.toString());
+                                    }}
+                                  >
+                                    {item.quantity}
+                                  </span>
+                                )}
+                                
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => updateQuantity(item.id, 1)}
+                                  className="w-6 h-6 p-0 rounded-full"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 text-right">
+                              {editingItem === item.id ? (
+                                <Input
+                                  value={editPrice}
+                                  onChange={(e) => setEditPrice(e.target.value)}
+                                  onBlur={() => {
+                                    const newPrice = parseFloat(editPrice) || item.price;
+                                    updateItemPrice(item.id, newPrice);
+                                    setEditingItem(null);
+                                  }}
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      const newPrice = parseFloat(editPrice) || item.price;
+                                      updateItemPrice(item.id, newPrice);
+                                      setEditingItem(null);
+                                    }
+                                  }}
+                                  className="w-20 h-6 text-xs text-right rounded"
+                                  autoFocus
+                                />
+                              ) : (
+                                <span 
+                                  className="text-sm font-medium cursor-pointer hover:bg-gray-200 rounded px-1"
+                                  onClick={() => {
+                                    setEditingItem(item.id);
+                                    setEditPrice(item.price.toString());
+                                  }}
+                                >
+                                  ${item.price.toFixed(2)}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-2 text-right">
+                              <span className="font-semibold text-sm text-gray-900">
+                                ${item.total.toFixed(2)}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 text-center">
+                              <div className="flex justify-center space-x-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const discountValue = prompt(`Enter discount for ${item.name}:`);
+                                    if (discountValue) {
+                                      const isPercentage = discountValue.includes('%');
+                                      const value = parseFloat(discountValue.replace('%', ''));
+                                      if (!isNaN(value)) {
+                                        applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
+                                      }
+                                    }
+                                  }}
+                                  className="text-blue-600 hover:bg-blue-50 w-6 h-6 p-0"
+                                  title="Apply Discount"
+                                >
+                                  <Percent className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFromCart(item.id)}
+                                  className="text-red-500 hover:bg-red-50 w-6 h-6 p-0"
+                                  title="Remove Item"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right Side - Cart & Checkout */}
@@ -527,166 +702,7 @@ export default function POSTerminal() {
               </CardContent>
             </Card>
 
-            {/* Shopping Cart */}
-            <Card className="rounded-2xl shadow-lg border-0">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center">
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    Cart ({cart.length} items)
-                  </span>
-                  <Badge variant="secondary" className="text-xs">
-                    Subtotal: ${getSubtotal().toFixed(2)}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3 max-h-64 overflow-y-auto">
-                  {cart.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                      <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>Cart is empty</p>
-                      <p className="text-xs">Add products to get started</p>
-                    </div>
-                  ) : (
-                    cart.map((item) => (
-                      <div key={item.id} className="bg-gray-50 rounded-xl p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex-1">
-                            <div className="font-medium text-sm truncate">{item.name}</div>
-                            <div className="text-xs text-gray-500">{item.category}</div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeFromCart(item.id)}
-                            className="text-red-500 hover:bg-red-50 p-1"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateQuantity(item.id, -1)}
-                              className="w-8 h-8 p-0 rounded-full"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </Button>
-                            
-                            {editingItem === item.id ? (
-                              <Input
-                                value={editQuantity}
-                                onChange={(e) => setEditQuantity(e.target.value)}
-                                onBlur={() => {
-                                  const newQty = parseInt(editQuantity) || 1;
-                                  updateQuantity(item.id, newQty - item.quantity);
-                                  setEditingItem(null);
-                                }}
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter') {
-                                    const newQty = parseInt(editQuantity) || 1;
-                                    updateQuantity(item.id, newQty - item.quantity);
-                                    setEditingItem(null);
-                                  }
-                                }}
-                                className="w-12 h-8 text-center text-sm rounded-lg"
-                                autoFocus
-                              />
-                            ) : (
-                              <span 
-                                className="w-8 text-center font-medium text-sm cursor-pointer hover:bg-gray-200 rounded px-1"
-                                onClick={() => {
-                                  setEditingItem(item.id);
-                                  setEditQuantity(item.quantity.toString());
-                                }}
-                              >
-                                {item.quantity}
-                              </span>
-                            )}
-                            
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateQuantity(item.id, 1)}
-                              className="w-8 h-8 p-0 rounded-full"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </div>
-                          
-                          <div className="text-right">
-                            {editingItem === item.id ? (
-                              <Input
-                                value={editPrice}
-                                onChange={(e) => setEditPrice(e.target.value)}
-                                onBlur={() => {
-                                  const newPrice = parseFloat(editPrice) || item.price;
-                                  updateItemPrice(item.id, newPrice);
-                                  setEditingItem(null);
-                                }}
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter') {
-                                    const newPrice = parseFloat(editPrice) || item.price;
-                                    updateItemPrice(item.id, newPrice);
-                                    setEditingItem(null);
-                                  }
-                                }}
-                                className="w-16 h-6 text-xs text-right rounded"
-                                autoFocus
-                              />
-                            ) : (
-                              <div 
-                                className="text-xs text-gray-500 cursor-pointer hover:bg-gray-200 rounded px-1"
-                                onClick={() => {
-                                  setEditingItem(item.id);
-                                  setEditPrice(item.price.toString());
-                                }}
-                              >
-                                ${item.price.toFixed(2)} each
-                              </div>
-                            )}
-                            <div className="font-medium text-sm">
-                              ${item.total.toFixed(2)}
-                            </div>
-                            {item.discount && item.discount > 0 && (
-                              <div className="text-xs text-green-600">
-                                -{item.discountType === 'percentage' ? `${item.discount}%` : `$${item.discount}`} discount
-                              </div>
-                            )}
-                          </div>
-                        </div>
 
-                        {/* Item Discount Button */}
-                        <div className="mt-2 pt-2 border-t border-gray-200">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const discountValue = prompt(`Enter discount for ${item.name}:`);
-                              if (discountValue) {
-                                const isPercentage = discountValue.includes('%');
-                                const value = parseFloat(discountValue.replace('%', ''));
-                                if (!isNaN(value)) {
-                                  applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
-                                }
-                              }
-                            }}
-                            className="text-xs text-blue-600 hover:bg-blue-50 h-6"
-                          >
-                            <Percent className="w-3 h-3 mr-1" />
-                            Item Discount
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Discount & Tax Controls */}
             <Card className="rounded-2xl shadow-lg border-0">
