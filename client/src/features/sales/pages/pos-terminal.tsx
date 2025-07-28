@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import PosLayout from "@/layouts/app/pos-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ export default function POSTerminal() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const printRef = useRef<HTMLDivElement>(null);
   
   // Core state
@@ -168,6 +170,11 @@ export default function POSTerminal() {
       title: "Register Closed",
       description: `${selectedRegister.name} has been closed`,
     });
+    
+    // Redirect to dashboard after closing register
+    setTimeout(() => {
+      setLocation('/');
+    }, 1500); // Give time for toast to show
   };
 
   // Process sale mutation

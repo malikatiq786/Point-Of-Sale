@@ -16,7 +16,7 @@ This is a comprehensive Point of Sale (POS) system built with modern web technol
 - ✅ **Sales Prevention**: System blocks all sales transactions when register is closed, prompts for register opening
 - ✅ **Cart Table Format**: Shopping cart displayed in professional table format below available products as requested
 - ✅ **Fixed Database Type Issues**: Properly handles numeric opening balance values from PostgreSQL database
-- ✅ **Complete Register Workflow**: Open register → Verify balance → Enable POS → Process sales → Close register
+- ✅ **Complete Register Workflow**: Open register → Verify balance → Enable POS → Process sales → Close register → Redirect to dashboard
 - ✅ **User Experience**: Clear error messages, validation feedback, and guided register opening process
 
 **July 28, 2025 - EVENING UPDATE - COMPLETE HR MODULES IMPLEMENTATION**
