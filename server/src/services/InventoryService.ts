@@ -31,6 +31,36 @@ export class InventoryService {
     }
   }
 
+  async updateWarehouse(id: number, warehouseData: { name?: string; location?: string }) {
+    try {
+      if (!warehouseData.name && !warehouseData.location) {
+        return { success: false, error: 'At least one field is required for update' };
+      }
+
+      const warehouse = await this.inventoryRepository.updateWarehouse(id, warehouseData);
+      return { success: true, data: warehouse };
+    } catch (error) {
+      console.error('InventoryService: Error updating warehouse:', error);
+      return { success: false, error: 'Failed to update warehouse' };
+    }
+  }
+
+  async deleteWarehouse(id: number) {
+    try {
+      // Check if warehouse has stock before deletion
+      const stockCount = await this.inventoryRepository.getWarehouseStockCount(id);
+      if (stockCount > 0) {
+        return { success: false, error: 'Cannot delete warehouse with existing stock items' };
+      }
+
+      await this.inventoryRepository.deleteWarehouse(id);
+      return { success: true };
+    } catch (error) {
+      console.error('InventoryService: Error deleting warehouse:', error);
+      return { success: false, error: 'Failed to delete warehouse' };
+    }
+  }
+
   async getStock(warehouseId?: number, lowStockOnly?: boolean) {
     try {
       const stock = await this.inventoryRepository.findStock(warehouseId, lowStockOnly);

@@ -52,6 +52,53 @@ export class InventoryController {
     }
   };
 
+  // Update warehouse
+  updateWarehouse = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const result = await this.inventoryService.updateWarehouse(parseInt(id), req.body);
+
+      if (result.success) {
+        res.status(HTTP_STATUS.OK).json({
+          message: SUCCESS_MESSAGES.UPDATED,
+          data: result.data
+        });
+      } else {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: result.error || ERROR_MESSAGES.VALIDATION_FAILED
+        });
+      }
+    } catch (error) {
+      console.error('InventoryController: Error in updateWarehouse:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
+
+  // Delete warehouse
+  deleteWarehouse = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const result = await this.inventoryService.deleteWarehouse(parseInt(id));
+
+      if (result.success) {
+        res.status(HTTP_STATUS.OK).json({
+          message: SUCCESS_MESSAGES.DELETED
+        });
+      } else {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: result.error || ERROR_MESSAGES.VALIDATION_FAILED
+        });
+      }
+    } catch (error) {
+      console.error('InventoryController: Error in deleteWarehouse:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
+
   // Get stock levels
   getStock = async (req: Request, res: Response) => {
     try {

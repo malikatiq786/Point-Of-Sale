@@ -26,6 +26,41 @@ export class InventoryRepository {
     }
   }
 
+  async updateWarehouse(id: number, warehouseData: { name?: string; location?: string }) {
+    try {
+      const results = await storage.db.update(schema.warehouses)
+        .set(warehouseData)
+        .where(eq(schema.warehouses.id, id))
+        .returning();
+      return results[0];
+    } catch (error) {
+      console.error('Error updating warehouse:', error);
+      throw error;
+    }
+  }
+
+  async deleteWarehouse(id: number) {
+    try {
+      await storage.db.delete(schema.warehouses)
+        .where(eq(schema.warehouses.id, id));
+    } catch (error) {
+      console.error('Error deleting warehouse:', error);
+      throw error;
+    }
+  }
+
+  async getWarehouseStockCount(warehouseId: number) {
+    try {
+      const result = await storage.db.select({ count: sql`count(*)` })
+        .from(schema.stock)
+        .where(eq(schema.stock.warehouseId, warehouseId));
+      return parseInt(result[0].count as string);
+    } catch (error) {
+      console.error('Error getting warehouse stock count:', error);
+      throw error;
+    }
+  }
+
   // Stock methods
   async findStock(warehouseId?: number, lowStockOnly?: boolean) {
     try {

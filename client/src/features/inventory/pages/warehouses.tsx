@@ -15,7 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 export default function Warehouses() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [newWarehouse, setNewWarehouse] = useState({ name: "", location: "" });
+  const [editingWarehouse, setEditingWarehouse] = useState<any>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -55,6 +57,49 @@ export default function Warehouses() {
     },
   });
 
+  const updateWarehouseMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number, data: any }) => apiRequest(`/api/warehouses/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Warehouse updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouses"] });
+      setShowEditDialog(false);
+      setEditingWarehouse(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update warehouse",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteWarehouseMutation = useMutation({
+    mutationFn: (id: number) => apiRequest(`/api/warehouses/${id}`, {
+      method: "DELETE",
+    }),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Warehouse deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouses"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete warehouse",
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredWarehouses = warehouses.filter((warehouse: any) =>
     warehouse.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     warehouse.location?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -81,6 +126,36 @@ export default function Warehouses() {
       return;
     }
     createWarehouseMutation.mutate(newWarehouse);
+  };
+
+  const handleEditWarehouse = (warehouse: any) => {
+    setEditingWarehouse(warehouse);
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateWarehouse = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingWarehouse.name) {
+      toast({
+        title: "Error",
+        description: "Warehouse name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateWarehouseMutation.mutate({
+      id: editingWarehouse.id,
+      data: { 
+        name: editingWarehouse.name, 
+        location: editingWarehouse.location 
+      }
+    });
+  };
+
+  const handleDeleteWarehouse = (id: number) => {
+    if (confirm("Are you sure you want to delete this warehouse? This action cannot be undone.")) {
+      deleteWarehouseMutation.mutate(id);
+    }
   };
 
   return (
@@ -144,6 +219,50 @@ export default function Warehouses() {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Warehouse Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Warehouse</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleUpdateWarehouse} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Warehouse Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editingWarehouse?.name || ""}
+                  onChange={(e) => setEditingWarehouse({ 
+                    ...editingWarehouse, 
+                    name: e.target.value 
+                  })}
+                  placeholder="Enter warehouse name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-location">Location</Label>
+                <Textarea
+                  id="edit-location"
+                  value={editingWarehouse?.location || ""}
+                  onChange={(e) => setEditingWarehouse({ 
+                    ...editingWarehouse, 
+                    location: e.target.value 
+                  })}
+                  placeholder="Enter warehouse address or location details"
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateWarehouseMutation.isPending}>
+                  {updateWarehouseMutation.isPending ? "Updating..." : "Update Warehouse"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {isLoading ? (
@@ -195,10 +314,15 @@ export default function Warehouses() {
                       )}
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
-                    <Edit className="w-3 h-3 mr-1" />
-                    Edit
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEditWarehouse(warehouse)}>
+                      <Edit className="w-3 h-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleDeleteWarehouse(warehouse.id)}>
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

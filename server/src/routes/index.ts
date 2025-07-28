@@ -54,6 +54,8 @@ router.put('/users/:id/permissions', isAuthenticated, userController.updateUserP
 // Inventory routes
 router.get('/warehouses', isAuthenticated, inventoryController.getWarehouses as any);
 router.post('/warehouses', isAuthenticated, inventoryController.createWarehouse as any);
+router.put('/warehouses/:id', isAuthenticated, inventoryController.updateWarehouse as any);
+router.delete('/warehouses/:id', isAuthenticated, inventoryController.deleteWarehouse as any);
 router.get('/stock', isAuthenticated, inventoryController.getStock as any);
 router.post('/stock/adjust', isAuthenticated, inventoryController.adjustStock as any);
 router.get('/stock/transfers', isAuthenticated, inventoryController.getStockTransfers as any);
