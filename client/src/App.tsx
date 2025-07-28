@@ -20,6 +20,7 @@ import Notifications from "@/features/users/pages/notifications";
 import Settings from "@/features/settings";
 import Categories from "@/features/categories";
 import Purchases from "@/features/purchases";
+import { Warehouses, StockManagement, StockTransfers, StockAdjustments } from "@/features/inventory";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -45,6 +46,10 @@ function Router() {
           <Route path="/roles" component={Roles} />
           <Route path="/activity-logs" component={ActivityLogs} />
           <Route path="/notifications" component={Notifications} />
+          <Route path="/warehouses" component={Warehouses} />
+          <Route path="/stock-management" component={StockManagement} />
+          <Route path="/stock-transfers" component={StockTransfers} />
+          <Route path="/stock-adjustments" component={StockAdjustments} />
           <Route path="/settings" component={Settings} />
         </>
       )}

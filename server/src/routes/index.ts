@@ -3,6 +3,7 @@ import { ProductController } from '../controllers/ProductController';
 import { SaleController } from '../controllers/SaleController';
 import { DashboardController } from '../controllers/DashboardController';
 import { UserController } from '../controllers/UserController';
+import { InventoryController } from '../controllers/InventoryController';
 import { isAuthenticated } from '../../replitAuth';
 
 // Initialize controllers
@@ -10,6 +11,7 @@ const productController = new ProductController();
 const saleController = new SaleController();
 const dashboardController = new DashboardController();
 const userController = new UserController();
+const inventoryController = new InventoryController();
 
 // Create router
 const router = Router();
@@ -48,5 +50,14 @@ router.get('/roles', isAuthenticated, userController.getAllRoles as any);
 router.get('/permissions', isAuthenticated, userController.getAllPermissions as any);
 router.get('/users/:id/permissions', isAuthenticated, userController.getUserPermissions as any);
 router.put('/users/:id/permissions', isAuthenticated, userController.updateUserPermissions as any);
+
+// Inventory routes
+router.get('/warehouses', isAuthenticated, inventoryController.getWarehouses as any);
+router.post('/warehouses', isAuthenticated, inventoryController.createWarehouse as any);
+router.get('/stock', isAuthenticated, inventoryController.getStock as any);
+router.post('/stock/adjust', isAuthenticated, inventoryController.adjustStock as any);
+router.get('/stock/transfers', isAuthenticated, inventoryController.getStockTransfers as any);
+router.post('/stock/transfers', isAuthenticated, inventoryController.createStockTransfer as any);
+router.get('/stock/adjustments', isAuthenticated, inventoryController.getStockAdjustments as any);
 
 export { router as apiRoutes };
