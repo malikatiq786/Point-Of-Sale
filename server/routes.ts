@@ -544,6 +544,286 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // HR Modules APIs
+  
+  // Employees API
+  let employeesStorage: any[] = [
+    {
+      id: 1,
+      name: "John Smith",
+      email: "john.smith@company.com",
+      phone: "+1-555-0101",
+      position: "Software Engineer",
+      salary: "75000",
+      hireDate: "2023-01-15",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 2,
+      name: "Sarah Johnson",
+      email: "sarah.johnson@company.com",
+      phone: "+1-555-0102",
+      position: "Marketing Manager",
+      salary: "68000",
+      hireDate: "2023-03-20",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 3,
+      name: "Mike Davis",
+      email: "mike.davis@company.com",
+      phone: "+1-555-0103",
+      position: "Sales Representative",
+      salary: "55000",
+      hireDate: "2023-06-10",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 4,
+      name: "Emily Wilson",
+      email: "emily.wilson@company.com",
+      phone: "+1-555-0104",
+      position: "HR Specialist",
+      salary: "62000",
+      hireDate: "2023-02-05",
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  app.get('/api/employees', (req, res) => {
+    console.log('Fetching employees, total:', employeesStorage.length);
+    const sortedEmployees = employeesStorage.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    res.json(sortedEmployees);
+  });
+
+  app.post('/api/employees', (req, res) => {
+    try {
+      const { name, email, phone, position, salary, hireDate } = req.body;
+      
+      const employeeData = {
+        id: Date.now(),
+        name,
+        email,
+        phone: phone || '',
+        position: position || '',
+        salary: salary || '',
+        hireDate: hireDate || '',
+        createdAt: new Date().toISOString()
+      };
+
+      employeesStorage.unshift(employeeData);
+      console.log('Employee created:', employeeData);
+      res.status(201).json(employeeData);
+    } catch (error) {
+      console.error('Create employee error:', error);
+      res.status(500).json({ message: 'Failed to create employee' });
+    }
+  });
+
+  // Attendance API
+  let attendanceStorage: any[] = [
+    {
+      id: 1,
+      employeeId: 1,
+      employeeName: "John Smith",
+      employeePosition: "Software Engineer",
+      date: "2025-07-28",
+      checkIn: "09:00",
+      checkOut: "17:30",
+      status: "present",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 2,
+      employeeId: 2,
+      employeeName: "Sarah Johnson",
+      employeePosition: "Marketing Manager",
+      date: "2025-07-28",
+      checkIn: "08:45",
+      checkOut: "17:15",
+      status: "present",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 3,
+      employeeId: 3,
+      employeeName: "Mike Davis",
+      employeePosition: "Sales Representative",
+      date: "2025-07-28",
+      checkIn: "",
+      checkOut: "",
+      status: "absent",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 4,
+      employeeId: 4,
+      employeeName: "Emily Wilson",
+      employeePosition: "HR Specialist",
+      date: "2025-07-28",
+      checkIn: "09:15",
+      checkOut: "17:45",
+      status: "late",
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  app.get('/api/attendance', (req, res) => {
+    console.log('Fetching attendance records, total:', attendanceStorage.length);
+    const sortedAttendance = attendanceStorage.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    res.json(sortedAttendance);
+  });
+
+  app.post('/api/attendance', (req, res) => {
+    try {
+      const { employeeId, date, checkIn, checkOut, status } = req.body;
+      
+      // Get employee data for the attendance record
+      const employee = employeesStorage.find(e => e.id == employeeId) || { name: 'Unknown Employee', position: 'Unknown' };
+      
+      const attendanceData = {
+        id: Date.now(),
+        employeeId: parseInt(employeeId),
+        employeeName: employee.name,
+        employeePosition: employee.position,
+        date,
+        checkIn: checkIn || '',
+        checkOut: checkOut || '',
+        status,
+        createdAt: new Date().toISOString()
+      };
+
+      attendanceStorage.unshift(attendanceData);
+      console.log('Attendance record created:', attendanceData);
+      res.status(201).json(attendanceData);
+    } catch (error) {
+      console.error('Create attendance error:', error);
+      res.status(500).json({ message: 'Failed to create attendance record' });
+    }
+  });
+
+  // Payroll API
+  let payrollStorage: any[] = [
+    {
+      id: 1,
+      employeeId: 1,
+      employeeName: "John Smith",
+      employeePosition: "Software Engineer",
+      baseSalary: "75000",
+      overtime: "500",
+      bonuses: "1000",
+      deductions: "200",
+      netSalary: "76300",
+      month: 7,
+      year: 2025,
+      status: "paid",
+      notes: "Regular monthly salary",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 2,
+      employeeId: 2,
+      employeeName: "Sarah Johnson",
+      employeePosition: "Marketing Manager",
+      baseSalary: "68000",
+      overtime: "300",
+      bonuses: "800",
+      deductions: "150",
+      netSalary: "68950",
+      month: 7,
+      year: 2025,
+      status: "pending",
+      notes: "Monthly salary with performance bonus",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 3,
+      employeeId: 3,
+      employeeName: "Mike Davis",
+      employeePosition: "Sales Representative",
+      baseSalary: "55000",
+      overtime: "200",
+      bonuses: "1500",
+      deductions: "100",
+      netSalary: "56600",
+      month: 7,
+      year: 2025,
+      status: "processing",
+      notes: "Salary with sales commission",
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  app.get('/api/payroll', (req, res) => {
+    console.log('Fetching payroll records, total:', payrollStorage.length);
+    const sortedPayroll = payrollStorage.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    res.json(sortedPayroll);
+  });
+
+  app.post('/api/payroll', (req, res) => {
+    try {
+      const { employeeId, baseSalary, overtime, bonuses, deductions, month, year, notes } = req.body;
+      
+      // Get employee data for the payroll record
+      const employee = employeesStorage.find(e => e.id == employeeId) || { name: 'Unknown Employee', position: 'Unknown' };
+      
+      // Calculate net salary
+      const base = parseFloat(baseSalary || '0');
+      const ot = parseFloat(overtime || '0');
+      const bonus = parseFloat(bonuses || '0');
+      const deduct = parseFloat(deductions || '0');
+      const net = base + ot + bonus - deduct;
+      
+      const payrollData = {
+        id: Date.now(),
+        employeeId: parseInt(employeeId),
+        employeeName: employee.name,
+        employeePosition: employee.position,
+        baseSalary: baseSalary,
+        overtime: overtime || '0',
+        bonuses: bonuses || '0',
+        deductions: deductions || '0',
+        netSalary: net.toFixed(2),
+        month: parseInt(month),
+        year: parseInt(year),
+        status: 'pending',
+        notes: notes || '',
+        createdAt: new Date().toISOString()
+      };
+
+      payrollStorage.unshift(payrollData);
+      console.log('Payroll record created:', payrollData);
+      res.status(201).json(payrollData);
+    } catch (error) {
+      console.error('Create payroll error:', error);
+      res.status(500).json({ message: 'Failed to create payroll record' });
+    }
+  });
+
+  app.patch('/api/payroll/:id/process', (req, res) => {
+    try {
+      const payrollId = parseInt(req.params.id);
+      const payrollIndex = payrollStorage.findIndex(p => p.id === payrollId);
+      
+      if (payrollIndex === -1) {
+        return res.status(404).json({ message: 'Payroll record not found' });
+      }
+      
+      payrollStorage[payrollIndex].status = 'paid';
+      console.log('Payroll payment processed for ID:', payrollId);
+      res.json(payrollStorage[payrollIndex]);
+    } catch (error) {
+      console.error('Process payroll error:', error);
+      res.status(500).json({ message: 'Failed to process payroll payment' });
+    }
+  });
+
   // Use new MVC routes
   app.use('/api', apiRoutes);
 

@@ -12,7 +12,9 @@ import { Products, Stock } from "@/features/products";
 import Customers from "@/features/customers";
 import Suppliers from "@/features/suppliers";
 import Expenses from "@/features/expenses";
-import { Employees } from "@/features/hr";
+import Employees from "@/features/hr/pages/employees";
+import Attendance from "@/features/hr/pages/attendance";
+import Payroll from "@/features/hr/pages/payroll";
 import Users from "@/features/users/pages/users";
 import Roles from "@/features/users/pages/roles";
 import ActivityLogs from "@/features/users/pages/activity-logs";
@@ -59,6 +61,8 @@ function Router() {
           <Route path="/transactions" component={Transactions} />
           <Route path="/reports" component={Reports} />
           <Route path="/employees" component={Employees} />
+          <Route path="/attendance" component={Attendance} />
+          <Route path="/payroll" component={Payroll} />
           <Route path="/users" component={Users} />
           <Route path="/roles" component={Roles} />
           <Route path="/activity-logs" component={ActivityLogs} />
