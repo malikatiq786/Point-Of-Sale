@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/features/dashboard";
-import { POSTerminal, Sales } from "@/features/sales";
+import { POSTerminal, Sales, Returns } from "@/features/sales";
 import { Products, Stock } from "@/features/products";
 import Customers from "@/features/customers";
 import Suppliers from "@/features/suppliers";
@@ -47,6 +47,7 @@ function Router() {
           <Route path="/purchases" component={Purchases} />
           <Route path="/purchases/add" component={AddPurchase} />
           <Route path="/sales" component={Sales} />
+          <Route path="/returns" component={Returns} />
           <Route path="/expenses" component={Expenses} />
           <Route path="/employees" component={Employees} />
           <Route path="/users" component={Users} />

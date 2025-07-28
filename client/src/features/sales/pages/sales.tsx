@@ -1,16 +1,14 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import Sidebar from "@/components/sidebar";
+import { AppLayout } from "@/layouts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Receipt, Eye, Calendar, DollarSign, User } from "lucide-react";
+import { Search, Receipt, Eye, Calendar, DollarSign, User, Package, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Sales() {
-  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
 
@@ -41,42 +39,40 @@ export default function Sales() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar user={user} />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Sales History</h1>
-              <p className="text-sm text-gray-500">View and manage all sales transactions</p>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <input 
-                  type="text" 
-                  placeholder="Search sales..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              </div>
-              
-              <input 
-                type="date" 
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-        </header>
+    <AppLayout>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Sales History</h1>
+        <p className="text-gray-600">View and manage all sales transactions</p>
+      </div>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Input 
+            type="text" 
+            placeholder="Search sales..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        </div>
+        
+        <Input
+          type="date"
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+          className="w-full sm:w-48"
+        />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Receipt className="w-5 h-5 mr-2" />
+            Transaction History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
           {isLoading ? (
             <div className="space-y-4">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -156,8 +152,8 @@ export default function Sales() {
               ))}
             </div>
           )}
-        </main>
-      </div>
-    </div>
+        </CardContent>
+      </Card>
+    </AppLayout>
   );
 }
