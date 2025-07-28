@@ -46,11 +46,6 @@ export default function Registers() {
   // Fetch branches for dropdown
   const { data: branches = [] } = useQuery({
     queryKey: ['/api/branches'],
-    queryFn: () => Promise.resolve([
-      { id: 1, name: "Main Branch", code: "MAIN001" },
-      { id: 2, name: "Downtown Branch", code: "DOWN002" },
-      { id: 3, name: "Uptown Branch", code: "UP003" }
-    ]),
   });
 
   // Fetch registers

@@ -340,38 +340,8 @@ router.put('/business-profile', async (req: any, res: any) => {
 // Branches routes
 router.get('/branches', async (req: any, res: any) => {
   try {
-    res.json([
-      {
-        id: 1,
-        name: "Main Branch",
-        code: "MAIN001",
-        address: "123 Main Street",
-        city: "New York",
-        state: "NY",
-        country: "United States",
-        postalCode: "10001",
-        phone: "+1-555-0123",
-        email: "main@mybusiness.com",
-        managerId: "John Doe",
-        isActive: true,
-        businessProfileId: 1
-      },
-      {
-        id: 2,
-        name: "Downtown Branch",
-        code: "DOWN002",
-        address: "456 Downtown Ave",
-        city: "New York",
-        state: "NY",
-        country: "United States",
-        postalCode: "10005",
-        phone: "+1-555-0124",
-        email: "downtown@mybusiness.com",
-        managerId: "Jane Smith",
-        isActive: true,
-        businessProfileId: 1
-      }
-    ]);
+    const branches = await db.select().from(schema.branches).limit(50);
+    res.json(branches);
   } catch (error) {
     console.error('Get branches error:', error);
     res.status(500).json({ message: 'Failed to fetch branches' });
@@ -401,6 +371,7 @@ router.get('/registers', async (req: any, res: any) => {
       currentBalance: sql`0`,
       lastOpened: schema.registers.openedAt,
       lastClosed: schema.registers.closedAt,
+      code: sql`'REG' || ${schema.registers.id}`,
     })
     .from(schema.registers)
     .leftJoin(schema.branches, eq(schema.registers.branchId, schema.branches.id))
