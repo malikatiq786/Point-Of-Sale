@@ -526,26 +526,41 @@ router.post('/stock/adjust', async (req: any, res: any) => {
 router.post('/warehouses', isAuthenticated, inventoryController.createWarehouse as any);
 router.put('/warehouses/:id', isAuthenticated, inventoryController.updateWarehouse as any);
 router.delete('/warehouses/:id', isAuthenticated, inventoryController.deleteWarehouse as any);
-// Stock transfers routes
+// Stock transfers routes - using in-memory storage
+let stockTransfers: any[] = [
+  {
+    id: 1,
+    fromWarehouseId: 1,
+    toWarehouseId: 2,
+    fromWarehouseName: "Main Warehouse",
+    toWarehouseName: "North Warehouse", 
+    transferDate: "2025-07-28T10:00:00Z",
+    status: "completed",
+    items: [
+      {
+        productName: "Final Test Product",
+        quantity: 2
+      }
+    ]
+  }
+];
+
 router.get('/stock/transfers', async (req: any, res: any) => {
   try {
-    res.json([
-      {
-        id: 1,
-        fromWarehouseId: 1,
-        toWarehouseId: 2,
-        fromWarehouseName: "Main Warehouse",
-        toWarehouseName: "North Warehouse", 
-        transferDate: "2025-07-28T10:00:00Z",
-        status: "completed",
-        items: [
-          {
-            productName: "Final Test Product",
-            quantity: 2
-          }
-        ]
-      }
-    ]);
+    // Get warehouse names for each transfer
+    const warehouses = await db.select().from(schema.warehouses);
+    const warehouseMap = warehouses.reduce((acc: Record<number, string>, warehouse: any) => {
+      acc[warehouse.id] = warehouse.name || "Unknown";
+      return acc;
+    }, {} as Record<number, string>);
+
+    const transfersWithNames = stockTransfers.map(transfer => ({
+      ...transfer,
+      fromWarehouseName: warehouseMap[transfer.fromWarehouseId] || "Unknown Warehouse",
+      toWarehouseName: warehouseMap[transfer.toWarehouseId] || "Unknown Warehouse"
+    }));
+
+    res.json(transfersWithNames);
   } catch (error) {
     console.error('Get stock transfers error:', error);
     res.status(500).json({ message: 'Failed to fetch stock transfers' });
@@ -554,16 +569,27 @@ router.get('/stock/transfers', async (req: any, res: any) => {
 
 router.post('/stock/transfers', async (req: any, res: any) => {
   try {
+    // Get warehouse names
+    const warehouses = await db.select().from(schema.warehouses);
+    const warehouseMap = warehouses.reduce((acc: Record<number, string>, warehouse: any) => {
+      acc[warehouse.id] = warehouse.name || "Unknown";
+      return acc;
+    }, {} as Record<number, string>);
+
     const transfer = {
       id: Date.now(),
       fromWarehouseId: req.body.fromWarehouseId,
       toWarehouseId: req.body.toWarehouseId,
-      fromWarehouseName: "Main Warehouse",
-      toWarehouseName: "North Warehouse",
-      transferDate: new Date(),
+      fromWarehouseName: warehouseMap[req.body.fromWarehouseId] || "Unknown Warehouse",
+      toWarehouseName: warehouseMap[req.body.toWarehouseId] || "Unknown Warehouse",
+      transferDate: new Date().toISOString(),
       status: "completed",
-      items: req.body.items
+      items: req.body.items || []
     };
+    
+    // Add to in-memory storage
+    stockTransfers.unshift(transfer); // Add to beginning of array
+    
     res.status(201).json(transfer);
   } catch (error) {
     console.error('Create stock transfer error:', error);
