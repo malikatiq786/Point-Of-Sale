@@ -235,22 +235,7 @@ export default function Sidebar({ user }: SidebarProps) {
           );
         })}
 
-        {/* Settings */}
-        <div className="pt-4">
-          <Link href="/settings">
-            <Button
-              variant={isActive("/settings") ? "default" : "ghost"}
-              className={`w-full justify-start px-4 py-3 ${
-                isActive("/settings") 
-                  ? "bg-primary-500 text-white hover:bg-primary-600" 
-                  : "text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              <Settings className="w-5 h-5 mr-3" />
-              Settings
-            </Button>
-          </Link>
-        </div>
+
       </nav>
 
       {/* Bottom Actions */}
