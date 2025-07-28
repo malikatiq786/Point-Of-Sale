@@ -366,12 +366,12 @@ router.get('/registers', async (req: any, res: any) => {
       name: schema.registers.name,
       branchId: schema.registers.branchId,
       branchName: schema.branches.name,
-      isActive: sql`true`,
-      openingBalance: sql`0`,
-      currentBalance: sql`0`,
+      code: schema.registers.code,
+      openingBalance: schema.registers.openingBalance,
+      currentBalance: schema.registers.currentBalance,
+      isActive: schema.registers.isActive,
       lastOpened: schema.registers.openedAt,
       lastClosed: schema.registers.closedAt,
-      code: sql`'REG' || ${schema.registers.id}`,
     })
     .from(schema.registers)
     .leftJoin(schema.branches, eq(schema.registers.branchId, schema.branches.id))
@@ -390,6 +390,10 @@ router.post('/registers', async (req: any, res: any) => {
       .values({
         name: req.body.name,
         branchId: req.body.branchId,
+        code: req.body.code,
+        openingBalance: req.body.openingBalance || 0,
+        currentBalance: req.body.openingBalance || 0,
+        isActive: req.body.isActive !== undefined ? req.body.isActive : true,
         openedAt: new Date()
       })
       .returning();
@@ -403,10 +407,6 @@ router.post('/registers', async (req: any, res: any) => {
     const response = {
       ...register,
       branchName: branch?.name || "Unknown Branch",
-      isActive: req.body.isActive || true,
-      openingBalance: req.body.openingBalance || 0,
-      currentBalance: req.body.openingBalance || 0,
-      code: req.body.code,
       lastOpened: register.openedAt,
       lastClosed: register.closedAt
     };
@@ -423,7 +423,11 @@ router.put('/registers/:id', async (req: any, res: any) => {
     const [register] = await db.update(schema.registers)
       .set({
         name: req.body.name,
-        branchId: req.body.branchId
+        branchId: req.body.branchId,
+        code: req.body.code,
+        openingBalance: req.body.openingBalance,
+        currentBalance: req.body.currentBalance,
+        isActive: req.body.isActive
       })
       .where(eq(schema.registers.id, parseInt(req.params.id)))
       .returning();
@@ -437,10 +441,6 @@ router.put('/registers/:id', async (req: any, res: any) => {
     const response = {
       ...register,
       branchName: branch?.name || "Unknown Branch",
-      isActive: req.body.isActive || true,
-      openingBalance: req.body.openingBalance || 0,
-      currentBalance: req.body.openingBalance || 0,
-      code: req.body.code,
       lastOpened: register.openedAt,
       lastClosed: register.closedAt
     };

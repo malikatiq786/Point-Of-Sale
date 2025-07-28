@@ -94,6 +94,10 @@ export const registers = pgTable("registers", {
   id: serial("id").primaryKey(),
   branchId: integer("branch_id").references(() => branches.id),
   name: varchar("name", { length: 150 }),
+  code: varchar("code", { length: 50 }),
+  openingBalance: numeric("opening_balance", { precision: 12, scale: 2 }).default("0"),
+  currentBalance: numeric("current_balance", { precision: 12, scale: 2 }).default("0"),
+  isActive: boolean("is_active").default(true),
   openedAt: timestamp("opened_at"),
   closedAt: timestamp("closed_at"),
 });
