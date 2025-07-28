@@ -84,7 +84,6 @@ export default function Products() {
                   <TableHead>Brand</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Stock</TableHead>
-                  <TableHead>Barcode</TableHead>
                   <TableHead>Low Stock Alert</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -147,15 +146,7 @@ export default function Products() {
                         <span className="text-gray-500 text-sm">units</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {product.barcode ? (
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                          {product.barcode}
-                        </code>
-                      ) : (
-                        <span className="text-gray-400 text-sm">No Barcode</span>
-                      )}
-                    </TableCell>
+
                     <TableCell>
                       <span className="text-sm text-gray-600">
                         {product.lowStockAlert || 0} units
