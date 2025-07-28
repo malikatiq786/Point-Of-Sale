@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ProductController } from '../controllers/ProductController';
 import { SaleController } from '../controllers/SaleController';
 import { DashboardController } from '../controllers/DashboardController';
-import { isAuthenticated } from '../replitAuth';
+import { isAuthenticated } from '../../replitAuth';
 
 // Initialize controllers
 const productController = new ProductController();

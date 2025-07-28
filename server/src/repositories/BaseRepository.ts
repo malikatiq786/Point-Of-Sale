@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
-import * as schema from '../../shared/schema';
+import * as schema from '../../../shared/schema';
 
 // Database connection
 const sql = neon(process.env.DATABASE_URL!);
@@ -101,7 +101,7 @@ export abstract class BaseRepository<T> {
   // Generic count
   async count(conditions?: any): Promise<number> {
     try {
-      let query = db.select({ count: sql`count(*)` }).from(this.table);
+      let query = db.select({ count: sql`count(*)::text` }).from(this.table);
       
       if (conditions) {
         query = query.where(conditions);

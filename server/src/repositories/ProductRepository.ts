@@ -1,5 +1,6 @@
 import { BaseRepository, eq, and, or, like } from './BaseRepository';
-import { products, categories, brands } from '../../shared/schema';
+import { sql } from 'drizzle-orm';
+import { products, categories, brands } from '../../../shared/schema';
 import { db } from './BaseRepository';
 
 export class ProductRepository extends BaseRepository<typeof products.$inferSelect> {
@@ -81,10 +82,9 @@ export class ProductRepository extends BaseRepository<typeof products.$inferSele
     try {
       return await db.select()
         .from(products)
-        .where(and(
-          products.stock !== null,
-          eq(products.stock < threshold, true)
-        ));
+        .where(
+          sql`${products.stock} < ${threshold}`
+        );
     } catch (error) {
       console.error('Error finding low stock products:', error);
       throw error;

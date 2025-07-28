@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { insertCustomerSchema, insertSaleSchema } from "@shared/schema";
-import { apiRoutes } from "./routes/index";
+import { apiRoutes } from "./src/routes/index";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware

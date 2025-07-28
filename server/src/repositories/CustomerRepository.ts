@@ -1,5 +1,5 @@
 import { BaseRepository, eq, like, or } from './BaseRepository';
-import { customers } from '../../shared/schema';
+import { customers } from '../../../shared/schema';
 
 export class CustomerRepository extends BaseRepository<typeof customers.$inferSelect> {
   constructor() {

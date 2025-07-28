@@ -1,5 +1,5 @@
 import { BaseRepository, eq, and, gte, lte } from './BaseRepository';
-import { sales, saleItems, customers, products } from '../../shared/schema';
+import { sales, saleItems, customers, products } from '../../../shared/schema';
 import { db } from './BaseRepository';
 
 export class SaleRepository extends BaseRepository<typeof sales.$inferSelect> {
@@ -95,7 +95,7 @@ export class SaleRepository extends BaseRepository<typeof sales.$inferSelect> {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       const results = await db.select({
-        total: sql`COALESCE(SUM(${sales.totalAmount}), 0)`
+        total: sql`COALESCE(SUM(${sales.totalAmount}), 0)::text`
       })
       .from(sales)
       .where(and(

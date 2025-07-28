@@ -1,5 +1,5 @@
 import { BaseRepository, eq, like } from './BaseRepository';
-import { categories } from '../../shared/schema';
+import { categories } from '../../../shared/schema';
 import { db } from './BaseRepository';
 
 export class CategoryRepository extends BaseRepository<typeof categories.$inferSelect> {
@@ -40,7 +40,7 @@ export class CategoryRepository extends BaseRepository<typeof categories.$inferS
       return await db.select({
         id: categories.id,
         name: categories.name,
-        productCount: sql`COUNT(p.id)`,
+        productCount: sql`COUNT(p.id)::text`,
       })
       .from(categories)
       .leftJoin(products, eq(categories.id, products.categoryId))
@@ -53,4 +53,4 @@ export class CategoryRepository extends BaseRepository<typeof categories.$inferS
 }
 
 import { sql } from 'drizzle-orm';
-import { products } from '../../shared/schema';
+import { products } from '../../../shared/schema';
