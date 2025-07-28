@@ -27,7 +27,7 @@ export default function POSTerminal() {
 
   // Fetch products
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ["/api/products", { search: searchQuery }],
+    queryKey: searchQuery ? ["/api/products?search=" + encodeURIComponent(searchQuery)] : ["/api/products"],
     retry: false,
   });
 
