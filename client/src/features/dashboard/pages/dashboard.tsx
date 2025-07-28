@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/sidebar";
-import DashboardStats from "./dashboard-stats";
+import DashboardStats from "../components/dashboard-stats";
 import RecentActivities from "@/components/recent-activities";
 import QuickSaleModal from "@/components/quick-sale-modal";
 import { Button } from "@/components/ui/button";

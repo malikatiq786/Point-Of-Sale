@@ -1,2 +1,2 @@
-export { default } from './settings';
+export { default } from './pages/settings';
 export * from './types';

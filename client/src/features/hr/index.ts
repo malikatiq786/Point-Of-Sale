@@ -1,2 +1,2 @@
-export { default as Employees } from './employees';
+export { default as Employees } from './pages/employees';
 export * from './types';

@@ -1,2 +1,2 @@
-export { default } from './purchases';
+export { default } from './pages/purchases';
 export * from './types';
