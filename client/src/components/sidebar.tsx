@@ -131,14 +131,22 @@ export default function Sidebar({ user }: SidebarProps) {
   ];
 
   const isItemVisible = (item: NavItem) => {
+    // Get the user's role - it could be a string or an object with name property
+    const userRole = typeof user?.role === 'string' ? user.role : user?.role?.name;
+    
+    // Debug: Log role information
+    if (process.env.NODE_ENV === 'development') {
+      console.log('User role check:', { userRole, itemName: item.name, allowedRoles: item.roles });
+    }
+    
     // Super Admin can see all modules
-    if (user?.role?.name === "Super Admin") return true;
+    if (userRole === "Super Admin") return true;
     
     // If no role restrictions, show to everyone
     if (!item.roles) return true;
     
     // Check if user's role is in the allowed roles
-    return item.roles.includes(user?.role?.name || "");
+    return item.roles.includes(userRole || "");
   };
 
   const isActive = (href: string) => {
@@ -170,7 +178,7 @@ export default function Sidebar({ user }: SidebarProps) {
               {user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'User'}
             </p>
             <Badge variant="outline" className="text-xs bg-primary-50 text-primary-600 border-primary-200">
-              {user?.role?.name || 'User'}
+              {typeof user?.role === 'string' ? user.role : user?.role?.name || 'User'}
             </Badge>
           </div>
         </div>
