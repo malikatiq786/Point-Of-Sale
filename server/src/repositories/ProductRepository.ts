@@ -38,12 +38,25 @@ export class ProductRepository {
   // Create new product
   async create(productData: any) {
     try {
+      console.log('ProductRepository: Creating product with data:', productData);
       const results = await storage.db.insert(schema.products)
-        .values(productData)
+        .values({
+          name: productData.name,
+          description: productData.description,
+          barcode: productData.barcode,
+          categoryId: productData.categoryId,
+          brandId: productData.brandId,
+          unitId: productData.unitId,
+          price: productData.price?.toString() || "0",
+          stock: productData.stock || 0,
+          lowStockAlert: productData.lowStockAlert || 0,
+          image: productData.image
+        })
         .returning();
+      console.log('ProductRepository: Insert result:', results);
       return results[0];
     } catch (error) {
-      console.error('Error creating product:', error);
+      console.error('ProductRepository: Error creating product:', error);
       throw error;
     }
   }

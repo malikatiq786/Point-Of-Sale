@@ -4,6 +4,8 @@ import { SaleController } from '../controllers/SaleController';
 import { DashboardController } from '../controllers/DashboardController';
 import { UserController } from '../controllers/UserController';
 import { InventoryController } from '../controllers/InventoryController';
+import { storage } from '../../storage';
+import * as schema from '../../../shared/schema';
 import { isAuthenticated } from '../../replitAuth';
 
 // Initialize controllers
@@ -16,9 +18,40 @@ const inventoryController = new InventoryController();
 // Create router
 const router = Router();
 
-// Product routes
+// Product routes  
 router.get('/products', isAuthenticated, productController.getProducts as any);
-router.post('/products', isAuthenticated, productController.createProduct as any);
+router.post('/products', isAuthenticated, async (req: any, res: any) => {
+  try {
+    console.log('Direct product creation in route:', req.body);
+    
+    if (!req.body.name) {
+      return res.status(400).json({ message: 'Product name is required' });
+    }
+
+    const productData = {
+      name: req.body.name,
+      description: req.body.description || null,
+      barcode: req.body.barcode || null,
+      categoryId: req.body.categoryId || null,
+      brandId: req.body.brandId || null,
+      unitId: req.body.unitId || null,
+      price: req.body.price?.toString() || "0",
+      stock: req.body.stock || 0,
+      lowStockAlert: req.body.lowStockAlert || 0,
+      image: req.body.image || null
+    };
+
+    const result = await storage.db.insert(schema.products)
+      .values(productData)
+      .returning();
+      
+    console.log('Direct route result:', result);
+    res.status(201).json(result[0]);
+  } catch (error) {
+    console.error('Direct route error:', error);
+    res.status(500).json({ message: 'Failed to create product', error: error.message });
+  }
+});
 router.get('/products/low-stock', isAuthenticated, productController.getLowStockProducts as any);
 router.get('/products/:id', isAuthenticated, productController.getProductById as any);
 // Categories and brands routes

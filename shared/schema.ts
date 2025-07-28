@@ -138,6 +138,13 @@ export const products = pgTable("products", {
   brandId: integer("brand_id").references(() => brands.id),
   unitId: integer("unit_id").references(() => units.id),
   description: text("description"),
+  barcode: varchar("barcode", { length: 255 }),
+  price: numeric("price", { precision: 10, scale: 2 }).default("0"),
+  stock: integer("stock").default(0),
+  lowStockAlert: integer("low_stock_alert").default(0),
+  image: text("image"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const productVariants = pgTable("product_variants", {

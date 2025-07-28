@@ -33,17 +33,35 @@ export class ProductService {
   // Create new product
   async createProduct(productData: any) {
     try {
+      console.log('ProductService: Creating product with data:', productData);
+      
       if (!productData.name) {
         return { success: false, error: 'Product name is required' };
       }
 
-      const product = await this.productRepository.create(productData);
+      // Prepare data with proper field mapping
+      const productToCreate = {
+        name: productData.name,
+        description: productData.description || null,
+        barcode: productData.barcode || null,
+        categoryId: productData.categoryId || null,
+        brandId: productData.brandId || null,
+        unitId: productData.unitId || null,
+        price: productData.price || 0,
+        stock: productData.stock || 0,
+        lowStockAlert: productData.lowStockAlert || 0,
+        image: productData.image || null
+      };
+
+      console.log('ProductService: Prepared product data:', productToCreate);
+      const product = await this.productRepository.create(productToCreate);
+      console.log('ProductService: Created product:', product);
       return { success: true, data: product };
     } catch (error) {
       console.error('ProductService: Error creating product:', error);
       return {
         success: false,
-        error: 'Failed to create product',
+        error: error.message || 'Failed to create product',
       };
     }
   }
