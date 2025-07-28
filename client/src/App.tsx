@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import Login from "@/features/auth/pages/login";
 import Dashboard from "@/features/dashboard";
 import { POSTerminal, Sales, Returns } from "@/features/sales";
 import { Products, Stock } from "@/features/products";
@@ -35,8 +36,15 @@ function Router() {
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
+      {isLoading ? (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-500"></div>
+        </div>
+      ) : !isAuthenticated ? (
+        <>
+          <Route path="/login" component={Login} />
+          <Route path="/" component={Login} />
+        </>
       ) : (
         <>
           <Route path="/" component={Dashboard} />

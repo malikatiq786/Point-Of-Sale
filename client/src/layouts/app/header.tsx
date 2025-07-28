@@ -13,8 +13,22 @@ import { useAuth } from "@/hooks/useAuth";
 function AppHeader() {
   const { user } = useAuth();
 
-  const handleLogout = () => {
-    window.location.href = "/api/auth/logout";
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      // Reload the page to trigger re-authentication
+      window.location.reload();
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Fallback to direct redirect
+      window.location.href = "/api/auth/logout";
+    }
   };
 
   return (

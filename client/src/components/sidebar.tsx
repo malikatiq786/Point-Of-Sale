@@ -245,7 +245,19 @@ export default function Sidebar({ user }: SidebarProps) {
         <Button
           variant="ghost"
           className="w-full justify-start px-4 py-3 text-gray-700 hover:bg-gray-100"
-          onClick={() => window.location.href = "/api/logout"}
+          onClick={async () => {
+            try {
+              await fetch("/api/auth/logout", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              });
+              window.location.reload();
+            } catch (error) {
+              window.location.href = "/api/auth/logout";
+            }
+          }}
         >
           <LogOut className="w-5 h-5 mr-3" />
           Logout

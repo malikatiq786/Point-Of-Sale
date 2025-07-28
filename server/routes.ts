@@ -824,7 +824,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Use new MVC routes
+  // Authentication APIs (placed before the generic MVC routes to avoid conflicts)
+  
+  // Mock user database with role-based access
+  const usersDatabase = [
+    {
+      id: 1,
+      email: "malikatiq@gmail.com",
+      password: "admin123", // In production, this should be hashed
+      name: "Malik Atiq",
+      role: "Super Admin",
+      permissions: ["all"], // Super admin has all permissions
+      avatar: null
+    },
+    {
+      id: 2,
+      email: "owner@company.com",
+      password: "owner123",
+      name: "Business Owner",
+      role: "Admin/Owner", 
+      permissions: ["business_management", "inventory", "sales", "finance", "hr", "reports"],
+      avatar: null
+    },
+    {
+      id: 3,
+      email: "manager@company.com",
+      password: "manager123",
+      name: "Store Manager",
+      role: "Manager",
+      permissions: ["inventory", "sales", "customers", "suppliers", "reports"],
+      avatar: null
+    },
+    {
+      id: 4,
+      email: "cashier@company.com", 
+      password: "cashier123",
+      name: "POS Cashier",
+      role: "Cashier",
+      permissions: ["pos", "sales", "customers_basic"],
+      avatar: null
+    },
+    {
+      id: 5,
+      email: "accountant@company.com",
+      password: "accountant123", 
+      name: "Financial Accountant",
+      role: "Accountant",
+      permissions: ["finance", "expenses", "accounting", "reports_financial"],
+      avatar: null
+    },
+    {
+      id: 6,
+      email: "warehouse@company.com",
+      password: "warehouse123",
+      name: "Warehouse Staff", 
+      role: "Warehouse Staff",
+      permissions: ["inventory", "stock_management", "transfers", "reports_inventory"],
+      avatar: null
+    }
+  ];
+
+  // Current logged-in user session storage
+  let currentUser: any = null;
+
+  app.post('/api/auth/login', (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+
+      // Find user in mock database
+      const user = usersDatabase.find(u => u.email === email && u.password === password);
+      
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      // Set current user session
+      currentUser = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        permissions: user.permissions,
+        avatar: user.avatar
+      };
+
+      console.log('User logged in:', currentUser);
+      
+      res.json({ 
+        message: 'Login successful',
+        user: currentUser
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Login failed' });
+    }
+  });
+
+  app.get('/api/auth/user', (req, res) => {
+    try {
+      if (!currentUser) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+      
+      res.json(currentUser);
+    } catch (error) {
+      console.error('Get user error:', error);
+      res.status(500).json({ message: 'Failed to fetch user' });
+    }
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    try {
+      const loggedOutUser = currentUser?.name || 'Unknown user';
+      currentUser = null;
+      
+      console.log('User logged out:', loggedOutUser);
+      res.json({ message: 'Logout successful' });
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.status(500).json({ message: 'Logout failed' });
+    }
+  });
+
+  app.get('/api/auth/logout', (req, res) => {
+    try {
+      const loggedOutUser = currentUser?.name || 'Unknown user';
+      currentUser = null;
+      
+      console.log('User logged out:', loggedOutUser);
+      res.redirect('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.status(500).json({ message: 'Logout failed' });
+    }
+  });
+
+  // Use new MVC routes (after auth routes to avoid conflicts)
   app.use('/api', apiRoutes);
 
   // Legacy routes for compatibility (will be gradually migrated)
