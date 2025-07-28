@@ -53,7 +53,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 100 }),
   email: varchar("email", { length: 150 }).unique().notNull(),
-  password: text("password").notNull(),
+  password: text("password"), // Made nullable for Replit Auth
   roleId: integer("role_id").references(() => roles.id),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
