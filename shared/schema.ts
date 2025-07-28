@@ -155,6 +155,55 @@ export const stock = pgTable("stock", {
   quantity: numeric("quantity", { precision: 12, scale: 2 }).default("0"),
 });
 
+export const productAttributes = pgTable("product_attributes", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }),
+});
+
+export const productAttributeValues = pgTable("product_attribute_values", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id),
+  attributeId: integer("attribute_id").references(() => productAttributes.id),
+  value: text("value"),
+});
+
+export const productBundleItems = pgTable("product_bundle_items", {
+  id: serial("id").primaryKey(),
+  bundleId: integer("bundle_id").references(() => products.id),
+  itemId: integer("item_id").references(() => products.id),
+  quantity: numeric("quantity", { precision: 10, scale: 2 }),
+});
+
+export const stockAdjustments = pgTable("stock_adjustments", {
+  id: serial("id").primaryKey(),
+  warehouseId: integer("warehouse_id").references(() => warehouses.id),
+  userId: varchar("user_id").references(() => users.id),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const stockTransfers = pgTable("stock_transfers", {
+  id: serial("id").primaryKey(),
+  fromWarehouseId: integer("from_warehouse_id").references(() => warehouses.id),
+  toWarehouseId: integer("to_warehouse_id").references(() => warehouses.id),
+  transferDate: timestamp("transfer_date"),
+  status: varchar("status", { length: 50 }),
+});
+
+export const stockTransferItems = pgTable("stock_transfer_items", {
+  id: serial("id").primaryKey(),
+  transferId: integer("transfer_id").references(() => stockTransfers.id),
+  productVariantId: integer("product_variant_id").references(() => productVariants.id),
+  quantity: numeric("quantity", { precision: 12, scale: 2 }),
+});
+
+export const productImei = pgTable("product_imei", {
+  id: serial("id").primaryKey(),
+  productVariantId: integer("product_variant_id").references(() => productVariants.id),
+  imei: varchar("imei", { length: 50 }).unique(),
+  status: varchar("status", { length: 50 }).default("available"),
+});
+
 // =========================================
 // 👥 CRM & Customers
 // =========================================
@@ -199,6 +248,81 @@ export const saleItems = pgTable("sale_items", {
   price: numeric("price", { precision: 12, scale: 2 }),
 });
 
+export const returns = pgTable("returns", {
+  id: serial("id").primaryKey(),
+  saleId: integer("sale_id").references(() => sales.id),
+  userId: varchar("user_id").references(() => users.id),
+  reason: text("reason"),
+  returnDate: timestamp("return_date"),
+});
+
+// =========================================
+// 📥 Purchases & Suppliers
+// =========================================
+
+export const purchases = pgTable("purchases", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  userId: varchar("user_id").references(() => users.id),
+  totalAmount: numeric("total_amount", { precision: 12, scale: 2 }),
+  purchaseDate: timestamp("purchase_date"),
+  status: varchar("status", { length: 50 }),
+});
+
+export const purchaseItems = pgTable("purchase_items", {
+  id: serial("id").primaryKey(),
+  purchaseId: integer("purchase_id").references(() => purchases.id),
+  productVariantId: integer("product_variant_id").references(() => productVariants.id),
+  quantity: numeric("quantity", { precision: 10, scale: 2 }),
+  costPrice: numeric("cost_price", { precision: 12, scale: 2 }),
+});
+
+export const supplierLedgers = pgTable("supplier_ledgers", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  amount: numeric("amount", { precision: 12, scale: 2 }),
+  type: varchar("type", { length: 20 }),
+  reference: text("reference"),
+  date: timestamp("date").defaultNow(),
+});
+
+export const customerLedgers = pgTable("customer_ledgers", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id),
+  amount: numeric("amount", { precision: 12, scale: 2 }),
+  type: varchar("type", { length: 20 }),
+  reference: text("reference"),
+  date: timestamp("date").defaultNow(),
+});
+
+// =========================================
+// 💰 Payments & Accounting
+// =========================================
+
+export const accounts = pgTable("accounts", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }),
+  type: varchar("type", { length: 50 }),
+});
+
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  accountId: integer("account_id").references(() => accounts.id),
+  amount: numeric("amount", { precision: 12, scale: 2 }),
+  paymentType: varchar("payment_type", { length: 50 }),
+  reference: text("reference"),
+  date: timestamp("date").defaultNow(),
+});
+
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  accountId: integer("account_id").references(() => accounts.id),
+  type: varchar("type", { length: 20 }),
+  amount: numeric("amount", { precision: 12, scale: 2 }),
+  reference: text("reference"),
+  date: timestamp("date").defaultNow(),
+});
+
 // =========================================
 // 💸 Expenses
 // =========================================
@@ -215,6 +339,63 @@ export const expenses = pgTable("expenses", {
   note: text("note"),
   expenseDate: timestamp("expense_date"),
   createdBy: varchar("created_by").references(() => users.id),
+});
+
+// =========================================
+// ⚙️ Settings & Configuration
+// =========================================
+
+export const settings = pgTable("settings", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 100 }).unique(),
+  value: text("value"),
+});
+
+export const backupLogs = pgTable("backup_logs", {
+  id: serial("id").primaryKey(),
+  filename: text("filename"),
+  backupDate: timestamp("backup_date").defaultNow(),
+});
+
+// =========================================
+// 🔔 Notifications
+// =========================================
+
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id),
+  message: text("message"),
+  type: varchar("type", { length: 50 }),
+  status: varchar("status", { length: 50 }).default("unread"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// =========================================
+// 👨‍💼 Human Resource (Optional)
+// =========================================
+
+export const employees = pgTable("employees", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 150 }),
+  phone: varchar("phone", { length: 20 }),
+  email: varchar("email", { length: 100 }),
+  position: varchar("position", { length: 100 }),
+  joinDate: timestamp("join_date"),
+});
+
+export const attendances = pgTable("attendances", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").references(() => employees.id),
+  date: date("date"),
+  checkIn: timestamp("check_in"),
+  checkOut: timestamp("check_out"),
+});
+
+export const salaries = pgTable("salaries", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").references(() => employees.id),
+  amount: numeric("amount", { precision: 12, scale: 2 }),
+  payDate: timestamp("pay_date"),
 });
 
 // =========================================
@@ -303,6 +484,17 @@ export type Customer = typeof customers.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type Brand = typeof brands.$inferSelect;
 export type Stock = typeof stock.$inferSelect;
+export type Supplier = typeof suppliers.$inferSelect;
+export type Purchase = typeof purchases.$inferSelect;
+export type PurchaseItem = typeof purchaseItems.$inferSelect;
+export type Account = typeof accounts.$inferSelect;
+export type Payment = typeof payments.$inferSelect;
+export type Transaction = typeof transactions.$inferSelect;
+export type Expense = typeof expenses.$inferSelect;
+export type ExpenseCategory = typeof expenseCategories.$inferSelect;
+export type Employee = typeof employees.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+export type Setting = typeof settings.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -319,9 +511,17 @@ export const upsertUserSchema = createInsertSchema(users).omit({
 export const insertProductSchema = createInsertSchema(products);
 export const insertSaleSchema = createInsertSchema(sales);
 export const insertCustomerSchema = createInsertSchema(customers);
+export const insertSupplierSchema = createInsertSchema(suppliers);
+export const insertPurchaseSchema = createInsertSchema(purchases);
+export const insertEmployeeSchema = createInsertSchema(employees);
+export const insertExpenseSchema = createInsertSchema(expenses);
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type InsertSale = z.infer<typeof insertSaleSchema>;
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
+export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
