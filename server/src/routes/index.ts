@@ -223,10 +223,12 @@ let returnsStorage: any[] = [
 // Returns routes
 router.get('/returns', isAuthenticated, async (req: any, res: any) => {
   try {
+    console.log('Fetching returns, current storage has:', returnsStorage.length, 'items');
     // Return all returns from storage, sorted by creation date (newest first)
     const sortedReturns = [...returnsStorage].sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+    console.log('Returning sorted returns:', sortedReturns.map(r => ({ id: r.id, reason: r.reason })));
     res.json(sortedReturns);
   } catch (error) {
     console.error('Get returns error:', error);
@@ -244,11 +246,12 @@ router.post('/returns', isAuthenticated, async (req: any, res: any) => {
       { id: 4, totalAmount: "49.99", customer: { name: "Sarah Wilson" }}
     ];
     
-    const sale = salesData.find(s => s.id === parseInt(req.body.saleId));
+    const saleId = parseInt(req.body.saleId);
+    const sale = salesData.find(s => s.id === saleId);
     
     const returnData = {
       id: Date.now(),
-      saleId: parseInt(req.body.saleId),
+      saleId: saleId,
       reason: req.body.reason,
       items: req.body.items || [],
       status: "pending",
@@ -260,7 +263,8 @@ router.post('/returns', isAuthenticated, async (req: any, res: any) => {
     // Add to storage
     returnsStorage.push(returnData);
     
-    console.log('Return created:', returnData);
+    console.log('Return created and added to storage:', returnData);
+    console.log('Total returns in storage:', returnsStorage.length);
     res.status(201).json(returnData);
   } catch (error) {
     console.error('Create return error:', error);

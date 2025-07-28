@@ -22,6 +22,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // In-memory storage for returns
+  let returnsStorage: any[] = [
+    {
+      id: 1,
+      saleId: 1,
+      reason: "Defective product - screen cracked on arrival",
+      status: "processed",
+      totalAmount: "599.99",
+      customerName: "John Smith",
+      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      items: [{ productName: "Samsung Galaxy S23", quantity: 1 }]
+    },
+    {
+      id: 2,
+      saleId: 2,
+      reason: "Wrong size ordered",
+      status: "pending",
+      totalAmount: "129.99",
+      customerName: "Jane Doe",
+      createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      items: [{ productName: "Nike Air Max", quantity: 1 }]
+    },
+    {
+      id: 3,
+      saleId: 3,
+      reason: "Customer changed mind - no longer needed",
+      status: "approved",
+      totalAmount: "89.99",
+      customerName: "Mike Johnson",
+      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      items: [{ productName: "Sony Headphones", quantity: 1 }]
+    }
+  ];
+
+  // Returns routes
+  app.get('/api/returns', isAuthenticated, async (req: any, res: any) => {
+    try {
+      console.log('MAIN ROUTES: Fetching returns, current storage has:', returnsStorage.length, 'items');
+      const sortedReturns = [...returnsStorage].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      console.log('MAIN ROUTES: Returning sorted returns:', sortedReturns.map(r => ({ id: r.id, reason: r.reason })));
+      res.json(sortedReturns);
+    } catch (error) {
+      console.error('Get returns error:', error);
+      res.status(500).json({ message: 'Failed to fetch returns' });
+    }
+  });
+
+  app.post('/api/returns', isAuthenticated, async (req: any, res: any) => {
+    try {
+      const salesData = [
+        { id: 1, totalAmount: "599.99", customer: { name: "John Smith" }},
+        { id: 2, totalAmount: "129.99", customer: { name: "Jane Doe" }},
+        { id: 3, totalAmount: "89.99", customer: { name: "Mike Johnson" }},
+        { id: 4, totalAmount: "49.99", customer: { name: "Sarah Wilson" }}
+      ];
+      
+      const saleId = parseInt(req.body.saleId);
+      const sale = salesData.find(s => s.id === saleId);
+      
+      const returnData = {
+        id: Date.now(),
+        saleId: saleId,
+        reason: req.body.reason,
+        items: req.body.items || [],
+        status: "pending",
+        totalAmount: sale?.totalAmount || "0.00",
+        customerName: sale?.customer?.name || "Walk-in Customer",
+        createdAt: new Date().toISOString()
+      };
+      
+      returnsStorage.push(returnData);
+      
+      console.log('MAIN ROUTES: Return created and added to storage:', returnData);
+      console.log('MAIN ROUTES: Total returns in storage:', returnsStorage.length);
+      res.status(201).json(returnData);
+    } catch (error) {
+      console.error('Create return error:', error);
+      res.status(500).json({ message: 'Failed to create return' });
+    }
+  });
+
   // Use new MVC routes
   app.use('/api', apiRoutes);
 
