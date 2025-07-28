@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { insertCustomerSchema, insertSaleSchema } from "@shared/schema";
+import { apiRoutes } from "./routes/index";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -21,7 +22,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard routes
+  // Use new MVC routes
+  app.use('/api', apiRoutes);
+
+  // Legacy routes for compatibility (will be gradually migrated)
   app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
     try {
       const stats = await storage.getDashboardStats();
