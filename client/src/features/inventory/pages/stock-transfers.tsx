@@ -15,6 +15,8 @@ import { Label } from "@/components/ui/label";
 export default function StockTransfers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [selectedTransfer, setSelectedTransfer] = useState<any>(null);
   const [transfer, setTransfer] = useState({
     fromWarehouseId: "",
     toWarehouseId: "",
@@ -162,6 +164,11 @@ export default function StockTransfers() {
     }
   };
 
+  const handleViewDetails = (transfer: any) => {
+    setSelectedTransfer(transfer);
+    setShowDetailsDialog(true);
+  };
+
   return (
     <AppLayout>
       <div className="mb-6">
@@ -305,6 +312,78 @@ export default function StockTransfers() {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* View Details Dialog */}
+        <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Transfer Details</DialogTitle>
+            </DialogHeader>
+            {selectedTransfer && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Transfer ID</Label>
+                    <p className="text-sm">{selectedTransfer.id}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Status</Label>
+                    <Badge className={getStatusColor(selectedTransfer.status)}>
+                      {selectedTransfer.status || 'Pending'}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">From Warehouse</Label>
+                    <p className="text-sm">{selectedTransfer.fromWarehouseName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">To Warehouse</Label>
+                    <p className="text-sm">{selectedTransfer.toWarehouseName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Transfer Date</Label>
+                    <p className="text-sm">{new Date(selectedTransfer.transferDate).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-500 mb-3 block">Items Transferred</Label>
+                  <div className="border rounded-lg divide-y">
+                    {selectedTransfer.items && selectedTransfer.items.length > 0 ? (
+                      selectedTransfer.items.map((item: any, index: number) => (
+                        <div key={index} className="p-3 flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">
+                              {item.productName || `Product ID: ${item.productVariantId}`}
+                            </p>
+                            {item.productVariantId && (
+                              <p className="text-xs text-gray-500">
+                                Variant ID: {item.productVariantId}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+                              {item.quantity} units
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-3 text-center text-gray-500">
+                        No items information available
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button onClick={() => setShowDetailsDialog(false)}>Close</Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -374,7 +453,7 @@ export default function StockTransfers() {
                     <Badge className={getStatusColor(transfer.status)}>
                       {transfer.status || 'Pending'}
                     </Badge>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(transfer)}>
                       View Details
                     </Button>
                   </div>
