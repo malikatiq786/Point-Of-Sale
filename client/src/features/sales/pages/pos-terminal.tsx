@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { AppLayout } from "@/layouts";
+import PosLayout from "@/layouts/app/pos-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -136,7 +136,7 @@ export default function POSTerminal() {
     }
 
     // Validate opening balance matches register's expected opening balance
-    const expectedBalance = parseFloat(register.openingBalance);
+    const expectedBalance = parseFloat(String(register.openingBalance));
     if (Math.abs(openingBalance - expectedBalance) > 0.01) {
       toast({
         title: "Opening Balance Mismatch",
@@ -363,7 +363,7 @@ export default function POSTerminal() {
       id: `INV-${Date.now()}`,
       date: new Date().toLocaleDateString(),
       time: new Date().toLocaleTimeString(),
-      cashier: user?.name || 'Cashier',
+      cashier: (user as any)?.name || 'Cashier',
       customer: customer?.name ? customer : undefined,
       items: cart,
       subtotal: getSubtotal(),
@@ -446,7 +446,7 @@ export default function POSTerminal() {
   };
 
   return (
-    <AppLayout>
+    <PosLayout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className={`max-w-7xl mx-auto ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
         {/* Modern Header */}
@@ -487,7 +487,7 @@ export default function POSTerminal() {
               </div>
               
               <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 px-3 py-1">
-                {user?.name || 'Cashier'} • Staff
+                {(user as any)?.name || 'Cashier'} • Staff
               </Badge>
               <Button 
                 variant="outline" 
@@ -1184,7 +1184,7 @@ export default function POSTerminal() {
                       .filter((register) => register.isActive)
                       .map((register) => (
                       <SelectItem key={register.id} value={register.id.toString()}>
-                        {register.name} ({register.branchName}) - Expected: ${parseFloat(register.openingBalance).toFixed(2)}
+                        {register.name} ({register.branchName}) - Expected: ${parseFloat(String(register.openingBalance)).toFixed(2)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1196,7 +1196,7 @@ export default function POSTerminal() {
                   <Label>Opening Balance Verification</Label>
                   <div className="mt-2 p-3 bg-blue-50 rounded-lg">
                     <div className="text-sm text-blue-800">
-                      <strong>Expected Opening Balance:</strong> ${parseFloat(selectedRegister?.openingBalance || 0).toFixed(2)}
+                      <strong>Expected Opening Balance:</strong> ${parseFloat(String(selectedRegister?.openingBalance || 0)).toFixed(2)}
                     </div>
                     <div className="text-xs text-blue-600 mt-1">
                       Please count the cash drawer and confirm this amount matches
@@ -1232,6 +1232,6 @@ export default function POSTerminal() {
         </Dialog>
       </div>
     </div>
-    </AppLayout>
+    </PosLayout>
   );
 }

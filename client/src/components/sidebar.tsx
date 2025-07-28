@@ -63,69 +63,69 @@ export default function Sidebar({ user }: SidebarProps) {
     {
       title: "POINT OF SALE",
       items: [
-        { name: "POS Terminal", href: "/pos", icon: ShoppingCart },
-        { name: "Sales History", href: "/sales", icon: Receipt },
-        { name: "Returns", href: "/returns", icon: RotateCcw },
+        { name: "POS Terminal", href: "/pos", icon: ShoppingCart, roles: ["Super Admin", "Admin/Owner", "Manager", "Cashier"] },
+        { name: "Sales History", href: "/sales", icon: Receipt, roles: ["Super Admin", "Admin/Owner", "Manager", "Cashier"] },
+        { name: "Returns", href: "/returns", icon: RotateCcw, roles: ["Super Admin", "Admin/Owner", "Manager"] },
       ]
     },
     {
       title: "INVENTORY",
       items: [
-        { name: "Products", href: "/products", icon: Package },
-        { name: "Categories", href: "/categories", icon: Tags },
-        { name: "Brands", href: "/brands", icon: Package },
-        { name: "Units", href: "/units", icon: Package },
-        { name: "Stock Management", href: "/stock", icon: Warehouse },
-        { name: "Stock Transfers", href: "/stock-transfers", icon: Truck },
-        { name: "Stock Adjustments", href: "/stock-adjustments", icon: Package },
-        { name: "Warehouses", href: "/warehouses", icon: Warehouse },
+        { name: "Products", href: "/products", icon: Package, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
+        { name: "Categories", href: "/categories", icon: Tags, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Brands", href: "/brands", icon: Package, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Units", href: "/units", icon: Package, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Stock Management", href: "/stock", icon: Warehouse, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
+        { name: "Stock Transfers", href: "/stock-transfers", icon: Truck, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
+        { name: "Stock Adjustments", href: "/stock-adjustments", icon: Package, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
+        { name: "Warehouses", href: "/warehouses", icon: Warehouse, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
       ]
     },
     {
       title: "BUSINESS",
       items: [
-        { name: "Customers", href: "/customers", icon: Users },
-        { name: "Suppliers", href: "/suppliers", icon: Truck },
-        { name: "Purchases", href: "/purchases", icon: ShoppingBag },
-        { name: "Customer Ledgers", href: "/customer-ledgers", icon: CreditCard },
-        { name: "Supplier Ledgers", href: "/supplier-ledgers", icon: CreditCard },
+        { name: "Customers", href: "/customers", icon: Users, roles: ["Super Admin", "Admin/Owner", "Manager", "Cashier"] },
+        { name: "Suppliers", href: "/suppliers", icon: Truck, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
+        { name: "Purchases", href: "/purchases", icon: ShoppingBag, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
+        { name: "Customer Ledgers", href: "/customer-ledgers", icon: CreditCard, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
+        { name: "Supplier Ledgers", href: "/supplier-ledgers", icon: CreditCard, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
       ]
     },
     {
       title: "FINANCIAL",
       items: [
-        { name: "Payments", href: "/payments", icon: CreditCard },
-        { name: "Expenses", href: "/expenses", icon: DollarSign },
-        { name: "Accounts", href: "/accounts", icon: CreditCard },
-        { name: "Transactions", href: "/transactions", icon: Receipt },
-        { name: "Reports", href: "/reports", icon: PieChart },
+        { name: "Payments", href: "/payments", icon: CreditCard, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
+        { name: "Expenses", href: "/expenses", icon: DollarSign, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
+        { name: "Accounts", href: "/accounts", icon: CreditCard, roles: ["Super Admin", "Admin/Owner", "Accountant"] },
+        { name: "Transactions", href: "/transactions", icon: Receipt, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
+        { name: "Reports", href: "/reports", icon: PieChart, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
       ]
     },
     {
       title: "HUMAN RESOURCES",
       items: [
-        { name: "Employees", href: "/employees", icon: UserCheck },
-        { name: "Attendance", href: "/attendance", icon: Clock },
-        { name: "Payroll", href: "/payroll", icon: Wallet },
+        { name: "Employees", href: "/employees", icon: UserCheck, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Attendance", href: "/attendance", icon: Clock, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["Super Admin", "Admin/Owner", "Accountant"] },
       ]
     },
     {
       title: "BUSINESS SETUP",
       items: [
-        { name: "Business Profile", href: "/business-profile", icon: Store },
-        { name: "Branches", href: "/branches", icon: Store },
-        { name: "Registers", href: "/registers", icon: ShoppingCart },
+        { name: "Business Profile", href: "/business-profile", icon: Store, roles: ["Super Admin", "Admin/Owner"] },
+        { name: "Branches", href: "/branches", icon: Store, roles: ["Super Admin", "Admin/Owner"] },
+        { name: "Registers", href: "/registers", icon: ShoppingCart, roles: ["Super Admin", "Admin/Owner", "Manager"] },
       ]
     },
     {
       title: "SYSTEM",
       items: [
-        { name: "Users", href: "/users", icon: Shield },
-        { name: "Roles & Permissions", href: "/roles", icon: Shield },
-        { name: "Activity Logs", href: "/activity-logs", icon: Receipt },
-        { name: "Notifications", href: "/notifications", icon: Receipt },
-        { name: "Backups", href: "/backups", icon: Settings },
-        { name: "Settings", href: "/settings", icon: Settings },
+        { name: "Users", href: "/users", icon: Shield, roles: ["Super Admin"] },
+        { name: "Roles & Permissions", href: "/roles", icon: Shield, roles: ["Super Admin"] },
+        { name: "Activity Logs", href: "/activity-logs", icon: Receipt, roles: ["Super Admin", "Admin/Owner"] },
+        { name: "Notifications", href: "/notifications", icon: Receipt, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Backups", href: "/backups", icon: Settings, roles: ["Super Admin"] },
+        { name: "Settings", href: "/settings", icon: Settings, roles: ["Super Admin", "Admin/Owner"] },
       ]
     }
   ];
