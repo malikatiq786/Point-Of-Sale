@@ -20,6 +20,7 @@ import Notifications from "@/features/users/pages/notifications";
 import Settings from "@/features/settings";
 import Categories from "@/features/categories";
 import Purchases from "@/features/purchases";
+import AddPurchase from "@/features/purchases/pages/add-purchase";
 import { Warehouses, StockManagement, StockTransfers, StockAdjustments } from "@/features/inventory";
 import AddProduct from "@/features/products/pages/add-product";
 
@@ -41,6 +42,7 @@ function Router() {
           <Route path="/customers" component={Customers} />
           <Route path="/suppliers" component={Suppliers} />
           <Route path="/purchases" component={Purchases} />
+          <Route path="/purchases/add" component={AddPurchase} />
           <Route path="/sales" component={Sales} />
           <Route path="/expenses" component={Expenses} />
           <Route path="/employees" component={Employees} />
