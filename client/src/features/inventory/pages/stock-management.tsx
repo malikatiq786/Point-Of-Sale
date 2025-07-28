@@ -37,16 +37,38 @@ export default function StockManagement() {
   });
 
   const adjustStockMutation = useMutation({
-    mutationFn: (adjustmentData: any) => apiRequest("/api/stock/adjust", {
-      method: "POST",
-      body: JSON.stringify(adjustmentData),
-    }),
+    mutationFn: async (adjustmentData: any) => {
+      // Create the adjustment record
+      const response = await fetch("/api/stock/adjustments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          warehouseId: adjustmentData.warehouseId,
+          reason: adjustmentData.reason,
+          items: [{
+            productName: selectedStock?.productName,
+            quantity: adjustmentData.quantityChange,
+            previousQuantity: Math.round(parseFloat(selectedStock?.quantity || '0')),
+            newQuantity: Math.round(parseFloat(selectedStock?.quantity || '0')) + adjustmentData.quantityChange
+          }]
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to create stock adjustment");
+      }
+      
+      return await response.json();
+    },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Stock adjusted successfully",
+        description: "Stock adjusted successfully and logged in adjustments history",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/stock"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stock/adjustments"] });
       setShowAdjustDialog(false);
       setAdjustment({ type: "increase", quantity: "", reason: "" });
     },
