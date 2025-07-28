@@ -51,10 +51,7 @@ export default function AddProduct() {
 
   // Create product mutation
   const createProductMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('/api/products', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    mutationFn: (data: any) => apiRequest('POST', '/api/products', data),
     onSuccess: () => {
       toast({
         title: "Success",
