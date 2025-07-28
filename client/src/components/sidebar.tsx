@@ -134,11 +134,6 @@ export default function Sidebar({ user }: SidebarProps) {
     // Get the user's role - it could be a string or an object with name property
     const userRole = typeof user?.role === 'string' ? user.role : user?.role?.name;
     
-    // Debug: Log role information
-    if (process.env.NODE_ENV === 'development') {
-      console.log('User role check:', { userRole, itemName: item.name, allowedRoles: item.roles });
-    }
-    
     // Super Admin can see all modules
     if (userRole === "Super Admin") return true;
     

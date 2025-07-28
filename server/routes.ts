@@ -10,12 +10,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Custom login endpoint that bypasses Replit auth for development
+  app.post('/api/auth/login', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUserWithRole(userId);
-      res.json(user);
+      const { email, password } = req.body;
+      console.log('Login attempt for:', email);
+      
+      // Get user from database with role information
+      const user = await storage.getUserByEmail(email);
+      console.log('Found user:', user);
+      
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      
+      // For development, we'll skip password verification
+      // In production, you'd verify the password hash here
+      
+      // Store user in session
+      req.session.user = user;
+      console.log('User logged in:', user);
+      
+      res.json({ 
+        message: 'Login successful', 
+        user: user 
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Login failed' });
+    }
+  });
+
+  // Logout endpoint
+  app.post('/api/auth/logout', (req: any, res) => {
+    const user = req.session?.user;
+    console.log('User logged out:', user?.name || 'Unknown user');
+    req.session.destroy((err: any) => {
+      if (err) {
+        console.error('Logout error:', err);
+        return res.status(500).json({ message: 'Logout failed' });
+      }
+      res.json({ message: 'Logout successful' });
+    });
+  });
+
+  // Get current user (modified to use session)
+  app.get('/api/auth/user', async (req: any, res) => {
+    try {
+      // Check session first
+      if (req.session?.user) {
+        return res.json(req.session.user);
+      }
+      
+      // Fallback to Replit auth if available
+      if (req.user?.claims?.sub) {
+        const userId = req.user.claims.sub;
+        const user = await storage.getUserWithRole(userId);
+        return res.json(user);
+      }
+      
+      res.status(401).json({ message: 'Not authenticated' });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });

@@ -18,7 +18,7 @@ export default function Login() {
 
   const { toast } = useToast();
 
-  // Test credentials for different user roles
+  // Test credentials for different user roles (based on actual database users)
   const testCredentials = [
     {
       role: "Super Admin",
@@ -29,36 +29,36 @@ export default function Login() {
     },
     {
       role: "Admin/Owner",
-      email: "owner@company.com",
-      password: "owner123",
+      email: "sarah.johnson@company.com",
+      password: "admin123",
       description: "Business owner - Full access except role management",
       color: "bg-purple-100 text-purple-800"
     },
     {
       role: "Manager",
-      email: "manager@company.com",
-      password: "manager123",
+      email: "mike.wilson@company.com",
+      password: "admin123",
       description: "Store manager - Operations, sales, inventory, reports",
       color: "bg-blue-100 text-blue-800"
     },
     {
       role: "Cashier",
-      email: "cashier@company.com",
-      password: "cashier123",
+      email: "emma.davis@company.com",
+      password: "admin123",
       description: "POS operator - Limited to sales and basic customer management",
       color: "bg-green-100 text-green-800"
     },
     {
       role: "Accountant",
-      email: "accountant@company.com",
-      password: "accountant123",
+      email: "lisa.brown@company.com",
+      password: "admin123",
       description: "Financial staff - Expenses, purchases, accounting, reports",
       color: "bg-yellow-100 text-yellow-800"
     },
     {
       role: "Warehouse Staff",
-      email: "warehouse@company.com",
-      password: "warehouse123",
+      email: "david.miller@company.com",
+      password: "admin123",
       description: "Inventory staff - Stock management, transfers, inventory reports",
       color: "bg-orange-100 text-orange-800"
     }

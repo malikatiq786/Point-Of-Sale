@@ -11,12 +11,12 @@ export default function LogoutButton() {
         },
       });
       
-      // Reload the page to trigger re-authentication
-      window.location.reload();
+      // Redirect to login page after logout
+      window.location.href = "/login";
     } catch (error) {
       console.error("Logout error:", error);
-      // Fallback to direct redirect
-      window.location.href = "/api/auth/logout";
+      // Fallback to login page redirect
+      window.location.href = "/login";
     }
   };
 

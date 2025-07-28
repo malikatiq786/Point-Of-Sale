@@ -32,6 +32,7 @@ export interface IStorage {
   // Role operations
   getRoles(): Promise<Role[]>;
   getUserWithRole(id: string): Promise<(User & { role: Role | null }) | undefined>;
+  getUserByEmail(email: string): Promise<(User & { role: string }) | undefined>;
   
   // Product operations
   getProducts(limit?: number): Promise<(Product & { 
@@ -112,6 +113,30 @@ export class DatabaseStorage implements IStorage {
       ...result.users,
       role: result.roles
     };
+  }
+
+  async getUserByEmail(email: string): Promise<(User & { role: string }) | undefined> {
+    const result = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        roleId: users.roleId,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        role: roles.name,
+      })
+      .from(users)
+      .leftJoin(roles, eq(users.roleId, roles.id))
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (result.length === 0) return undefined;
+
+    return result[0];
   }
 
   async getProducts(limit = 50): Promise<any[]> {
