@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, Package, Eye } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, Eye, Filter, X } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Products() {
@@ -17,6 +18,10 @@ export default function Products() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [brandFilter, setBrandFilter] = useState("");
+  const [stockFilter, setStockFilter] = useState("");
+  const [priceFilter, setPriceFilter] = useState("");
 
   // Fetch products
   const { data: products = [], isLoading } = useQuery({
@@ -24,11 +29,61 @@ export default function Products() {
     retry: false,
   });
 
-  const filteredProducts = products.filter((product: any) =>
-    product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.category?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.brand?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Fetch categories for filter dropdown
+  const { data: categories = [] } = useQuery({
+    queryKey: ["/api/categories"],
+    retry: false,
+  });
+
+  // Fetch brands for filter dropdown
+  const { data: brands = [] } = useQuery({
+    queryKey: ["/api/brands"],
+    retry: false,
+  });
+
+  // Filter products based on all filter criteria
+  const filteredProducts = products.filter((product: any) => {
+    // Search query filter
+    const matchesSearch = !searchQuery || 
+      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.category?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.brand?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Category filter
+    const matchesCategory = !categoryFilter || product.category?.id?.toString() === categoryFilter;
+
+    // Brand filter
+    const matchesBrand = !brandFilter || product.brand?.id?.toString() === brandFilter;
+
+    // Stock filter
+    const matchesStock = !stockFilter || 
+      (stockFilter === "in-stock" && product.stock > 0) ||
+      (stockFilter === "out-of-stock" && product.stock === 0) ||
+      (stockFilter === "low-stock" && product.stock <= (product.lowStockAlert || 0) && product.stock > 0);
+
+    // Price filter
+    const price = parseFloat(product.price || '0');
+    const matchesPrice = !priceFilter ||
+      (priceFilter === "under-10" && price < 10) ||
+      (priceFilter === "10-50" && price >= 10 && price <= 50) ||
+      (priceFilter === "50-100" && price > 50 && price <= 100) ||
+      (priceFilter === "over-100" && price > 100);
+
+    return matchesSearch && matchesCategory && matchesBrand && matchesStock && matchesPrice;
+  });
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery("");
+    setCategoryFilter("");
+    setBrandFilter("");
+    setStockFilter("");
+    setPriceFilter("");
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = searchQuery || categoryFilter || brandFilter || stockFilter || priceFilter;
 
   return (
     <AppLayout>
@@ -37,7 +92,8 @@ export default function Products() {
         <p className="text-gray-600">Manage your product inventory</p>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
+      {/* Search and Add Product */}
+      <div className="flex items-center justify-between mb-4">
         <div className="relative w-96">
           <Input 
             type="text" 
@@ -56,6 +112,154 @@ export default function Products() {
           </Button>
         </Link>
       </div>
+
+      {/* Filters */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center text-sm font-medium">
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </CardTitle>
+            {hasActiveFilters && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearFilters}
+                className="text-xs"
+              >
+                <X className="w-3 h-3 mr-1" />
+                Clear All
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Category Filter */}
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Category</label>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Categories</SelectItem>
+                  {categories.map((category: any) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Brand Filter */}
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Brand</label>
+              <Select value={brandFilter} onValueChange={setBrandFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Brands" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Brands</SelectItem>
+                  {brands.map((brand: any) => (
+                    <SelectItem key={brand.id} value={brand.id.toString()}>
+                      {brand.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Stock Filter */}
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Stock Status</label>
+              <Select value={stockFilter} onValueChange={setStockFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Stock" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Stock</SelectItem>
+                  <SelectItem value="in-stock">In Stock</SelectItem>
+                  <SelectItem value="low-stock">Low Stock</SelectItem>
+                  <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Price Filter */}
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Price Range</label>
+              <Select value={priceFilter} onValueChange={setPriceFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Prices" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Prices</SelectItem>
+                  <SelectItem value="under-10">Under $10</SelectItem>
+                  <SelectItem value="10-50">$10 - $50</SelectItem>
+                  <SelectItem value="50-100">$50 - $100</SelectItem>
+                  <SelectItem value="over-100">Over $100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Active Filters Display */}
+          {hasActiveFilters && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex flex-wrap gap-2">
+                {searchQuery && (
+                  <Badge variant="secondary" className="text-xs">
+                    Search: "{searchQuery}"
+                    <X 
+                      className="w-3 h-3 ml-1 cursor-pointer" 
+                      onClick={() => setSearchQuery("")}
+                    />
+                  </Badge>
+                )}
+                {categoryFilter && (
+                  <Badge variant="secondary" className="text-xs">
+                    Category: {categories.find((c: any) => c.id.toString() === categoryFilter)?.name}
+                    <X 
+                      className="w-3 h-3 ml-1 cursor-pointer" 
+                      onClick={() => setCategoryFilter("")}
+                    />
+                  </Badge>
+                )}
+                {brandFilter && (
+                  <Badge variant="secondary" className="text-xs">
+                    Brand: {brands.find((b: any) => b.id.toString() === brandFilter)?.name}
+                    <X 
+                      className="w-3 h-3 ml-1 cursor-pointer" 
+                      onClick={() => setBrandFilter("")}
+                    />
+                  </Badge>
+                )}
+                {stockFilter && (
+                  <Badge variant="secondary" className="text-xs">
+                    Stock: {stockFilter.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    <X 
+                      className="w-3 h-3 ml-1 cursor-pointer" 
+                      onClick={() => setStockFilter("")}
+                    />
+                  </Badge>
+                )}
+                {priceFilter && (
+                  <Badge variant="secondary" className="text-xs">
+                    Price: {priceFilter.replace('-', ' - $').replace('under', 'Under $').replace('over', 'Over $')}
+                    <X 
+                      className="w-3 h-3 ml-1 cursor-pointer" 
+                      onClick={() => setPriceFilter("")}
+                    />
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
