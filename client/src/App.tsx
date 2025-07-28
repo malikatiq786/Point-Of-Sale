@@ -24,6 +24,7 @@ import AddPurchase from "@/features/purchases/pages/add-purchase";
 import { Warehouses, StockManagement, StockTransfers, StockAdjustments } from "@/features/inventory";
 import AddProduct from "@/features/products/pages/add-product";
 import { BusinessProfile, Branches, Registers } from "@/features/business";
+import { Payments, Accounts, Transactions, Reports } from "@/features/financial";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -49,6 +50,10 @@ function Router() {
           <Route path="/sales" component={Sales} />
           <Route path="/returns" component={Returns} />
           <Route path="/expenses" component={Expenses} />
+          <Route path="/payments" component={Payments} />
+          <Route path="/accounts" component={Accounts} />
+          <Route path="/transactions" component={Transactions} />
+          <Route path="/reports" component={Reports} />
           <Route path="/employees" component={Employees} />
           <Route path="/users" component={Users} />
           <Route path="/roles" component={Roles} />

@@ -105,6 +105,277 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Financial modules APIs
+  
+  // Payments API
+  let paymentsStorage: any[] = [
+    {
+      id: 1,
+      customerId: 1,
+      customerName: "John Smith",
+      amount: "250.00",
+      paymentMethod: "card",
+      paymentType: "received",
+      paymentDate: "2025-07-28",
+      status: "completed",
+      description: "Payment for invoice #INV-001",
+      reference: "TXN-12345",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 2,
+      customerId: 2,
+      customerName: "Jane Doe",
+      amount: "180.50",
+      paymentMethod: "cash",
+      paymentType: "received",
+      paymentDate: "2025-07-27",
+      status: "completed",
+      description: "Cash payment for services",
+      reference: "",
+      createdAt: new Date(Date.now() - 86400000).toISOString()
+    },
+    {
+      id: 3,
+      customerId: 3,
+      customerName: "Mike Johnson",
+      amount: "95.75",
+      paymentMethod: "bank_transfer",
+      paymentType: "refund",
+      paymentDate: "2025-07-26",
+      status: "pending",
+      description: "Refund for returned items",
+      reference: "REF-789",
+      createdAt: new Date(Date.now() - 172800000).toISOString()
+    }
+  ];
+
+  app.get('/api/payments', (req, res) => {
+    console.log('Fetching payments, total:', paymentsStorage.length);
+    const sortedPayments = paymentsStorage.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    res.json(sortedPayments);
+  });
+
+  app.post('/api/payments', (req, res) => {
+    try {
+      const { customerId, amount, paymentMethod, paymentType, description, reference } = req.body;
+      
+      // Get customer data for the payment
+      const customer = customersStorage.find(c => c.id == customerId) || { name: 'Walk-in Customer' };
+      
+      const paymentData = {
+        id: Date.now(),
+        customerId: parseInt(customerId),
+        customerName: customer.name,
+        amount: amount,
+        paymentMethod,
+        paymentType,
+        paymentDate: new Date().toISOString().split('T')[0],
+        status: 'completed',
+        description: description || '',
+        reference: reference || '',
+        createdAt: new Date().toISOString()
+      };
+
+      paymentsStorage.unshift(paymentData);
+      console.log('Payment created:', paymentData);
+      res.status(201).json(paymentData);
+    } catch (error) {
+      console.error('Create payment error:', error);
+      res.status(500).json({ message: 'Failed to create payment' });
+    }
+  });
+
+  // Accounts API
+  let accountsStorage: any[] = [
+    {
+      id: 1,
+      name: "Cash in Hand",
+      accountCode: "1001",
+      accountType: "asset",
+      openingBalance: "5000.00",
+      currentBalance: "7250.00",
+      description: "Cash register and petty cash",
+      isActive: true,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 2,
+      name: "Accounts Receivable",
+      accountCode: "1200",
+      accountType: "asset", 
+      openingBalance: "2500.00",
+      currentBalance: "3100.00",
+      description: "Outstanding customer invoices",
+      isActive: true,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 3,
+      name: "Sales Revenue",
+      accountCode: "4001",
+      accountType: "revenue",
+      openingBalance: "0.00",
+      currentBalance: "15750.00",
+      description: "Revenue from product sales",
+      isActive: true,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 4,
+      name: "Office Rent",
+      accountCode: "5001",
+      accountType: "expense",
+      openingBalance: "0.00",
+      currentBalance: "3000.00",
+      description: "Monthly office rent expense",
+      isActive: true,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 5,
+      name: "Accounts Payable",
+      accountCode: "2001",
+      accountType: "liability",
+      openingBalance: "1500.00",
+      currentBalance: "2200.00",
+      description: "Outstanding supplier invoices",
+      isActive: true,
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  app.get('/api/accounts', (req, res) => {
+    console.log('Fetching accounts, total:', accountsStorage.length);
+    res.json(accountsStorage);
+  });
+
+  app.post('/api/accounts', (req, res) => {
+    try {
+      const { name, accountCode, accountType, description, openingBalance, isActive } = req.body;
+      
+      const accountData = {
+        id: Date.now(),
+        name,
+        accountCode,
+        accountType,
+        openingBalance: openingBalance || "0.00",
+        currentBalance: openingBalance || "0.00",
+        description: description || '',
+        isActive: isActive !== false,
+        createdAt: new Date().toISOString()
+      };
+
+      accountsStorage.push(accountData);
+      console.log('Account created:', accountData);
+      res.status(201).json(accountData);
+    } catch (error) {
+      console.error('Create account error:', error);
+      res.status(500).json({ message: 'Failed to create account' });
+    }
+  });
+
+  // Transactions API  
+  let transactionsStorage: any[] = [
+    {
+      id: 1,
+      accountId: 1,
+      accountName: "Cash in Hand",
+      amount: "250.00",
+      transactionType: "income",
+      transactionDate: "2025-07-28",
+      description: "Cash sale payment received",
+      reference: "SALE-001",
+      createdBy: "John Cashier",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 2,
+      accountId: 4,
+      accountName: "Office Rent", 
+      amount: "1500.00",
+      transactionType: "expense",
+      transactionDate: "2025-07-27",
+      description: "Monthly office rent payment",
+      reference: "RENT-JUL25",
+      createdBy: "Admin User",
+      createdAt: new Date(Date.now() - 86400000).toISOString()
+    },
+    {
+      id: 3,
+      accountId: 3,
+      accountName: "Sales Revenue",
+      amount: "450.00",
+      transactionType: "income",
+      transactionDate: "2025-07-26",
+      description: "Product sales revenue",
+      reference: "SALE-002",
+      createdBy: "Jane Cashier",
+      createdAt: new Date(Date.now() - 172800000).toISOString()
+    },
+    {
+      id: 4,
+      accountId: 1,
+      accountName: "Cash in Hand",
+      amount: "120.00",
+      transactionType: "expense",
+      transactionDate: "2025-07-25",
+      description: "Office supplies purchase",
+      reference: "EXP-001",
+      createdBy: "Admin User",
+      createdAt: new Date(Date.now() - 259200000).toISOString()
+    }
+  ];
+
+  app.get('/api/transactions', (req, res) => {
+    console.log('Fetching transactions, total:', transactionsStorage.length);
+    const sortedTransactions = transactionsStorage.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    res.json(sortedTransactions);
+  });
+
+  // Reports API
+  app.get('/api/reports', (req, res) => {
+    const { reportType, dateFrom, dateTo, period } = req.query;
+    
+    console.log('Generating report:', { reportType, dateFrom, dateTo, period });
+    
+    // Sample report data - in real implementation, this would query the database
+    const reportData = {
+      reportType: reportType || 'profit_loss',
+      period: period || 'monthly',
+      dateFrom: dateFrom || '2025-01-01',
+      dateTo: dateTo || '2025-07-28',
+      summary: {
+        totalRevenue: 125400,
+        totalExpenses: 67200,
+        netProfit: 58200,
+        profitMargin: 0.464
+      },
+      monthlyData: [
+        { month: 'Jan', income: 12000, expenses: 8000, profit: 4000 },
+        { month: 'Feb', income: 15000, expenses: 9000, profit: 6000 },
+        { month: 'Mar', income: 18000, expenses: 11000, profit: 7000 },
+        { month: 'Apr', income: 16000, expenses: 12000, profit: 4000 },
+        { month: 'May', income: 20000, expenses: 13000, profit: 7000 },
+        { month: 'Jun', income: 22000, expenses: 14000, profit: 8000 },
+      ],
+      expenseBreakdown: [
+        { category: 'Rent', amount: 3000 },
+        { category: 'Utilities', amount: 800 },
+        { category: 'Supplies', amount: 1200 },
+        { category: 'Marketing', amount: 1500 },
+        { category: 'Other', amount: 900 }
+      ],
+      generatedAt: new Date().toISOString()
+    };
+    
+    res.json(reportData);
+  });
+
   // Use new MVC routes
   app.use('/api', apiRoutes);
 
