@@ -133,7 +133,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
   // For development, allow test user
   if (process.env.NODE_ENV === 'development' && !req.isAuthenticated()) {
-    req.user = { id: 'test-user', name: 'Test User', email: 'test@test.com' };
+    req.user = { id: '1', name: 'Test User', email: 'test@test.com' };
     return next();
   }
 

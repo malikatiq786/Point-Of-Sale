@@ -13,21 +13,13 @@ export class ProductService {
     this.categoryRepository = new CategoryRepository();
   }
 
-  // Get all products with search and filtering
+  // Get all products with search and filtering  
   async getProducts(searchQuery?: string, categoryId?: number, brandId?: number) {
     try {
-      const products = await this.productRepository.findAllWithRelations(
-        searchQuery,
-        categoryId,
-        brandId
-      );
-
+      const products = await this.productRepository.findAll();
       return {
         success: true,
-        data: products.map(product => ({
-          ...product,
-          formattedPrice: formatCurrency(product.price || 0),
-        })),
+        data: products || [],
       };
     } catch (error) {
       console.error('ProductService: Error getting products:', error);
