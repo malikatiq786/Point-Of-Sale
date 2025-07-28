@@ -1,95 +1,59 @@
-// Common types used across the server
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-}
-
-export interface PaginationParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
-}
-
+// Server-side type definitions
 import { Request } from 'express';
 
-// Request types
+// Extend Express Request to include authenticated user
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
     name: string;
     email: string;
-    role?: {
-      id: number;
-      name: string;
-    };
+    roleId?: number;
+    profileImageUrl?: string;
   };
 }
 
-// Database operation result types
-export interface DatabaseResult<T = any> {
+// User management types
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  roleId: number;
+  password?: string;
+}
+
+export interface UpdateUserRequest extends Partial<CreateUserRequest> {
+  id: string;
+}
+
+// Service response pattern
+export interface ServiceResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
 }
 
-// Sale related types
-export interface SaleRequest {
-  totalAmount: number;
-  paidAmount: number;
-  status: 'completed' | 'pending' | 'cancelled';
-  customerId?: number;
-  items?: SaleItemRequest[];
+// Pagination parameters
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  search?: string;
 }
 
-export interface SaleItemRequest {
-  productId: number;
-  quantity: number;
-  unitPrice: number;
-  discount?: number;
+// Generic filter interface
+export interface FilterParams {
+  [key: string]: any;
 }
 
-// Product related types
-export interface ProductCreateRequest {
-  name: string;
-  description?: string;
-  price: number;
-  categoryId?: number;
-  brandId?: number;
-  barcode?: string;
-  stock?: number;
-}
-
-export interface ProductUpdateRequest extends Partial<ProductCreateRequest> {
-  id: number;
-}
-
-// Dashboard stats types
-export interface DashboardStats {
-  todaySales: string;
-  totalProducts: number;
-  totalCustomers: number;
-  lowStockItems: number;
-}
-
-// Activity log types
-export interface ActivityLog {
-  id: number;
-  action: string;
-  details?: string;
-  userId?: number;
-  timestamp: Date;
+// API Response format
+export interface ApiResponse<T = any> {
+  message?: string;
+  data?: T;
+  error?: string;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }

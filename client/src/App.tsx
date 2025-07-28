@@ -13,6 +13,7 @@ import Customers from "@/features/customers";
 import Suppliers from "@/features/suppliers";
 import Expenses from "@/features/expenses";
 import { Employees } from "@/features/hr";
+import Users from "@/features/users/pages/users";
 import Settings from "@/features/settings";
 import Categories from "@/features/categories";
 import Purchases from "@/features/purchases";
@@ -37,6 +38,7 @@ function Router() {
           <Route path="/sales" component={Sales} />
           <Route path="/expenses" component={Expenses} />
           <Route path="/employees" component={Employees} />
+          <Route path="/users" component={Users} />
           <Route path="/settings" component={Settings} />
         </>
       )}

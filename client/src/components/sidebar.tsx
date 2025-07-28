@@ -19,6 +19,7 @@ import {
   UserCheck, 
   Clock, 
   Wallet, 
+  Shield,
   Settings, 
   LogOut,
   ChevronDown,
@@ -97,6 +98,13 @@ export default function Sidebar({ user }: SidebarProps) {
         { name: "Employees", href: "/employees", icon: UserCheck, roles: ["Super Admin", "Admin", "HR"] },
         { name: "Attendance", href: "/attendance", icon: Clock, roles: ["Super Admin", "Admin", "HR"] },
         { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["Super Admin", "Admin", "HR"] },
+      ]
+    },
+    {
+      title: "SYSTEM",
+      items: [
+        { name: "Users", href: "/users", icon: Shield, roles: ["Super Admin", "Admin / Owner"] },
+        { name: "Settings", href: "/settings", icon: Settings },
       ]
     }
   ];

@@ -2,12 +2,14 @@ import { Router } from 'express';
 import { ProductController } from '../controllers/ProductController';
 import { SaleController } from '../controllers/SaleController';
 import { DashboardController } from '../controllers/DashboardController';
+import { UserController } from '../controllers/UserController';
 import { isAuthenticated } from '../../replitAuth';
 
 // Initialize controllers
 const productController = new ProductController();
 const saleController = new SaleController();
 const dashboardController = new DashboardController();
+const userController = new UserController();
 
 // Create router
 const router = Router();
@@ -32,5 +34,18 @@ router.get('/dashboard/stats', isAuthenticated, dashboardController.getStats as 
 router.get('/dashboard/activities', isAuthenticated, dashboardController.getActivities as any);
 router.get('/dashboard/top-products', isAuthenticated, dashboardController.getTopProducts as any);
 router.get('/dashboard/recent-transactions', isAuthenticated, dashboardController.getRecentTransactions as any);
+
+// User management routes
+router.get('/users', isAuthenticated, userController.getUsers as any);
+router.get('/users/:id', isAuthenticated, userController.getUserById as any);
+router.post('/users', isAuthenticated, userController.createUser as any);
+router.put('/users/:id', isAuthenticated, userController.updateUser as any);
+router.delete('/users/:id', isAuthenticated, userController.deleteUser as any);
+router.patch('/users/:id/role', isAuthenticated, userController.updateUserRole as any);
+
+// Role and permission routes
+router.get('/roles', isAuthenticated, userController.getRoles as any);
+router.get('/permissions', isAuthenticated, userController.getPermissions as any);
+router.get('/users/:id/permissions', isAuthenticated, userController.getUserPermissions as any);
 
 export { router as apiRoutes };

@@ -2,3 +2,4 @@
 export { ProductController } from './ProductController';
 export { SaleController } from './SaleController';
 export { DashboardController } from './DashboardController';
+export { UserController } from './UserController';
