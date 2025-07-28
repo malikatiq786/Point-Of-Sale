@@ -18,7 +18,7 @@ import Roles from "@/features/users/pages/roles";
 import ActivityLogs from "@/features/users/pages/activity-logs";
 import Notifications from "@/features/users/pages/notifications";
 import Settings from "@/features/settings";
-import Categories from "@/features/categories";
+import Categories, { Brands, Units } from "@/features/categories";
 import Purchases from "@/features/purchases";
 import AddPurchase from "@/features/purchases/pages/add-purchase";
 import { Warehouses, StockManagement, StockTransfers, StockAdjustments } from "@/features/inventory";
@@ -38,6 +38,8 @@ function Router() {
           <Route path="/products" component={Products} />
           <Route path="/products/add" component={AddProduct} />
           <Route path="/categories" component={Categories} />
+          <Route path="/brands" component={Brands} />
+          <Route path="/units" component={Units} />
           <Route path="/stock" component={Stock} />
           <Route path="/customers" component={Customers} />
           <Route path="/suppliers" component={Suppliers} />

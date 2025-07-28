@@ -268,6 +268,53 @@ router.post('/suppliers', async (req: any, res: any) => {
   }
 });
 
+// Brand routes
+router.get('/brands', async (req: any, res: any) => {
+  try {
+    const brands = await db.select().from(schema.brands).limit(50);
+    res.json(brands);
+  } catch (error) {
+    console.error('Get brands error:', error);
+    res.status(500).json({ message: 'Failed to fetch brands' });
+  }
+});
+
+router.post('/brands', async (req: any, res: any) => {
+  try {
+    const [brand] = await db.insert(schema.brands)
+      .values(req.body)
+      .returning();
+    res.status(201).json(brand);
+  } catch (error) {
+    console.error('Create brand error:', error);
+    res.status(500).json({ message: 'Failed to create brand' });
+  }
+});
+
+router.put('/brands/:id', async (req: any, res: any) => {
+  try {
+    const [brand] = await db.update(schema.brands)
+      .set(req.body)
+      .where(eq(schema.brands.id, parseInt(req.params.id)))
+      .returning();
+    res.json(brand);
+  } catch (error) {
+    console.error('Update brand error:', error);
+    res.status(500).json({ message: 'Failed to update brand' });
+  }
+});
+
+router.delete('/brands/:id', async (req: any, res: any) => {
+  try {
+    await db.delete(schema.brands)
+      .where(eq(schema.brands.id, parseInt(req.params.id)));
+    res.json({ message: 'Brand deleted successfully' });
+  } catch (error) {
+    console.error('Delete brand error:', error);
+    res.status(500).json({ message: 'Failed to delete brand' });
+  }
+});
+
 // Inventory routes
 router.get('/warehouses', (req: any, res: any) => {
   res.json([

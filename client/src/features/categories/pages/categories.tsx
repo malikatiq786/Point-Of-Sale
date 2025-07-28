@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import Sidebar from "@/components/sidebar";
+import { AppLayout } from "@/layouts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Search, Edit, Trash2, Tags, Eye } from "lucide-react";
 
 export default function Categories() {
-  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch categories
@@ -22,39 +20,30 @@ export default function Categories() {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar user={user} />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
-              <p className="text-sm text-gray-500">Organize your products with categories</p>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <input 
-                  type="text" 
-                  placeholder="Search categories..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              </div>
-              
-              <Button className="bg-primary-500 text-white hover:bg-primary-600">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Category
-              </Button>
-            </div>
-          </div>
-        </header>
+    <AppLayout>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
+        <p className="text-gray-600">Organize your products with categories</p>
+      </div>
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Input
+            type="text"
+            placeholder="Search categories..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        </div>
+        
+        <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+          <Plus className="w-4 h-4 mr-2" />
+          Add Category
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {isLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <Card key={i} className="animate-pulse">
@@ -109,9 +98,7 @@ export default function Categories() {
                 </Card>
               ))
             )}
-          </div>
-        </main>
       </div>
-    </div>
+    </AppLayout>
   );
 }

@@ -73,6 +73,8 @@ export default function Sidebar({ user }: SidebarProps) {
       items: [
         { name: "Products", href: "/products", icon: Package },
         { name: "Categories", href: "/categories", icon: Tags },
+        { name: "Brands", href: "/brands", icon: Package },
+        { name: "Units", href: "/units", icon: Package },
         { name: "Stock Management", href: "/stock", icon: Warehouse },
         { name: "Stock Transfers", href: "/stock-transfers", icon: Truck },
         { name: "Stock Adjustments", href: "/stock-adjustments", icon: Package },
