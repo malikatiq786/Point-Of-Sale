@@ -74,6 +74,9 @@ export default function Sidebar({ user }: SidebarProps) {
         { name: "Products", href: "/products", icon: Package },
         { name: "Categories", href: "/categories", icon: Tags },
         { name: "Stock Management", href: "/stock", icon: Warehouse },
+        { name: "Stock Transfers", href: "/stock-transfers", icon: Truck },
+        { name: "Stock Adjustments", href: "/stock-adjustments", icon: Package },
+        { name: "Warehouses", href: "/warehouses", icon: Warehouse },
       ]
     },
     {
@@ -82,6 +85,8 @@ export default function Sidebar({ user }: SidebarProps) {
         { name: "Customers", href: "/customers", icon: Users },
         { name: "Suppliers", href: "/suppliers", icon: Truck },
         { name: "Purchases", href: "/purchases", icon: ShoppingBag },
+        { name: "Customer Ledgers", href: "/customer-ledgers", icon: CreditCard },
+        { name: "Supplier Ledgers", href: "/supplier-ledgers", icon: CreditCard },
       ]
     },
     {
@@ -89,28 +94,48 @@ export default function Sidebar({ user }: SidebarProps) {
       items: [
         { name: "Payments", href: "/payments", icon: CreditCard },
         { name: "Expenses", href: "/expenses", icon: DollarSign },
+        { name: "Accounts", href: "/accounts", icon: CreditCard },
+        { name: "Transactions", href: "/transactions", icon: Receipt },
         { name: "Reports", href: "/reports", icon: PieChart },
       ]
     },
     {
       title: "HUMAN RESOURCES",
       items: [
-        { name: "Employees", href: "/employees", icon: UserCheck, roles: ["Super Admin", "Admin", "HR"] },
-        { name: "Attendance", href: "/attendance", icon: Clock, roles: ["Super Admin", "Admin", "HR"] },
-        { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["Super Admin", "Admin", "HR"] },
+        { name: "Employees", href: "/employees", icon: UserCheck },
+        { name: "Attendance", href: "/attendance", icon: Clock },
+        { name: "Payroll", href: "/payroll", icon: Wallet },
+      ]
+    },
+    {
+      title: "BUSINESS SETUP",
+      items: [
+        { name: "Business Profile", href: "/business-profile", icon: Store },
+        { name: "Branches", href: "/branches", icon: Store },
+        { name: "Registers", href: "/registers", icon: ShoppingCart },
       ]
     },
     {
       title: "SYSTEM",
       items: [
-        { name: "Users", href: "/users", icon: Shield, roles: ["Super Admin", "Admin / Owner"] },
+        { name: "Users", href: "/users", icon: Shield },
+        { name: "Roles & Permissions", href: "/roles", icon: Shield },
+        { name: "Activity Logs", href: "/activity-logs", icon: Receipt },
+        { name: "Notifications", href: "/notifications", icon: Receipt },
+        { name: "Backups", href: "/backups", icon: Settings },
         { name: "Settings", href: "/settings", icon: Settings },
       ]
     }
   ];
 
   const isItemVisible = (item: NavItem) => {
+    // Super Admin can see all modules
+    if (user?.role?.name === "Super Admin") return true;
+    
+    // If no role restrictions, show to everyone
     if (!item.roles) return true;
+    
+    // Check if user's role is in the allowed roles
     return item.roles.includes(user?.role?.name || "");
   };
 

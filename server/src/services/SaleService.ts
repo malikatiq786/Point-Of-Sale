@@ -184,7 +184,7 @@ export class SaleService {
         success: true,
         data: transactions.map(transaction => ({
           ...transaction,
-          formattedTotal: formatCurrency(transaction.totalAmount),
+          formattedTotal: formatCurrency(transaction.totalAmount || 0),
           customerName: transaction.customerName || 'Walk-in Customer',
         })),
       };

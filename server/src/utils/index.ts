@@ -32,8 +32,10 @@ export function createPaginatedResponse<T>(
 }
 
 // Utility function to format currency
-export function formatCurrency(amount: number): string {
-  return `$${amount.toFixed(2)}`;
+export function formatCurrency(amount: number | string): string {
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(numAmount)) return '$0.00';
+  return `$${numAmount.toFixed(2)}`;
 }
 
 // Utility function to generate random ID (for activities, etc.)
