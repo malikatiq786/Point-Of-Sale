@@ -49,8 +49,8 @@ interface Register {
   code: string;
   branchId: number;
   branchName?: string;
-  openingBalance: number;
-  currentBalance: number;
+  openingBalance: string | number; // Can be string from database
+  currentBalance: string | number; // Can be string from database
   isActive: boolean;
   lastOpened?: string;
   lastClosed?: string;
@@ -136,10 +136,11 @@ export default function POSTerminal() {
     }
 
     // Validate opening balance matches register's expected opening balance
-    if (Math.abs(openingBalance - register.openingBalance) > 0.01) {
+    const expectedBalance = parseFloat(register.openingBalance);
+    if (Math.abs(openingBalance - expectedBalance) > 0.01) {
       toast({
         title: "Opening Balance Mismatch",
-        description: `Expected: $${register.openingBalance.toFixed(2)}, Entered: $${openingBalance.toFixed(2)}`,
+        description: `Expected: $${expectedBalance.toFixed(2)}, Entered: $${openingBalance.toFixed(2)}`,
         variant: "destructive",
       });
       return;
@@ -1175,7 +1176,7 @@ export default function POSTerminal() {
                       .filter((register) => register.isActive)
                       .map((register) => (
                       <SelectItem key={register.id} value={register.id.toString()}>
-                        {register.name} ({register.branchName}) - Expected: ${register.openingBalance.toFixed(2)}
+                        {register.name} ({register.branchName}) - Expected: ${parseFloat(register.openingBalance).toFixed(2)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1187,7 +1188,7 @@ export default function POSTerminal() {
                   <Label>Opening Balance Verification</Label>
                   <div className="mt-2 p-3 bg-blue-50 rounded-lg">
                     <div className="text-sm text-blue-800">
-                      <strong>Expected Opening Balance:</strong> ${selectedRegister?.openingBalance.toFixed(2)}
+                      <strong>Expected Opening Balance:</strong> ${parseFloat(selectedRegister?.openingBalance || 0).toFixed(2)}
                     </div>
                     <div className="text-xs text-blue-600 mt-1">
                       Please count the cash drawer and confirm this amount matches
