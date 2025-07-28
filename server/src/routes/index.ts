@@ -5,6 +5,7 @@ import { DashboardController } from '../controllers/DashboardController';
 import { UserController } from '../controllers/UserController';
 import { InventoryController } from '../controllers/InventoryController';
 import { storage } from '../../storage';
+import { db } from '../../db';
 import * as schema from '../../../shared/schema';
 import { isAuthenticated } from '../../replitAuth';
 
@@ -41,12 +42,12 @@ router.post('/products', isAuthenticated, async (req: any, res: any) => {
       image: req.body.image || null
     };
 
-    const result = await storage.db.insert(schema.products)
+    const [result] = await db.insert(schema.products)
       .values(productData)
       .returning();
       
     console.log('Direct route result:', result);
-    res.status(201).json(result[0]);
+    res.status(201).json(result);
   } catch (error) {
     console.error('Direct route error:', error);
     res.status(500).json({ message: 'Failed to create product', error: error.message });
