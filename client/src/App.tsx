@@ -25,6 +25,8 @@ import { Warehouses, StockManagement, StockTransfers, StockAdjustments } from "@
 import AddProduct from "@/features/products/pages/add-product";
 import { BusinessProfile, Branches, Registers } from "@/features/business";
 import { Payments, Accounts, Transactions, Reports } from "@/features/financial";
+import CustomerLedgers from "@/features/customers/pages/customer-ledgers";
+import SupplierLedgers from "@/features/suppliers/pages/supplier-ledgers";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -44,7 +46,9 @@ function Router() {
           <Route path="/units" component={Units} />
           <Route path="/stock" component={Stock} />
           <Route path="/customers" component={Customers} />
+          <Route path="/customer-ledgers" component={CustomerLedgers} />
           <Route path="/suppliers" component={Suppliers} />
+          <Route path="/supplier-ledgers" component={SupplierLedgers} />
           <Route path="/purchases" component={Purchases} />
           <Route path="/purchases/add" component={AddPurchase} />
           <Route path="/sales" component={Sales} />
