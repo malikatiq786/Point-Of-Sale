@@ -1631,6 +1631,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Currency management routes
+  let currenciesStorage: any[] = [
+    {
+      id: 1,
+      code: "PKR",
+      name: "Pakistani Rupee",
+      symbol: "Rs",
+      exchangeRate: 1.000000,
+      isActive: true,
+      isDefault: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 2,
+      code: "USD",
+      name: "US Dollar",
+      symbol: "$",
+      exchangeRate: 0.0035,
+      isActive: true,
+      isDefault: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 3,
+      code: "EUR",
+      name: "Euro",
+      symbol: "€",
+      exchangeRate: 0.0032,
+      isActive: true,
+      isDefault: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+  ];
+
+  app.get("/api/currencies", isAuthenticated, async (req, res) => {
+    console.log("Fetching currencies, total:", currenciesStorage.length);
+    res.json(currenciesStorage);
+  });
+
+  app.post("/api/currencies", isAuthenticated, async (req, res) => {
+    try {
+      // If setting as default, unset other defaults
+      if (req.body.isDefault) {
+        currenciesStorage.forEach(c => c.isDefault = false);
+      }
+      
+      const currency = {
+        id: Date.now(),
+        code: req.body.code.toUpperCase(),
+        name: req.body.name,
+        symbol: req.body.symbol,
+        exchangeRate: parseFloat(req.body.exchangeRate || "1.000000"),
+        isActive: req.body.isActive !== false,
+        isDefault: req.body.isDefault || false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      currenciesStorage.push(currency);
+      console.log("Currency created:", currency);
+      res.status(201).json(currency);
+    } catch (error) {
+      console.error("Error creating currency:", error);
+      res.status(500).json({ message: "Failed to create currency" });
+    }
+  });
+
+  app.put("/api/currencies/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const currencyIndex = currenciesStorage.findIndex(c => c.id === id);
+      
+      if (currencyIndex === -1) {
+        return res.status(404).json({ error: "Currency not found" });
+      }
+      
+      // If setting as default, unset other defaults
+      if (req.body.isDefault) {
+        currenciesStorage.forEach(c => c.isDefault = false);
+      }
+      
+      const updatedCurrency = {
+        ...currenciesStorage[currencyIndex],
+        code: req.body.code?.toUpperCase() || currenciesStorage[currencyIndex].code,
+        name: req.body.name || currenciesStorage[currencyIndex].name,
+        symbol: req.body.symbol || currenciesStorage[currencyIndex].symbol,
+        exchangeRate: parseFloat(req.body.exchangeRate || currenciesStorage[currencyIndex].exchangeRate),
+        isActive: req.body.isActive !== undefined ? req.body.isActive : currenciesStorage[currencyIndex].isActive,
+        isDefault: req.body.isDefault !== undefined ? req.body.isDefault : currenciesStorage[currencyIndex].isDefault,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      currenciesStorage[currencyIndex] = updatedCurrency;
+      console.log("Currency updated:", updatedCurrency);
+      res.json(updatedCurrency);
+    } catch (error) {
+      console.error("Error updating currency:", error);
+      res.status(500).json({ message: "Failed to update currency" });
+    }
+  });
+
+  app.delete("/api/currencies/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const currencyIndex = currenciesStorage.findIndex(c => c.id === id);
+      
+      if (currencyIndex === -1) {
+        return res.status(404).json({ error: "Currency not found" });
+      }
+      
+      // Prevent deletion of default currency
+      if (currenciesStorage[currencyIndex].isDefault) {
+        return res.status(400).json({ error: "Cannot delete default currency" });
+      }
+      
+      const deletedCurrency = currenciesStorage.splice(currencyIndex, 1)[0];
+      console.log("Currency deleted:", deletedCurrency);
+      res.json({ message: "Currency deleted successfully", currency: deletedCurrency });
+    } catch (error) {
+      console.error("Error deleting currency:", error);
+      res.status(500).json({ message: "Failed to delete currency" });
+    }
+  });
+
   // Initialize sample data route
   app.post("/api/initialize-sample-data", isAuthenticated, async (req: any, res) => {
     try {
@@ -1746,6 +1873,45 @@ async function initializeSampleData(userId: string) {
   await Promise.all(
     sampleCustomers.map((customer) => storage.createCustomer(customer))
   );
+
+  // Initialize default currencies
+  if (!storage.currencies || storage.currencies.length === 0) {
+    storage.currencies = [
+      {
+        id: 1,
+        code: "PKR",
+        name: "Pakistani Rupee", 
+        symbol: "Rs",
+        exchangeRate: 1.000000,
+        isActive: true,
+        isDefault: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 2,
+        code: "USD",
+        name: "US Dollar",
+        symbol: "$",
+        exchangeRate: 0.0035, // 1 PKR = 0.0035 USD (approximate)
+        isActive: true,
+        isDefault: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 3,
+        code: "EUR",
+        name: "Euro",
+        symbol: "€",
+        exchangeRate: 0.0032, // 1 PKR = 0.0032 EUR (approximate)
+        isActive: true,
+        isDefault: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    ];
+  }
 
   // Log the initialization
   await storage.logActivity(

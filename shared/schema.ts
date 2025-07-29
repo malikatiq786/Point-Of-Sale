@@ -352,16 +352,6 @@ export const expenses = pgTable("expenses", {
   createdBy: varchar("created_by").references(() => users.id),
 });
 
-// =========================================
-// ⚙️ Settings & Configuration
-// =========================================
-
-export const settings = pgTable("settings", {
-  id: serial("id").primaryKey(),
-  key: varchar("key", { length: 100 }).unique(),
-  value: text("value"),
-});
-
 export const backupLogs = pgTable("backup_logs", {
   id: serial("id").primaryKey(),
   filename: text("filename"),
@@ -407,6 +397,31 @@ export const salaries = pgTable("salaries", {
   employeeId: integer("employee_id").references(() => employees.id),
   amount: numeric("amount", { precision: 12, scale: 2 }),
   payDate: timestamp("pay_date"),
+});
+
+// =========================================
+// 📊 Settings & Configuration
+// =========================================
+
+export const settings = pgTable("settings", {
+  id: serial("id").primaryKey(),
+  keyName: varchar("key_name", { length: 100 }).unique().notNull(),
+  value: text("value"),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const currencies = pgTable("currencies", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 10 }).unique().notNull(), // USD, PKR, EUR, etc.
+  name: varchar("name", { length: 100 }).notNull(), // US Dollar, Pakistani Rupee, etc.
+  symbol: varchar("symbol", { length: 10 }).notNull(), // $, Rs, €, etc.
+  exchangeRate: numeric("exchange_rate", { precision: 15, scale: 6 }).default("1.000000").notNull(), // Rate relative to base currency
+  isActive: boolean("is_active").default(true).notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // =========================================
@@ -506,6 +521,7 @@ export type ExpenseCategory = typeof expenseCategories.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
+export type Currency = typeof currencies.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -528,6 +544,7 @@ export const insertSupplierSchema = createInsertSchema(suppliers);
 export const insertPurchaseSchema = createInsertSchema(purchases);
 export const insertEmployeeSchema = createInsertSchema(employees);
 export const insertExpenseSchema = createInsertSchema(expenses);
+export const insertCurrencySchema = createInsertSchema(currencies);
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -538,3 +555,4 @@ export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+export type InsertCurrency = z.infer<typeof insertCurrencySchema>;
