@@ -33,7 +33,7 @@ interface CartItem {
 
 interface Customer {
   id?: number;
-  name?: string;
+  name: string;
   phone?: string;
   email?: string;
 }
@@ -87,7 +87,7 @@ export default function POSTerminal() {
   // Core state
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [customer, setCustomer] = useState<Customer>({});
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'qr'>("cash");
   const [amountReceived, setAmountReceived] = useState<number>(0);
   
@@ -120,6 +120,11 @@ export default function POSTerminal() {
   // Fetch registers
   const { data: registers = [] } = useQuery<Register[]>({
     queryKey: ['/api/registers'],
+  });
+
+  // Fetch customers
+  const { data: customers = [] } = useQuery<Customer[]>({
+    queryKey: ['/api/customers'],
   });
 
   // Get selected register info
@@ -188,6 +193,8 @@ export default function POSTerminal() {
         description: "Transaction processed successfully",
       });
       setCart([]);
+      setSelectedCustomerId(null);
+      setAmountReceived(0);
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
     },
     onError: (error) => {
@@ -195,6 +202,19 @@ export default function POSTerminal() {
         title: "Sale Failed",
         description: error.message,
         variant: "destructive",
+      });
+    },
+  });
+
+  // Create customer ledger entry mutation
+  const createLedgerMutation = useMutation({
+    mutationFn: async (ledgerData: any) => {
+      await apiRequest("POST", "/api/customer-ledgers", ledgerData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Ledger Updated",
+        description: "Customer balance has been updated",
       });
     },
   });
@@ -336,7 +356,7 @@ export default function POSTerminal() {
     return Math.max(0, amountReceived - getGrandTotal());
   };
 
-  const processSale = () => {
+  const processSale = async () => {
     if (registerStatus !== 'open' || !selectedRegister) {
       toast({
         title: "Register Closed",
@@ -356,40 +376,59 @@ export default function POSTerminal() {
       return;
     }
 
-    if (paymentMethod === 'cash' && amountReceived < getGrandTotal()) {
+    const grandTotal = getGrandTotal();
+    const isWalkInCustomer = !selectedCustomerId;
+    const paidAmount = paymentMethod === 'cash' ? amountReceived : grandTotal;
+    const unpaidAmount = grandTotal - paidAmount;
+    
+    // Validation for walk-in customers: must pay in full
+    if (isWalkInCustomer && paymentMethod === 'cash' && paidAmount < grandTotal) {
       toast({
-        title: "Insufficient Payment",
-        description: "Amount received is less than total amount",
+        title: "Payment Required",
+        description: "Walk-in customers must pay the full amount",
         variant: "destructive",
       });
       return;
     }
 
+    // For registered customers with partial payment, validate customer selection
+    if (unpaidAmount > 0 && !selectedCustomerId) {
+      toast({
+        title: "Customer Required",
+        description: "Please select a customer for partial payments",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+    
     // Generate invoice data
     const invoiceData: InvoiceData = {
       id: `INV-${Date.now()}`,
       date: new Date().toLocaleDateString(),
       time: new Date().toLocaleTimeString(),
       cashier: (user as any)?.name || 'Cashier',
-      customer: customer?.name ? customer : undefined,
+      customer: selectedCustomer || { name: 'Walk-in Customer' },
       items: cart,
       subtotal: getSubtotal(),
       totalDiscount: getItemDiscountTotal() + getGlobalDiscountAmount(),
       tax: getTaxAmount(),
-      grandTotal: getGrandTotal(),
+      grandTotal: grandTotal,
       payment: {
         method: paymentMethod,
-        amountReceived: paymentMethod === 'cash' ? amountReceived : getGrandTotal(),
-        change: paymentMethod === 'cash' ? getChange() : 0
+        amountReceived: paidAmount,
+        change: paymentMethod === 'cash' ? Math.max(0, paidAmount - grandTotal) : 0
       }
     };
 
     const saleData = {
-      totalAmount: getGrandTotal(),
-      paidAmount: paymentMethod === 'cash' ? amountReceived : getGrandTotal(),
-      status: "completed",
+      totalAmount: grandTotal,
+      paidAmount: paidAmount,
+      status: unpaidAmount > 0 ? "partial" : "completed",
       paymentMethod,
-      customer: customer?.name ? customer : undefined,
+      customerId: selectedCustomerId,
+      customer: selectedCustomer || { name: 'Walk-in Customer' },
       items: cart.map(item => ({
         productId: item.id,
         quantity: item.quantity,
@@ -399,23 +438,44 @@ export default function POSTerminal() {
       }))
     };
 
-    processSaleMutation.mutate(saleData);
-    
-    // Store invoice for printing
-    setLastInvoice(invoiceData);
-    setShowInvoice(true);
-    
-    // Reset cart and form
-    setCart([]);
-    setCustomer({});
-    setAmountReceived(0);
-    setDiscount({ type: 'percentage', value: 0, applyTo: 'total' });
-    setShowPaymentDialog(false);
+    try {
+      // Process the sale
+      await processSaleMutation.mutateAsync(saleData);
+      
+      // If there's an unpaid amount and customer is selected, create ledger entry
+      if (unpaidAmount > 0 && selectedCustomerId) {
+        const ledgerData = {
+          customerId: selectedCustomerId,
+          amount: unpaidAmount.toFixed(2),
+          type: 'debit',
+          reference: invoiceData.id,
+          description: `Unpaid amount for sale ${invoiceData.id}`
+        };
+        
+        await createLedgerMutation.mutateAsync(ledgerData);
+        
+        toast({
+          title: "Partial Payment Processed",
+          description: `$${unpaidAmount.toFixed(2)} added to customer ledger`,
+        });
+      }
+      
+      // Store invoice for printing
+      setLastInvoice(invoiceData);
+      setShowInvoice(true);
+      
+      // Reset form
+      setDiscount({ type: 'percentage', value: 0, applyTo: 'total' });
+      setShowPaymentDialog(false);
+      
+    } catch (error) {
+      console.error('Transaction processing error:', error);
+    }
   };
 
   const clearCart = () => {
     setCart([]);
-    setCustomer({});
+    setSelectedCustomerId(null);
     setAmountReceived(0);
     setDiscount({ type: 'percentage', value: 0, applyTo: 'total' });
   };
@@ -744,77 +804,55 @@ export default function POSTerminal() {
 
           {/* Right Side - Cart & Checkout */}
           <div className="space-y-6">
-            {/* Customer Info */}
+            {/* Customer Selection */}
             <Card className="rounded-2xl shadow-lg border-0">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center">
-                    <User className="w-5 h-5 mr-2" />
-                    Customer
-                  </span>
-                  <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-50">
-                        <Edit3 className="w-4 h-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="rounded-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Customer Information</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="customerName">Name</Label>
-                          <Input
-                            id="customerName"
-                            value={customer.name || ''}
-                            onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
-                            placeholder="Customer name"
-                            className="rounded-xl"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="customerPhone">Phone</Label>
-                          <Input
-                            id="customerPhone"
-                            value={customer.phone || ''}
-                            onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
-                            placeholder="Phone number"
-                            className="rounded-xl"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="customerEmail">Email</Label>
-                          <Input
-                            id="customerEmail"
-                            value={customer.email || ''}
-                            onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
-                            placeholder="Email address"
-                            className="rounded-xl"
-                          />
-                        </div>
-                        <Button 
-                          onClick={() => setShowCustomerDialog(false)}
-                          className="w-full rounded-xl"
-                        >
-                          Save Customer Info
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                <CardTitle className="flex items-center">
+                  <User className="w-5 h-5 mr-2" />
+                  Customer Selection
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="text-sm text-gray-600">
-                  {customer.name ? (
-                    <div>
-                      <div className="font-medium">{customer.name}</div>
-                      {customer.phone && <div>{customer.phone}</div>}
-                      {customer.email && <div>{customer.email}</div>}
-                    </div>
-                  ) : (
-                    <div className="text-gray-400 italic">Walk-in Customer</div>
-                  )}
+                <div className="space-y-3">
+                  <Label>Select Customer</Label>
+                  <Select 
+                    value={selectedCustomerId?.toString() || "walk-in"} 
+                    onValueChange={(value) => setSelectedCustomerId(value === "walk-in" ? null : parseInt(value))}
+                  >
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue placeholder="Choose customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="walk-in">Walk-in Customer</SelectItem>
+                      {customers.map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id!.toString()}>
+                          {customer.name} {customer.phone ? `(${customer.phone})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  {/* Display selected customer info */}
+                  <div className="text-sm text-gray-600 mt-2 p-3 bg-gray-50 rounded-lg">
+                    {selectedCustomerId ? (
+                      (() => {
+                        const customer = customers.find(c => c.id === selectedCustomerId);
+                        return customer ? (
+                          <div>
+                            <div className="font-medium text-gray-900">{customer.name}</div>
+                            {customer.phone && <div className="text-gray-600">{customer.phone}</div>}
+                            {customer.email && <div className="text-gray-600">{customer.email}</div>}
+                            <div className="text-xs text-blue-600 mt-1">✓ Partial payments allowed</div>
+                          </div>
+                        ) : null;
+                      })()
+                    ) : (
+                      <div>
+                        <div className="font-medium text-gray-900">Walk-in Customer</div>
+                        <div className="text-xs text-orange-600 mt-1">⚠ Full payment required</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
