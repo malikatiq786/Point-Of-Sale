@@ -1121,6 +1121,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Registers storage and API
+  let registersStorage: any[] = [
+    {
+      id: 1,
+      name: "Main Register",
+      code: "REG-001",
+      branchId: 1,
+      branchName: "Main Branch",
+      openingBalance: "1000.00",
+      currentBalance: "1250.00",
+      isActive: true,
+      lastOpened: new Date(Date.now() - 3600000).toISOString(),
+      lastClosed: null
+    },
+    {
+      id: 2,
+      name: "Secondary Register",
+      code: "REG-002", 
+      branchId: 1,
+      branchName: "Main Branch",
+      openingBalance: "500.00",
+      currentBalance: "675.00",
+      isActive: false,
+      lastOpened: new Date(Date.now() - 86400000).toISOString(),
+      lastClosed: new Date(Date.now() - 3600000).toISOString()
+    },
+    {
+      id: 3,
+      name: "Express Counter",
+      code: "REG-003",
+      branchId: 2,
+      branchName: "West Branch",
+      openingBalance: "750.00",
+      currentBalance: "920.00",
+      isActive: false, 
+      lastOpened: new Date(Date.now() - 172800000).toISOString(),
+      lastClosed: new Date(Date.now() - 86400000).toISOString()
+    }
+  ];
+
+  app.get('/api/registers', (req, res) => {
+    console.log('Fetching registers, total:', registersStorage.length);
+    res.json(registersStorage);
+  });
+
+  app.post('/api/registers', (req, res) => {
+    try {
+      const { name, code, branchId, openingBalance } = req.body;
+      
+      const registerData = {
+        id: Date.now(),
+        name: name,
+        code: code || `REG-${Date.now()}`,
+        branchId: parseInt(branchId),
+        branchName: "Main Branch", // Default branch name
+        openingBalance: openingBalance || "0.00",
+        currentBalance: openingBalance || "0.00",
+        isActive: false,
+        lastOpened: null,
+        lastClosed: null
+      };
+
+      registersStorage.push(registerData);
+      console.log('Register created:', registerData);
+      res.status(201).json(registerData);
+    } catch (error) {
+      console.error('Create register error:', error);
+      res.status(500).json({ message: 'Failed to create register' });
+    }
+  });
+
+  app.patch('/api/registers/:id/open', (req, res) => {
+    try {
+      const registerId = parseInt(req.params.id);
+      const { openingBalance } = req.body;
+      
+      const registerIndex = registersStorage.findIndex(r => r.id === registerId);
+      if (registerIndex === -1) {
+        return res.status(404).json({ message: 'Register not found' });
+      }
+      
+      // Close all other registers first
+      registersStorage.forEach(r => {
+        if (r.id !== registerId && r.isActive) {
+          r.isActive = false;
+          r.lastClosed = new Date().toISOString();
+        }
+      });
+      
+      // Open the selected register
+      registersStorage[registerIndex].isActive = true;
+      registersStorage[registerIndex].lastOpened = new Date().toISOString();
+      registersStorage[registerIndex].lastClosed = null;
+      if (openingBalance !== undefined) {
+        registersStorage[registerIndex].currentBalance = openingBalance;
+      }
+      
+      console.log('Register opened:', registersStorage[registerIndex]);
+      res.json(registersStorage[registerIndex]);
+    } catch (error) {
+      console.error('Open register error:', error);
+      res.status(500).json({ message: 'Failed to open register' });
+    }
+  });
+
+  app.patch('/api/registers/:id/close', (req, res) => {
+    try {
+      const registerId = parseInt(req.params.id);
+      const { closingBalance } = req.body;
+      
+      const registerIndex = registersStorage.findIndex(r => r.id === registerId);
+      if (registerIndex === -1) {
+        return res.status(404).json({ message: 'Register not found' });
+      }
+      
+      registersStorage[registerIndex].isActive = false;
+      registersStorage[registerIndex].lastClosed = new Date().toISOString();
+      if (closingBalance !== undefined) {
+        registersStorage[registerIndex].currentBalance = closingBalance;
+      }
+      
+      console.log('Register closed:', registersStorage[registerIndex]);
+      res.json(registersStorage[registerIndex]);
+    } catch (error) {
+      console.error('Close register error:', error);
+      res.status(500).json({ message: 'Failed to close register' });
+    }
+  });
+
   // Sales storage and API
   let salesStorage: any[] = [
     {
