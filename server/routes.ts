@@ -1121,8 +1121,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Use new MVC routes (after auth routes to avoid conflicts)
-  app.use('/api', apiRoutes);
+  // Sales storage and API
+  let salesStorage: any[] = [
+    {
+      id: 1,
+      customerId: 1,
+      customerName: "John Smith",
+      totalAmount: "299.99",
+      paidAmount: "299.99",
+      status: "completed",
+      paymentMethod: "card",
+      saleDate: new Date(Date.now() - 86400000).toISOString(),
+      items: [
+        {
+          productId: 4,
+          productName: "Samsung Galaxy S23",
+          quantity: 1,
+          unitPrice: "299.99",
+          price: "299.99",
+          total: "299.99"
+        }
+      ]
+    },
+    {
+      id: 2,
+      customerId: 2,
+      customerName: "Jane Doe",
+      totalAmount: "129.99",
+      paidAmount: "100.00",
+      status: "pending",
+      paymentMethod: "cash",
+      saleDate: new Date(Date.now() - 172800000).toISOString(),
+      items: [
+        {
+          productId: 5,
+          productName: "Nike Air Max",
+          quantity: 1,
+          unitPrice: "129.99",
+          price: "129.99",
+          total: "129.99"
+        }
+      ]
+    }
+  ];
+
+  // Sales API endpoints
+  app.get('/api/sales', (req, res) => {
+    console.log('Fetching sales, total:', salesStorage.length);
+    const sortedSales = salesStorage.sort((a, b) => 
+      new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
+    );
+    res.json(sortedSales);
+  });
+
+  app.post('/api/sales', (req, res) => {
+    try {
+      console.log('SIMPLE SALES API: Received request body:', JSON.stringify(req.body, null, 2));
+      const { totalAmount, paidAmount, status, paymentMethod, customerId, customer, items } = req.body;
+      
+      console.log('SIMPLE SALES API: Processing sale:', { totalAmount, paidAmount, status, paymentMethod, customerId, items: items?.length });
+      
+      // Validate required fields
+      if (!totalAmount || !paidAmount || !items || items.length === 0) {
+        return res.status(400).json({ message: 'Missing required fields: totalAmount, paidAmount, items' });
+      }
+      
+      // Validate each item has required fields
+      for (const item of items) {
+        if (!item.productId || !item.quantity || !item.unitPrice || !item.price || !item.total) {
+          return res.status(400).json({ message: 'Each item must have productId, quantity, unitPrice, price, and total' });
+        }
+      }
+      
+      const saleData = {
+        id: Date.now(),
+        customerId: customerId || null,
+        customerName: customer?.name || customersStorage.find((c: any) => c.id == customerId)?.name || 'Walk-in Customer',
+        totalAmount: totalAmount,
+        paidAmount: paidAmount,
+        status: status || 'completed',
+        paymentMethod: paymentMethod || 'cash',
+        saleDate: new Date().toISOString(),
+        items: items.map((item: any) => ({
+          productId: item.productId,
+          productName: item.productName || `Product ${item.productId}`,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          price: item.price,
+          total: item.total,
+          discount: item.discount || 0
+        }))
+      };
+
+      salesStorage.unshift(saleData);
+      
+      // Create customer ledger entry if there's unpaid amount
+      const unpaidAmount = parseFloat(totalAmount) - parseFloat(paidAmount);
+      if (unpaidAmount > 0 && customerId) {
+        const ledgerEntry = {
+          id: Date.now() + 1,
+          customerId: parseInt(customerId),
+          customerName: saleData.customerName,
+          amount: unpaidAmount.toFixed(2),
+          type: "debit",
+          reference: `SALE-${saleData.id}`,
+          description: "Unpaid amount from sale",
+          date: new Date().toISOString().split('T')[0],
+          createdAt: new Date().toISOString()
+        };
+        
+        customerLedgersStorage.unshift(ledgerEntry);
+        console.log('Customer ledger entry created for unpaid amount:', ledgerEntry);
+      }
+      
+      console.log('SIMPLE SALES API: Sale created successfully:', saleData);
+      res.status(201).json(saleData);
+    } catch (error) {
+      console.error('SIMPLE SALES API: Create sale error:', error);
+      console.error('SIMPLE SALES API: Error stack:', error.stack);
+      res.status(500).json({ message: 'Failed to process sale' });
+    }
+  });
+
+  // Use new MVC routes (after auth routes to avoid conflicts) - COMPLETELY DISABLED to use simple endpoints
+  // app.use('/api', apiRoutes);
 
   // Legacy routes for compatibility (will be gradually migrated)
   app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
@@ -1184,71 +1306,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Customer routes
-  app.get("/api/customers", isAuthenticated, async (req, res) => {
-    try {
-      const customers = await storage.getCustomers();
-      res.json(customers);
-    } catch (error) {
-      console.error("Error fetching customers:", error);
-      res.status(500).json({ message: "Failed to fetch customers" });
-    }
-  });
+  // Customer routes - DISABLED (using simple in-memory version above)
+  // app.get("/api/customers", isAuthenticated, async (req, res) => {
+  //   try {
+  //     const customers = await storage.getCustomers();
+  //     res.json(customers);
+  //   } catch (error) {
+  //     console.error("Error fetching customers:", error);
+  //     res.status(500).json({ message: "Failed to fetch customers" });
+  //   }
+  // });
 
-  app.post("/api/customers", isAuthenticated, async (req: any, res) => {
-    try {
-      const validatedData = insertCustomerSchema.parse(req.body);
-      const customer = await storage.createCustomer(validatedData);
+  // app.post("/api/customers", isAuthenticated, async (req: any, res) => {
+  //   try {
+  //     const validatedData = insertCustomerSchema.parse(req.body);
+  //     const customer = await storage.createCustomer(validatedData);
       
-      // Log activity
-      await storage.logActivity(
-        req.user.claims.sub,
-        `Created customer: ${customer.name}`,
-        req.ip
-      );
+  //     // Log activity
+  //     await storage.logActivity(
+  //       req.user.claims.sub,
+  //       `Created customer: ${customer.name}`,
+  //       req.ip
+  //     );
       
-      res.json(customer);
-    } catch (error) {
-      console.error("Error creating customer:", error);
-      res.status(500).json({ message: "Failed to create customer" });
-    }
-  });
+  //     res.json(customer);
+  //   } catch (error) {
+  //     console.error("Error creating customer:", error);
+  //     res.status(500).json({ message: "Failed to create customer" });
+  //   }
+  // });
 
-  // Sales routes
-  app.get("/api/sales", isAuthenticated, async (req, res) => {
-    try {
-      const sales = await storage.getSales();
-      res.json(sales);
-    } catch (error) {
-      console.error("Error fetching sales:", error);
-      res.status(500).json({ message: "Failed to fetch sales" });
-    }
-  });
+  // Sales routes - DISABLED (using simple in-memory version above)
+  // app.get("/api/sales", isAuthenticated, async (req, res) => {
+  //   try {
+  //     const sales = await storage.getSales();
+  //     res.json(sales);
+  //   } catch (error) {
+  //     console.error("Error fetching sales:", error);
+  //     res.status(500).json({ message: "Failed to fetch sales" });
+  //   }
+  // });
 
-  app.post("/api/sales", isAuthenticated, async (req: any, res) => {
-    try {
-      const saleData = {
-        ...req.body,
-        userId: req.user.claims.sub,
-        saleDate: new Date(),
-        status: 'completed'
-      };
+  // app.post("/api/sales", isAuthenticated, async (req: any, res) => {
+  //   try {
+  //     const saleData = {
+  //       ...req.body,
+  //       userId: req.user.claims.sub,
+  //       saleDate: new Date(),
+  //       status: 'completed'
+  //     };
       
-      const sale = await storage.createSale(saleData);
+  //     const sale = await storage.createSale(saleData);
       
-      // Log activity
-      await storage.logActivity(
-        req.user.claims.sub,
-        `Completed sale: $${sale.totalAmount}`,
-        req.ip
-      );
+  //     // Log activity
+  //     await storage.logActivity(
+  //       req.user.claims.sub,
+  //       `Completed sale: $${sale.totalAmount}`,
+  //       req.ip
+  //     );
       
-      res.json(sale);
-    } catch (error) {
-      console.error("Error creating sale:", error);
-      res.status(500).json({ message: "Failed to create sale" });
-    }
-  });
+  //     res.json(sale);
+  //   } catch (error) {
+  //     console.error("Error creating sale:", error);
+  //     res.status(500).json({ message: "Failed to create sale" });
+  //   }
+  // });
 
   // Product management routes
   app.post("/api/products", isAuthenticated, async (req: any, res) => {
