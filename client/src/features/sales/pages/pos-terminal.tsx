@@ -90,6 +90,8 @@ export default function POSTerminal() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'qr'>("cash");
   const [amountReceived, setAmountReceived] = useState<number>(0);
+  const [changeAmount, setChangeAmount] = useState<number>(0);
+  const [isChangeEditable, setIsChangeEditable] = useState(false);
   
   // Customer management state
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
@@ -382,6 +384,9 @@ export default function POSTerminal() {
   };
 
   const getChange = () => {
+    if (isChangeEditable) {
+      return changeAmount;
+    }
     return Math.max(0, amountReceived - getGrandTotal());
   };
 
@@ -409,6 +414,7 @@ export default function POSTerminal() {
     const isWalkInCustomer = !selectedCustomerId;
     const paidAmount = paymentMethod === 'cash' ? amountReceived : grandTotal;
     const unpaidAmount = grandTotal - paidAmount;
+    const overpaidAmount = paidAmount > grandTotal ? paidAmount - grandTotal : 0;
     
     // Validation for walk-in customers: must pay in full
     if (isWalkInCustomer && paymentMethod === 'cash' && paidAmount < grandTotal) {
@@ -472,21 +478,16 @@ export default function POSTerminal() {
       // Process the sale
       await processSaleMutation.mutateAsync(saleData);
       
-      // If there's an unpaid amount and customer is selected, create ledger entry
+      // Handle ledger entries - both underpayment and overpayment are handled by the backend
       if (unpaidAmount > 0 && selectedCustomerId) {
-        const ledgerData = {
-          customerId: selectedCustomerId,
-          amount: unpaidAmount.toFixed(2),
-          type: 'debit',
-          reference: invoiceData.id,
-          description: `Unpaid amount for sale ${invoiceData.id}`
-        };
-        
-        await createLedgerMutation.mutateAsync(ledgerData);
-        
         toast({
           title: "Partial Payment Processed",
           description: `$${unpaidAmount.toFixed(2)} added to customer ledger`,
+        });
+      } else if (overpaidAmount > 0 && selectedCustomerId) {
+        toast({
+          title: "Overpayment Credit Added",
+          description: `$${overpaidAmount.toFixed(2)} credit added to customer ledger`,
         });
       }
       
@@ -496,6 +497,9 @@ export default function POSTerminal() {
       
       // Reset form
       setDiscount({ type: 'percentage', value: 0, applyTo: 'total' });
+      setAmountReceived(0);
+      setChangeAmount(0);
+      setIsChangeEditable(false);
       setShowPaymentDialog(false);
       
     } catch (error) {
@@ -507,6 +511,8 @@ export default function POSTerminal() {
     setCart([]);
     setSelectedCustomerId(null);
     setAmountReceived(0);
+    setChangeAmount(0);
+    setIsChangeEditable(false);
     setDiscount({ type: 'percentage', value: 0, applyTo: 'total' });
   };
 
@@ -1139,10 +1145,40 @@ export default function POSTerminal() {
                       <div className="bg-green-50 rounded-xl p-3">
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-green-700">Change Due:</span>
-                          <span className="text-lg font-bold text-green-800">
-                            ${getChange().toFixed(2)}
-                          </span>
+                          <div className="flex items-center space-x-2">
+                            {isChangeEditable ? (
+                              <Input
+                                type="number"
+                                value={changeAmount}
+                                onChange={(e) => setChangeAmount(parseFloat(e.target.value) || 0)}
+                                className="w-20 h-8 text-sm text-center"
+                                step="0.01"
+                              />
+                            ) : (
+                              <span className="text-lg font-bold text-green-800">
+                                ${getChange().toFixed(2)}
+                              </span>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (!isChangeEditable) {
+                                  setChangeAmount(getChange());
+                                }
+                                setIsChangeEditable(!isChangeEditable);
+                              }}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
+                        {amountReceived > getGrandTotal() && selectedCustomerId && (
+                          <div className="text-xs text-blue-600 mt-1">
+                            Overpayment will be added as credit to customer ledger
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

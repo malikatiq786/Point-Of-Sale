@@ -1322,7 +1322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const saleData = {
+      const saleData: any = {
         id: Date.now(),
         customerId: customerId || null,
         customerName: customer?.name || customersStorage.find((c: any) => c.id == customerId)?.name || 'Walk-in Customer',
@@ -1344,14 +1344,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       salesStorage.unshift(saleData);
       
-      // Create customer ledger entry if there's unpaid amount
-      const unpaidAmount = parseFloat(totalAmount) - parseFloat(paidAmount);
-      if (unpaidAmount > 0 && customerId) {
+      // Handle customer ledger entries based on payment difference
+      const totalAmountFloat = parseFloat(totalAmount);
+      const paidAmountFloat = parseFloat(paidAmount);
+      const difference = totalAmountFloat - paidAmountFloat;
+      
+      if (difference > 0 && customerId) {
+        // Customer owes money - create debit entry for unpaid amount
         const ledgerEntry = {
           id: Date.now() + 1,
           customerId: parseInt(customerId),
           customerName: saleData.customerName,
-          amount: unpaidAmount.toFixed(2),
+          amount: difference.toFixed(2),
           type: "debit",
           reference: `SALE-${saleData.id}`,
           description: "Unpaid amount from sale",
@@ -1361,13 +1365,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         customerLedgersStorage.unshift(ledgerEntry);
         console.log('Customer ledger entry created for unpaid amount:', ledgerEntry);
+      } else if (difference < 0 && customerId) {
+        // Customer overpaid - create credit entry for overpayment
+        const overpaidAmount = Math.abs(difference);
+        const creditEntry = {
+          id: Date.now() + 1,
+          customerId: parseInt(customerId),
+          customerName: saleData.customerName,
+          amount: overpaidAmount.toFixed(2),
+          type: "credit",
+          reference: `SALE-${saleData.id}`,
+          description: "Overpayment credit from sale",
+          date: new Date().toISOString().split('T')[0],
+          createdAt: new Date().toISOString()
+        };
+        
+        customerLedgersStorage.unshift(creditEntry);
+        console.log('Customer ledger entry created for overpayment:', creditEntry);
+        
+        // Add overpayment info to sale data for frontend reference
+        saleData.overpaymentAmount = overpaidAmount.toFixed(2);
+        saleData.changeAmount = overpaidAmount.toFixed(2);
       }
       
       console.log('SIMPLE SALES API: Sale created successfully:', saleData);
       res.status(201).json(saleData);
     } catch (error) {
       console.error('SIMPLE SALES API: Create sale error:', error);
-      console.error('SIMPLE SALES API: Error stack:', error.stack);
+      console.error('SIMPLE SALES API: Error stack:', (error as Error).stack);
       res.status(500).json({ message: 'Failed to process sale' });
     }
   });
