@@ -920,14 +920,14 @@ export default function POSTerminal() {
                   
                   {/* Customer Dropdown Selection */}
                   <Select 
-                    value={selectedCustomerId?.toString() || ""} 
-                    onValueChange={(value) => setSelectedCustomerId(value ? parseInt(value) : null)}
+                    value={selectedCustomerId?.toString() || "walk-in"} 
+                    onValueChange={(value) => setSelectedCustomerId(value === "walk-in" ? null : parseInt(value))}
                   >
                     <SelectTrigger className="rounded-xl">
                       <SelectValue placeholder="Select customer or walk-in sale" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Walk-in Sale (No Customer)</SelectItem>
+                      <SelectItem value="walk-in">Walk-in Sale (No Customer)</SelectItem>
                       {customers.map((customer: any) => (
                         <SelectItem key={customer.id} value={customer.id.toString()}>
                           <div className="flex flex-col">
