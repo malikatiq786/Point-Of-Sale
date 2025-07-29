@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Receipt, Calendar, DollarSign, User, FileText, TrendingUp, TrendingDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function Transactions() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [accountFilter, setAccountFilter] = useState("all");
+  const { formatCurrencyValue } = useCurrency();
 
   // Fetch transactions
   const { data: transactions = [], isLoading } = useQuery({
@@ -88,7 +90,7 @@ export default function Transactions() {
               <TrendingUp className="w-8 h-8 text-green-500" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Income</p>
-                <p className="text-2xl font-bold text-green-600">${totalIncome.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-green-600">{formatCurrencyValue(totalIncome)}</p>
               </div>
             </div>
           </CardContent>
@@ -100,7 +102,7 @@ export default function Transactions() {
               <TrendingDown className="w-8 h-8 text-red-500" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Expenses</p>
-                <p className="text-2xl font-bold text-red-600">${totalExpense.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-red-600">{formatCurrencyValue(totalExpense)}</p>
               </div>
             </div>
           </CardContent>

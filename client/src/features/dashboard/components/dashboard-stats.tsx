@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DollarSign, Package, AlertTriangle, Users, TrendingUp, TrendingDown } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface DashboardStatsData {
   todaySales: string;
@@ -13,6 +14,7 @@ interface DashboardStatsData {
 
 export default function DashboardStats() {
   const { toast } = useToast();
+  const { formatCurrencyValue } = useCurrency();
 
   const { data: stats, isLoading } = useQuery<DashboardStatsData>({
     queryKey: ["/api/dashboard/stats"],
@@ -22,7 +24,7 @@ export default function DashboardStats() {
   const statCards = [
     {
       title: "Today's Sales",
-      value: stats?.todaySales || "$0",
+      value: stats?.todaySales ? formatCurrencyValue(stats.todaySales.replace(/[^\d.-]/g, '')) : formatCurrencyValue(0),
       change: "+12.5%",
       changeType: "increase" as const,
       icon: DollarSign,

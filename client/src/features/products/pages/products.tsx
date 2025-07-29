@@ -12,6 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Trash2, Package, Eye, Filter, X } from "lucide-react";
 import { Link } from "wouter";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function Products() {
   const { user } = useAuth();
@@ -22,6 +23,7 @@ export default function Products() {
   const [brandFilter, setBrandFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [priceFilter, setPriceFilter] = useState("all");
+  const { formatCurrencyValue } = useCurrency();
 
   // Fetch products
   const { data: products = [], isLoading } = useQuery({

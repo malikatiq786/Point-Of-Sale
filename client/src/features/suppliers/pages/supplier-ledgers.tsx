@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Truck, Calendar, DollarSign, Plus, TrendingUp, TrendingDown, FileText, Eye } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function SupplierLedgers() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -28,6 +29,7 @@ export default function SupplierLedgers() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { formatCurrencyValue } = useCurrency();
 
   // Fetch supplier ledgers
   const { data: ledgers = [], isLoading } = useQuery({
@@ -147,7 +149,7 @@ export default function SupplierLedgers() {
               <TrendingUp className="w-8 h-8 text-red-500" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Debit (We Owe)</p>
-                <p className="text-2xl font-bold text-red-600">${totalDebit.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-red-600">{formatCurrencyValue(totalDebit)}</p>
               </div>
             </div>
           </CardContent>
@@ -159,7 +161,7 @@ export default function SupplierLedgers() {
               <TrendingDown className="w-8 h-8 text-green-500" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Credit (We Paid)</p>
-                <p className="text-2xl font-bold text-green-600">${totalCredit.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-green-600">{formatCurrencyValue(totalCredit)}</p>
               </div>
             </div>
           </CardContent>
@@ -172,7 +174,7 @@ export default function SupplierLedgers() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Outstanding Balance</p>
                 <p className={`text-2xl font-bold ${balance >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  ${Math.abs(balance).toFixed(2)} {balance >= 0 ? '(Payable)' : '(Overpaid)'}
+                  {formatCurrencyValue(Math.abs(balance))} {balance >= 0 ? '(Payable)' : '(Overpaid)'}
                 </p>
               </div>
             </div>

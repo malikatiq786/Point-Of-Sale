@@ -7,12 +7,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { FileText, Download, TrendingUp, TrendingDown, DollarSign, Calendar, BarChart3 } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function Reports() {
   const [reportType, setReportType] = useState("profit_loss");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [period, setPeriod] = useState("monthly");
+  const { formatCurrencyValue } = useCurrency();
 
   // Fetch report data
   const { data: reportData = {}, isLoading } = useQuery({

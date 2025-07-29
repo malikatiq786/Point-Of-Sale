@@ -7,10 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Search, DollarSign, Plus, Calendar, FileText, Eye } from "lucide-react";
 import { format } from "date-fns";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function Expenses() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const { formatCurrencyValue } = useCurrency();
 
   // Fetch expenses
   const { data: expenses = [], isLoading } = useQuery({

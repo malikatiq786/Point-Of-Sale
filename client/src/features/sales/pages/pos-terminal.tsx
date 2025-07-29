@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from "@/hooks/useCurrency";
 import { 
   Search, ShoppingCart, Minus, Plus, Trash2, CreditCard, DollarSign, 
   Smartphone, Percent, Calculator, Receipt, Printer, QrCode, 
@@ -83,6 +84,7 @@ export default function POSTerminal() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const printRef = useRef<HTMLDivElement>(null);
+  const { formatCurrencyValue, defaultCurrency } = useCurrency();
   
   // Core state
   const [searchQuery, setSearchQuery] = useState("");
@@ -153,7 +155,7 @@ export default function POSTerminal() {
     if (Math.abs(openingBalance - expectedBalance) > 0.01) {
       toast({
         title: "Opening Balance Mismatch",
-        description: `Expected: $${expectedBalance.toFixed(2)}, Entered: $${openingBalance.toFixed(2)}`,
+        description: `Expected: ${formatCurrencyValue(expectedBalance)}, Entered: ${formatCurrencyValue(openingBalance)}`,
         variant: "destructive",
       });
       return;
@@ -166,7 +168,7 @@ export default function POSTerminal() {
     
     toast({
       title: "Register Opened",
-      description: `${register.name} is now open with $${openingBalance.toFixed(2)}`,
+      description: `${register.name} is now open with ${formatCurrencyValue(openingBalance)}`,
     });
   };
 
@@ -670,7 +672,7 @@ export default function POSTerminal() {
                     Cart Items ({cart.length} items)
                   </span>
                   <Badge variant="secondary" className="text-xs">
-                    Subtotal: ${getSubtotal().toFixed(2)}
+                    Subtotal: {formatCurrencyValue(getSubtotal())}
                   </Badge>
                 </CardTitle>
               </CardHeader>
@@ -702,7 +704,7 @@ export default function POSTerminal() {
                                 <div className="text-xs text-gray-500">{item.category}</div>
                                 {item.discount && item.discount > 0 && (
                                   <div className="text-xs text-green-600 mt-1">
-                                    -{item.discountType === 'percentage' ? `${item.discount}%` : `$${item.discount}`} discount
+                                    -{item.discountType === 'percentage' ? `${item.discount}%` : formatCurrencyValue(item.discount)} discount
                                   </div>
                                 )}
                               </div>
@@ -787,13 +789,13 @@ export default function POSTerminal() {
                                     setEditPrice(item.price.toString());
                                   }}
                                 >
-                                  ${item.price.toFixed(2)}
+                                  {formatCurrencyValue(item.price)}
                                 </span>
                               )}
                             </td>
                             <td className="py-3 px-2 text-right">
                               <span className="font-semibold text-sm text-gray-900">
-                                ${item.total.toFixed(2)}
+                                {formatCurrencyValue(item.total)}
                               </span>
                             </td>
                             <td className="py-3 px-2 text-center">
@@ -987,7 +989,7 @@ export default function POSTerminal() {
                       </span>
                       <span className="text-blue-600">
                         {discount.value > 0 ? 
-                          (discount.type === 'percentage' ? `${discount.value}%` : `$${discount.value}`) 
+                          (discount.type === 'percentage' ? `${discount.value}%` : formatCurrencyValue(discount.value)) 
                           : 'None'
                         }
                       </span>
@@ -1008,7 +1010,7 @@ export default function POSTerminal() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="percentage">Percentage (%)</SelectItem>
-                            <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
+                            <SelectItem value="fixed">Fixed Amount ({defaultCurrency.symbol})</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1054,22 +1056,22 @@ export default function POSTerminal() {
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm opacity-90">
                     <span>Subtotal:</span>
-                    <span>${getSubtotal().toFixed(2)}</span>
+                    <span>{formatCurrencyValue(getSubtotal())}</span>
                   </div>
                   {(getItemDiscountTotal() + getGlobalDiscountAmount()) > 0 && (
                     <div className="flex justify-between text-sm opacity-90">
                       <span>Total Discounts:</span>
-                      <span>-${(getItemDiscountTotal() + getGlobalDiscountAmount()).toFixed(2)}</span>
+                      <span>-{formatCurrencyValue(getItemDiscountTotal() + getGlobalDiscountAmount())}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm opacity-90">
                     <span>Tax ({taxRate}%):</span>
-                    <span>${getTaxAmount().toFixed(2)}</span>
+                    <span>{formatCurrencyValue(getTaxAmount())}</span>
                   </div>
                   <Separator className="bg-white/20" />
                   <div className="flex justify-between text-xl font-bold">
                     <span>TOTAL:</span>
-                    <span>${getGrandTotal().toFixed(2)}</span>
+                    <span>{formatCurrencyValue(getGrandTotal())}</span>
                   </div>
                 </div>
               </CardContent>
@@ -1147,7 +1149,7 @@ export default function POSTerminal() {
                               />
                             ) : (
                               <span className="text-lg font-bold text-green-800">
-                                ${getChange().toFixed(2)}
+                                {formatCurrencyValue(getChange())}
                               </span>
                             )}
                             <Button
@@ -1186,7 +1188,7 @@ export default function POSTerminal() {
                         onClick={() => setAmountReceived(amountReceived + amount)}
                         className="rounded-lg text-xs"
                       >
-                        +${amount}
+                        +{formatCurrencyValue(amount)}
                       </Button>
                     ))}
                     <Button

@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, CreditCard, Plus, Calendar, DollarSign, User, FileText, ArrowUpDown } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function Payments() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -28,6 +29,7 @@ export default function Payments() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { formatCurrencyValue } = useCurrency();
 
   // Fetch payments
   const { data: payments = [], isLoading } = useQuery({
