@@ -94,7 +94,6 @@ export default function POSTerminal() {
   const [isChangeEditable, setIsChangeEditable] = useState(false);
   
   // Customer management state
-  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", email: "" });
   
@@ -919,34 +918,26 @@ export default function POSTerminal() {
                     </Dialog>
                   </div>
                   
-                  {/* Customer Search */}
-                  <Input
-                    placeholder="Search customers..."
-                    value={customerSearchQuery}
-                    onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                    className="rounded-xl"
-                  />
-                  
+                  {/* Customer Dropdown Selection */}
                   <Select 
-                    value={selectedCustomerId?.toString() || "walk-in"} 
-                    onValueChange={(value) => setSelectedCustomerId(value === "walk-in" ? null : parseInt(value))}
+                    value={selectedCustomerId?.toString() || ""} 
+                    onValueChange={(value) => setSelectedCustomerId(value ? parseInt(value) : null)}
                   >
                     <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Choose customer" />
+                      <SelectValue placeholder="Select customer or walk-in sale" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="walk-in">Walk-in Customer</SelectItem>
-                      {customers
-                        .filter((customer) => 
-                          customerSearchQuery === "" || 
-                          customer.name.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
-                          (customer.phone && customer.phone.includes(customerSearchQuery))
-                        )
-                        .map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id!.toString()}>
-                            {customer.name} {customer.phone ? `(${customer.phone})` : ''}
-                          </SelectItem>
-                        ))}
+                      <SelectItem value="">Walk-in Sale (No Customer)</SelectItem>
+                      {customers.map((customer: any) => (
+                        <SelectItem key={customer.id} value={customer.id.toString()}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{customer.name}</span>
+                            {customer.phone && (
+                              <span className="text-xs text-gray-500">{customer.phone}</span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   
