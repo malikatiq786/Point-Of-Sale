@@ -520,7 +520,9 @@ export const upsertUserSchema = createInsertSchema(users).omit({
 });
 
 export const insertProductSchema = createInsertSchema(products);
-export const insertSaleSchema = createInsertSchema(sales);
+export const insertSaleSchema = createInsertSchema(sales).extend({
+  status: z.enum(['completed', 'pending', 'cancelled']).optional(),
+});
 export const insertCustomerSchema = createInsertSchema(customers);
 export const insertSupplierSchema = createInsertSchema(suppliers);
 export const insertPurchaseSchema = createInsertSchema(purchases);

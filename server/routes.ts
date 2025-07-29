@@ -161,6 +161,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Financial modules APIs
   
+  // Customers storage
+  let customersStorage: any[] = [
+    {
+      id: 1,
+      name: "John Smith",
+      phone: "+1-555-0123",
+      email: "john.smith@email.com",
+      address: "123 Main St, City, State 12345"
+    },
+    {
+      id: 2,
+      name: "Jane Doe",
+      phone: "+1-555-0456",
+      email: "jane.doe@email.com",
+      address: "456 Oak Ave, City, State 67890"
+    },
+    {
+      id: 3,
+      name: "Mike Johnson",
+      phone: "+1-555-0789",
+      email: "mike.johnson@email.com",
+      address: "789 Pine St, City, State 11111"
+    },
+    {
+      id: 4,
+      name: "Sarah Wilson",
+      phone: "+1-555-0987",
+      email: "sarah.wilson@email.com",
+      address: "321 Elm St, City, State 22222"
+    }
+  ];
+
+  // Suppliers storage
+  let suppliersStorage: any[] = [
+    {
+      id: 1,
+      name: "ABC Supplies Co",
+      phone: "+1-555-1001",
+      email: "contact@abcsupplies.com",
+      address: "100 Industrial Dr, Business Park"
+    },
+    {
+      id: 2,
+      name: "Tech Solutions Inc",
+      phone: "+1-555-1002",
+      email: "sales@techsolutions.com",
+      address: "200 Technology Blvd, Tech Center"
+    }
+  ];
+  
   // Payments API
   let paymentsStorage: any[] = [
     {
@@ -217,7 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { customerId, amount, paymentMethod, paymentType, description, reference } = req.body;
       
       // Get customer data for the payment
-      const customer = customersStorage.find(c => c.id == customerId) || { name: 'Walk-in Customer' };
+      const customer = customersStorage.find((c: any) => c.id == customerId) || { name: 'Walk-in Customer' };
       
       const paymentData = {
         id: Date.now(),
@@ -430,6 +480,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(reportData);
   });
 
+  // Customers API
+  app.get('/api/customers', (req, res) => {
+    console.log('Fetching customers, total:', customersStorage.length);
+    res.json(customersStorage);
+  });
+
+  app.post('/api/customers', (req, res) => {
+    try {
+      const { name, phone, email, address } = req.body;
+      
+      const customerData = {
+        id: Date.now(),
+        name: name || '',
+        phone: phone || '',
+        email: email || '',
+        address: address || ''
+      };
+
+      customersStorage.push(customerData);
+      console.log('Customer created:', customerData);
+      res.status(201).json(customerData);
+    } catch (error) {
+      console.error('Create customer error:', error);
+      res.status(500).json({ message: 'Failed to create customer' });
+    }
+  });
+
+  // Suppliers API
+  app.get('/api/suppliers', (req, res) => {
+    console.log('Fetching suppliers, total:', suppliersStorage.length);
+    res.json(suppliersStorage);
+  });
+
+  app.post('/api/suppliers', (req, res) => {
+    try {
+      const { name, phone, email, address } = req.body;
+      
+      const supplierData = {
+        id: Date.now(),
+        name: name || '',
+        phone: phone || '',
+        email: email || '',
+        address: address || ''
+      };
+
+      suppliersStorage.push(supplierData);
+      console.log('Supplier created:', supplierData);
+      res.status(201).json(supplierData);
+    } catch (error) {
+      console.error('Create supplier error:', error);
+      res.status(500).json({ message: 'Failed to create supplier' });
+    }
+  });
+
   // Customer Ledgers API
   let customerLedgersStorage: any[] = [
     {
@@ -491,7 +595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { customerId, amount, type, reference, description } = req.body;
       
       // Get customer data for the ledger entry
-      const customer = customersStorage.find(c => c.id == customerId) || { name: 'Unknown Customer' };
+      const customer = customersStorage.find((c: any) => c.id == customerId) || { name: 'Unknown Customer' };
       
       const ledgerData = {
         id: Date.now(),
@@ -575,7 +679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { supplierId, amount, type, reference, description } = req.body;
       
       // Get supplier data for the ledger entry
-      const supplier = suppliersStorage.find(s => s.id == supplierId) || { name: 'Unknown Supplier' };
+      const supplier = suppliersStorage.find((s: any) => s.id == supplierId) || { name: 'Unknown Supplier' };
       
       const ledgerData = {
         id: Date.now(),

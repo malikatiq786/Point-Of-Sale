@@ -91,6 +91,11 @@ export default function POSTerminal() {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'qr'>("cash");
   const [amountReceived, setAmountReceived] = useState<number>(0);
   
+  // Customer management state
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+  const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", email: "" });
+  
   // Discount and tax state
   const [discount, setDiscount] = useState<DiscountState>({ type: 'percentage', value: 0, applyTo: 'total' });
   const [taxRate, setTaxRate] = useState<number>(10); // 10% default tax
@@ -215,6 +220,30 @@ export default function POSTerminal() {
       toast({
         title: "Ledger Updated",
         description: "Customer balance has been updated",
+      });
+    },
+  });
+
+  // Add customer mutation
+  const addCustomerMutation = useMutation({
+    mutationFn: async (customerData: any) => {
+      return await apiRequest("POST", "/api/customers", customerData);
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Customer Added",
+        description: "New customer has been added successfully",
+      });
+      setSelectedCustomerId(data.id);
+      setNewCustomer({ name: "", phone: "", email: "" });
+      setShowAddCustomerDialog(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to add customer",
+        variant: "destructive",
       });
     },
   });
@@ -425,13 +454,14 @@ export default function POSTerminal() {
     const saleData = {
       totalAmount: grandTotal,
       paidAmount: paidAmount,
-      status: unpaidAmount > 0 ? "partial" : "completed",
+      status: unpaidAmount > 0 ? "pending" : "completed",
       paymentMethod,
       customerId: selectedCustomerId,
       customer: selectedCustomer || { name: 'Walk-in Customer' },
       items: cart.map(item => ({
         productId: item.id,
         quantity: item.quantity,
+        unitPrice: item.price,
         price: item.price,
         discount: item.discount,
         total: item.total
@@ -814,7 +844,83 @@ export default function POSTerminal() {
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="space-y-3">
-                  <Label>Select Customer</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Select Customer</Label>
+                    <Dialog open={showAddCustomerDialog} onOpenChange={setShowAddCustomerDialog}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="rounded-xl">
+                          <Plus className="w-4 h-4 mr-1" />
+                          Add New
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="rounded-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Add New Customer</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="newCustomerName">Name *</Label>
+                            <Input
+                              id="newCustomerName"
+                              value={newCustomer.name}
+                              onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                              placeholder="Customer name"
+                              className="rounded-xl"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="newCustomerPhone">Phone</Label>
+                            <Input
+                              id="newCustomerPhone"
+                              value={newCustomer.phone}
+                              onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                              placeholder="Phone number"
+                              className="rounded-xl"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="newCustomerEmail">Email</Label>
+                            <Input
+                              id="newCustomerEmail"
+                              value={newCustomer.email}
+                              onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                              placeholder="Email address"
+                              className="rounded-xl"
+                            />
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button 
+                              onClick={() => setShowAddCustomerDialog(false)}
+                              variant="outline"
+                              className="flex-1 rounded-xl"
+                            >
+                              Cancel
+                            </Button>
+                            <Button 
+                              onClick={() => {
+                                if (newCustomer.name.trim()) {
+                                  addCustomerMutation.mutate(newCustomer);
+                                }
+                              }}
+                              disabled={!newCustomer.name.trim() || addCustomerMutation.isPending}
+                              className="flex-1 rounded-xl"
+                            >
+                              {addCustomerMutation.isPending ? "Adding..." : "Add Customer"}
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  
+                  {/* Customer Search */}
+                  <Input
+                    placeholder="Search customers..."
+                    value={customerSearchQuery}
+                    onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                    className="rounded-xl"
+                  />
+                  
                   <Select 
                     value={selectedCustomerId?.toString() || "walk-in"} 
                     onValueChange={(value) => setSelectedCustomerId(value === "walk-in" ? null : parseInt(value))}
@@ -824,11 +930,17 @@ export default function POSTerminal() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="walk-in">Walk-in Customer</SelectItem>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id!.toString()}>
-                          {customer.name} {customer.phone ? `(${customer.phone})` : ''}
-                        </SelectItem>
-                      ))}
+                      {customers
+                        .filter((customer) => 
+                          customerSearchQuery === "" || 
+                          customer.name.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+                          (customer.phone && customer.phone.includes(customerSearchQuery))
+                        )
+                        .map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id!.toString()}>
+                            {customer.name} {customer.phone ? `(${customer.phone})` : ''}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   
