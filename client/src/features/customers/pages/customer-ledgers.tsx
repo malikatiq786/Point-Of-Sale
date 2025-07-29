@@ -121,6 +121,29 @@ export default function CustomerLedgers() {
     createLedgerMutation.mutate(ledgerData);
   };
 
+  // Calculate running balances for each ledger entry
+  const ledgersWithBalance = filteredLedgers
+    .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .map((ledger: any, index: number, sortedLedgers: any[]) => {
+      // Calculate running balance up to this point
+      let runningBalance = 0;
+      for (let i = 0; i <= index; i++) {
+        const entry = sortedLedgers[i];
+        const amount = parseFloat(entry.amount || '0');
+        if (entry.type === 'debit') {
+          runningBalance += amount; // Debit increases what customer owes
+        } else {
+          runningBalance -= amount; // Credit reduces what customer owes
+        }
+      }
+      
+      return {
+        ...ledger,
+        runningBalance: runningBalance
+      };
+    })
+    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Show newest first
+
   // Calculate summary statistics
   const totalDebit = filteredLedgers
     .filter((l: any) => l.type === 'debit')
@@ -130,7 +153,7 @@ export default function CustomerLedgers() {
     .filter((l: any) => l.type === 'credit')
     .reduce((sum: number, l: any) => sum + parseFloat(l.amount || '0'), 0);
 
-  const balance = totalCredit - totalDebit;
+  const balance = totalDebit - totalCredit; // Positive = customer owes, Negative = customer credit
 
   return (
     <AppLayout>
@@ -168,11 +191,11 @@ export default function CustomerLedgers() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <DollarSign className={`w-8 h-8 ${balance >= 0 ? 'text-green-500' : 'text-red-500'}`} />
+              <DollarSign className={`w-8 h-8 ${balance <= 0 ? 'text-green-500' : 'text-red-500'}`} />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Net Balance</p>
-                <p className={`text-2xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ${Math.abs(balance).toFixed(2)} {balance >= 0 ? '(CR)' : '(DR)'}
+                <p className={`text-2xl font-bold ${balance <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  ${Math.abs(balance).toFixed(2)} {balance > 0 ? '(DR)' : balance < 0 ? '(CR)' : ''}
                 </p>
               </div>
             </div>
@@ -252,7 +275,7 @@ export default function CustomerLedgers() {
                 </div>
               ))}
             </div>
-          ) : filteredLedgers.length === 0 ? (
+          ) : ledgersWithBalance.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <User className="w-16 h-16 text-gray-400 mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No ledger entries found</h3>
@@ -263,52 +286,75 @@ export default function CustomerLedgers() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredLedgers.map((ledger: any) => (
-                <div key={ledger.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-4 mb-2">
-                      <h3 className="font-semibold text-gray-900">
-                        Entry #{ledger.id}
-                      </h3>
-                      <Badge className={getTypeColor(ledger.type)}>
-                        {getTypeIcon(ledger.type)}
-                        <span className="ml-1">{ledger.type.toUpperCase()}</span>
-                      </Badge>
-                      <div className={`text-lg font-bold ${ledger.type === 'debit' ? 'text-red-600' : 'text-green-600'}`}>
-                        ${parseFloat(ledger.amount || '0').toFixed(2)}
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                      <div className="flex items-center">
-                        <User className="w-4 h-4 mr-2" />
-                        {ledger.customerName || 'Unknown Customer'}
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="w-4 h-4 mr-2" />
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Date</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Customer</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Reference</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Description</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Debit</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Credit</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ledgersWithBalance.map((ledger: any) => (
+                    <tr key={ledger.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-sm text-gray-900">
                         {ledger.date ? new Date(ledger.date).toLocaleDateString() : 'N/A'}
-                      </div>
-                      <div className="flex items-center">
-                        <FileText className="w-4 h-4 mr-2" />
-                        {ledger.reference || 'No reference'}
-                      </div>
-                      {ledger.description && (
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
                         <div className="flex items-center">
-                          <span className="font-medium">Note:</span> {ledger.description}
+                          <User className="w-4 h-4 mr-2 text-gray-400" />
+                          {ledger.customerName || 'Unknown Customer'}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 ml-4">
-                    <Button variant="outline" size="sm">
-                      <Eye className="w-4 h-4 mr-1" />
-                      View
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {ledger.reference || 'No reference'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
+                        {ledger.description || 'No description'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right">
+                        {ledger.type === 'debit' ? (
+                          <span className="font-medium text-red-600">
+                            ${parseFloat(ledger.amount || '0').toFixed(2)}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right">
+                        {ledger.type === 'credit' ? (
+                          <span className="font-medium text-green-600">
+                            ${parseFloat(ledger.amount || '0').toFixed(2)}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right">
+                        <div className="flex items-center justify-end">
+                          <span className={`font-medium ${ledger.runningBalance > 0 ? 'text-red-600' : ledger.runningBalance < 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                            ${Math.abs(ledger.runningBalance).toFixed(2)}
+                          </span>
+                          {ledger.runningBalance > 0 && (
+                            <Badge variant="outline" className="ml-2 text-xs bg-red-50 text-red-600 border-red-200">DR</Badge>
+                          )}
+                          {ledger.runningBalance < 0 && (
+                            <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-600 border-green-200">CR</Badge>
+                          )}
+                          {ledger.runningBalance === 0 && (
+                            <Badge variant="outline" className="ml-2 text-xs bg-gray-50 text-gray-600 border-gray-200">Balanced</Badge>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
