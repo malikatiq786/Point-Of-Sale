@@ -1243,6 +1243,7 @@ export default function POSTerminal() {
                       <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Sub Total</th>
                       <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Sales Tax</th>
                       <th className="text-center py-2 px-2 font-bold text-gray-800 w-20">Total</th>
+                      <th className="text-center py-2 px-2 font-bold text-gray-800 w-16">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1252,12 +1253,115 @@ export default function POSTerminal() {
                           <td className="py-1 px-2 text-center border-r border-gray-200">{index + 1}</td>
                           <td className="py-1 px-2 border-r border-gray-200">{item.name}</td>
                           <td className="py-1 px-2 border-r border-gray-200">No Employee</td>
-                          <td className="py-1 px-2 text-center border-r border-gray-200">{item.quantity}</td>
-                          <td className="py-1 px-2 text-center border-r border-gray-200">0.00</td>
+                          <td className="py-1 px-2 text-center border-r border-gray-200">
+                            <div className="flex items-center justify-center space-x-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => updateQuantity(item.id, -1)}
+                                className="w-5 h-5 p-0 rounded-full text-xs"
+                              >
+                                <Minus className="w-2 h-2" />
+                              </Button>
+                              
+                              {editingItem === item.id ? (
+                                <Input
+                                  value={editQuantity}
+                                  onChange={(e) => setEditQuantity(e.target.value)}
+                                  onBlur={() => {
+                                    const newQty = parseInt(editQuantity) || 1;
+                                    updateQuantity(item.id, newQty - item.quantity);
+                                    setEditingItem(null);
+                                  }}
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      const newQty = parseInt(editQuantity) || 1;
+                                      updateQuantity(item.id, newQty - item.quantity);
+                                      setEditingItem(null);
+                                    }
+                                  }}
+                                  className="w-8 h-5 text-center text-xs rounded"
+                                  autoFocus
+                                />
+                              ) : (
+                                <span 
+                                  className="text-xs cursor-pointer hover:bg-gray-200 rounded px-1 py-1 min-w-[20px] inline-block text-center"
+                                  onClick={() => {
+                                    setEditingItem(item.id);
+                                    setEditQuantity(item.quantity.toString());
+                                  }}
+                                >
+                                  {item.quantity}
+                                </span>
+                              )}
+                              
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => updateQuantity(item.id, 1)}
+                                className="w-5 h-5 p-0 rounded-full text-xs"
+                              >
+                                <Plus className="w-2 h-2" />
+                              </Button>
+                            </div>
+                          </td>
+                          <td className="py-1 px-2 text-center border-r border-gray-200">
+                            {editingDiscount === item.id ? (
+                              <Input
+                                value={editDiscountValue}
+                                onChange={(e) => setEditDiscountValue(e.target.value)}
+                                onBlur={() => {
+                                  const value = parseFloat(editDiscountValue) || 0;
+                                  if (value > 0) {
+                                    const isPercentage = editDiscountValue.includes('%');
+                                    applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
+                                  }
+                                  setEditingDiscount(null);
+                                }}
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const value = parseFloat(editDiscountValue) || 0;
+                                    if (value > 0) {
+                                      const isPercentage = editDiscountValue.includes('%');
+                                      applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
+                                    }
+                                    setEditingDiscount(null);
+                                  }
+                                }}
+                                className="w-12 h-5 text-xs text-center rounded"
+                                placeholder="0% or 0.00"
+                                autoFocus
+                              />
+                            ) : (
+                              <span 
+                                className="text-xs cursor-pointer hover:bg-gray-200 rounded px-1 py-1 min-w-[40px] inline-block"
+                                onClick={() => {
+                                  setEditingDiscount(item.id);
+                                  setEditDiscountValue((item.discount && item.discount > 0) ? `${item.discount}${item.discountType === 'percentage' ? '%' : ''}` : '');
+                                }}
+                              >
+                                {(item.discount && item.discount > 0)
+                                  ? (item.discountType === 'percentage' ? `${item.discount}%` : formatCurrencyValue(item.discount))
+                                  : 'Click'
+                                }
+                              </span>
+                            )}
+                          </td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">{item.price.toFixed(2)}</td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">{item.total.toFixed(2)}</td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">{(item.total * 0.1).toFixed(2)}</td>
                           <td className="py-1 px-2 text-center">{(item.total + item.total * 0.1).toFixed(2)}</td>
+                          <td className="py-1 px-2 text-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeFromCart(item.id)}
+                              className="text-red-600 hover:bg-red-50 w-5 h-5 p-0"
+                              title="Remove Item"
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </td>
                         </tr>
                       ))
                     ) : searchResults.length > 0 ? (
@@ -1266,7 +1370,7 @@ export default function POSTerminal() {
                                      product.category?.name === 'Food & Beverages' ? 2.99 :
                                      product.category?.name === 'Clothing' ? 79.99 : 19.99;
                         return (
-                          <tr key={product.id} className="border-b border-gray-200 hover:bg-blue-50 cursor-pointer" onClick={() => addFromSearchResults(product)}>
+                          <tr key={product.id} className="border-b border-gray-200 hover:bg-blue-50">
                             <td className="py-1 px-2 text-center border-r border-gray-200">{index + 1}</td>
                             <td className="py-1 px-2 border-r border-gray-200">{product.name}</td>
                             <td className="py-1 px-2 border-r border-gray-200">No Employee</td>
@@ -1276,12 +1380,23 @@ export default function POSTerminal() {
                             <td className="py-1 px-2 text-center border-r border-gray-200">{price.toFixed(2)}</td>
                             <td className="py-1 px-2 text-center border-r border-gray-200">{(price * 0.1).toFixed(2)}</td>
                             <td className="py-1 px-2 text-center">{(price + price * 0.1).toFixed(2)}</td>
+                            <td className="py-1 px-2 text-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => addFromSearchResults(product)}
+                                className="text-green-600 hover:bg-green-50 w-5 h-5 p-0"
+                                title="Add to Cart"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                            </td>
                           </tr>
                         );
                       })
                     ) : (
                       <tr>
-                        <td colSpan={9} className="py-8 text-center text-gray-500">
+                        <td colSpan={10} className="py-8 text-center text-gray-500">
                           {searchQuery ? 'No items found. Try different search terms.' : 'Enter item code or scan barcode to add items'}
                         </td>
                       </tr>
