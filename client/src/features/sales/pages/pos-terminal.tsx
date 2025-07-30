@@ -89,6 +89,8 @@ export default function POSTerminal() {
   // Core state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'qr'>("cash");
@@ -117,7 +119,28 @@ export default function POSTerminal() {
   // Layout management state
   const [posLayout, setPosLayout] = useState<'grid' | 'search'>('grid');
 
-  // Search functionality for search layout
+  // Enhanced search functionality with autocomplete
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    
+    if (value.trim().length > 0 && products && products.length > 0) {
+      // Get suggestions based on partial matches
+      const suggestions = products.filter(product => 
+        product.name.toLowerCase().includes(value.toLowerCase()) ||
+        (product.barcode && product.barcode.toLowerCase().includes(value.toLowerCase())) ||
+        (product.description && product.description.toLowerCase().includes(value.toLowerCase())) ||
+        (product.category?.name && product.category.name.toLowerCase().includes(value.toLowerCase())) ||
+        (product.brand?.name && product.brand.name.toLowerCase().includes(value.toLowerCase()))
+      ).slice(0, 8); // Limit to 8 suggestions
+      
+      setSearchSuggestions(suggestions);
+      setShowSuggestions(suggestions.length > 0);
+    } else {
+      setSearchSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
   const handleSearchKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
       e.preventDefault();
@@ -131,11 +154,13 @@ export default function POSTerminal() {
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (product.barcode && product.barcode.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (product.category?.name && product.category.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        (product.category?.name && product.category.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (product.brand?.name && product.brand.name.toLowerCase().includes(searchQuery.toLowerCase()))
       );
       
       console.log(`Search for "${searchQuery}" found ${filteredProducts.length} products`);
       setSearchResults(filteredProducts);
+      setShowSuggestions(false);
       
       // If exactly one result, automatically add to cart and clear search
       if (filteredProducts.length === 1) {
@@ -143,6 +168,8 @@ export default function POSTerminal() {
         setSearchResults([]);
         setSearchQuery('');
       }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
     }
   };
 
@@ -151,6 +178,14 @@ export default function POSTerminal() {
     if (searchQuery.trim()) {
       handleSearchKeyPress({ key: 'Enter', preventDefault: () => {} } as any);
     }
+  };
+
+  // Select suggestion and add to cart or search
+  const selectSuggestion = (product: any) => {
+    setSearchQuery(product.name);
+    setShowSuggestions(false);
+    addToCart(product);
+    setSearchQuery(''); // Clear after adding
   };
 
   const addFromSearchResults = (product: any) => {
@@ -753,13 +788,45 @@ export default function POSTerminal() {
                       <option>Item Name</option>
                       <option>Barcode</option>
                     </select>
-                    <Input
-                      placeholder="Enter item code or scan barcode..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyPress={handleSearchKeyPress}
-                      className="h-7 text-xs w-64 border-gray-300"
-                    />
+                    <div className="relative">
+                      <Input
+                        placeholder="Enter item code or scan barcode..."
+                        value={searchQuery}
+                        onChange={(e) => handleSearchChange(e.target.value)}
+                        onKeyPress={handleSearchKeyPress}
+                        onFocus={() => setShowSuggestions(searchSuggestions.length > 0)}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                        className="h-7 text-xs w-64 border-gray-300"
+                      />
+                      
+                      {/* Autocomplete Suggestions Dropdown */}
+                      {showSuggestions && searchSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 w-full bg-white border border-gray-300 shadow-lg rounded-md mt-1 z-50 max-h-64 overflow-y-auto">
+                          {searchSuggestions.map((product, index) => (
+                            <div
+                              key={product.id}
+                              className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-xs border-b border-gray-100 last:border-b-0"
+                              onClick={() => selectSuggestion(product)}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="font-medium text-gray-900">{product.name}</div>
+                                  <div className="text-gray-500 text-xs">
+                                    {product.category?.name} • {product.brand?.name}
+                                    {product.barcode && <span> • {product.barcode}</span>}
+                                  </div>
+                                </div>
+                                <div className="text-blue-600 font-medium">
+                                  {product.category?.name === 'Electronics' ? '$599.99' : 
+                                   product.category?.name === 'Food & Beverages' ? '$2.99' :
+                                   product.category?.name === 'Clothing' ? '$79.99' : '$19.99'}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <Button size="sm" className="text-xs px-3 py-1 h-7" onClick={triggerSearch}>
                       Find Now
                     </Button>
