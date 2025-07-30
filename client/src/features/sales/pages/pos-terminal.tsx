@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import PosLayout from "@/layouts/app/pos-layout";
@@ -140,6 +140,68 @@ export default function POSTerminal() {
       setShowSuggestions(false);
     }
   };
+
+  // Global keyboard shortcuts handler
+  const handleGlobalKeyPress = (e: KeyboardEvent) => {
+    // Only handle shortcuts when not in input fields
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+
+    switch (e.key.toLowerCase()) {
+      case 'enter':
+        e.preventDefault();
+        if (cart.length > 0) {
+          setShowPaymentDialog(true);
+        }
+        break;
+      case 'escape':
+        e.preventDefault();
+        resetAll();
+        break;
+      case 'f2':
+        e.preventDefault();
+        setShowDiscountDialog(true);
+        break;
+      case 'f3':
+        e.preventDefault();
+        if (cart.length > 0) {
+          removeFromCart(cart[cart.length - 1].id);
+        }
+        break;
+      case 'f8':
+        e.preventDefault();
+        triggerSearch();
+        break;
+    }
+  };
+
+  // Reset all function
+  const resetAll = () => {
+    setCart([]);
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchSuggestions([]);
+    setShowSuggestions(false);
+    setSelectedCustomerId(null);
+    setAmountReceived(0);
+    setChangeAmount(0);
+    setDiscount({ type: 'percentage', value: 0, applyTo: 'total' });
+    setShowPaymentDialog(false);
+    setShowDiscountDialog(false);
+    setShowCustomerDialog(false);
+    setShowInvoice(false);
+    toast({
+      title: "Reset Complete",
+      description: "All data has been cleared",
+    });
+  };
+
+  // Add global keyboard listener
+  React.useEffect(() => {
+    document.addEventListener('keydown', handleGlobalKeyPress);
+    return () => document.removeEventListener('keydown', handleGlobalKeyPress);
+  }, [cart]);
 
   const handleSearchKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
@@ -924,75 +986,115 @@ export default function POSTerminal() {
                       <span className="text-xs font-bold">Line:</span>
                       <input type="number" defaultValue="3" className="w-8 h-6 text-xs text-center border border-gray-300" />
                     </div>
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-xs px-2 py-1 h-6 flex items-center hover:bg-blue-50"
+                      onClick={() => setShowDiscountDialog(true)}
+                    >
                       <div className="w-3 h-3 bg-blue-600 mr-1"></div>
                       F2-Discount
                     </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-xs px-2 py-1 h-6 flex items-center hover:bg-red-50"
+                      onClick={() => cart.length > 0 && removeFromCart(cart[cart.length - 1].id)}
+                    >
                       <X className="w-3 h-3 mr-1 text-red-600" />
                       F3-Delete Line
                     </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-green-50">
                       <RotateCcw className="w-3 h-3 mr-1 text-green-600" />
                       F4-Refund
                     </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-xs px-2 py-1 h-6 flex items-center hover:bg-orange-50"
+                      onClick={resetAll}
+                    >
                       <Tag className="w-3 h-3 mr-1 text-orange-600" />
-                      F5-Void
+                      F5-Reset All
                     </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-green-50">
                       <DollarSign className="w-3 h-3 mr-1 text-green-600" />
                       F6-Payout
                     </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-blue-50">
                       <Calculator className="w-3 h-3 mr-1 text-blue-600" />
-                      F7-Enter Qty To Finish
+                      F7-Enter Qty
                     </Button>
                   </div>
 
-                  {/* Right Side - Totals */}
-                  <div className="bg-purple-900 text-white px-4 py-2 rounded flex flex-col items-end">
-                    <div className="flex justify-between w-32 mb-1">
-                      <span className="text-xs">Subtotal</span>
-                      <span className="text-lg font-bold">{formatCurrencyValue(getSubtotal())}</span>
-                    </div>
-                    <div className="flex justify-between w-32 mb-1">
-                      <span className="text-xs">Sales Tax</span>
-                      <span className="text-sm">{formatCurrencyValue(getSubtotal() * 0.1)}</span>
-                    </div>
-                    <div className="flex justify-between w-32 border-t border-purple-700 pt-1">
-                      <span className="text-sm font-bold">Total</span>
-                      <span className="text-xl font-bold">{formatCurrencyValue(getSubtotal() * 1.1)}</span>
+                  {/* Right Side - Enhanced Totals */}
+                  <div className="bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 text-white px-6 py-4 rounded-lg shadow-lg border border-blue-700">
+                    <div className="space-y-3 min-w-[200px]">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-blue-100">Subtotal</span>
+                        <span className="text-xl font-bold text-white">{formatCurrencyValue(getSubtotal())}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-blue-100">Discount</span>
+                        <span className="text-lg font-semibold text-green-300">-{formatCurrencyValue(getItemDiscountTotal() + getGlobalDiscountAmount())}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-blue-100">Sales Tax (10%)</span>
+                        <span className="text-lg font-semibold text-yellow-300">{formatCurrencyValue(getTaxAmount())}</span>
+                      </div>
+                      <div className="border-t border-blue-600 pt-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-bold text-blue-100">TOTAL</span>
+                          <span className="text-3xl font-bold text-white tracking-wider">{formatCurrencyValue(getGrandTotal())}</span>
+                        </div>
+                      </div>
+                      <div className="text-center mt-3">
+                        <div className="text-xs text-blue-200">Items: {cart.reduce((sum, item) => sum + item.quantity, 0)}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Second Row of Buttons */}
                 <div className="flex space-x-1 mt-2">
-                  <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                  <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-blue-50">
                     <Gift className="w-3 h-3 mr-1 text-blue-600" />
-                    F9-Sell Gift Card/Certificate
+                    F9-Gift Card
                   </Button>
-                  <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                  <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-green-50">
                     <Receipt className="w-3 h-3 mr-1 text-green-600" />
-                    F10-Put Invoice On Hold
+                    F10-Hold Invoice
                   </Button>
-                  <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                  <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-blue-50">
                     <CheckCircle className="w-3 h-3 mr-1 text-blue-600" />
-                    F11-Get Invoice From Hold
+                    F11-Get Hold
                   </Button>
                   <Button 
                     size="sm" 
-                    variant="outline" 
-                    className="text-xs px-2 py-1 h-6 flex items-center"
+                    className="text-xs px-4 py-1 h-6 flex items-center bg-green-600 hover:bg-green-700 text-white font-bold"
                     onClick={() => {
                       if (cart.length > 0) {
                         setShowPaymentDialog(true);
+                      } else {
+                        toast({
+                          title: "Empty Cart",
+                          description: "Add items to cart before completing sale",
+                          variant: "destructive",
+                        });
                       }
                     }}
                   >
-                    <Printer className="w-3 h-3 mr-1 text-gray-600" />
-                    F12-Complete Sale
+                    <Printer className="w-3 h-3 mr-1" />
+                    ENTER-Complete Sale
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="text-xs px-2 py-1 h-6 flex items-center bg-red-600 hover:bg-red-700 text-white border-red-600"
+                    onClick={resetAll}
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    ESC-Reset All
                   </Button>
                 </div>
               </div>
