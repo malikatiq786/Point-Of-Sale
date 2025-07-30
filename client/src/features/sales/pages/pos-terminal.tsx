@@ -193,8 +193,10 @@ export default function POSTerminal() {
       case 'enter':
         e.preventDefault();
         if (cart.length > 0 && registerStatus === 'open') {
-          // Open payment dialog for selection
+          // Open payment dialog for amount entry
           setShowPaymentDialog(true);
+          // Set default amount to grand total for quick processing
+          setAmountReceived(getGrandTotal());
         } else if (cart.length === 0) {
           toast({
             title: "Empty Cart",
@@ -1947,6 +1949,188 @@ export default function POSTerminal() {
           </div>
         </div>
         )}
+
+        {/* Payment Dialog */}
+        <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+          <DialogContent className="max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <CreditCard className="w-5 h-5 mr-2" />
+                Payment Processing
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {/* Order Summary */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrencyValue(getSubtotal())}</span>
+                  </div>
+                  {(getItemDiscountTotal() + getGlobalDiscountAmount()) > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Discount:</span>
+                      <span>-{formatCurrencyValue(getItemDiscountTotal() + getGlobalDiscountAmount())}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span>Tax ({taxRate}%):</span>
+                    <span>{formatCurrencyValue(getTaxAmount())}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>TOTAL:</span>
+                    <span>{formatCurrencyValue(getGrandTotal())}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method Selection */}
+              <div>
+                <Label className="text-sm font-medium">Payment Method</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <Button
+                    variant={paymentMethod === 'cash' ? 'default' : 'outline'}
+                    onClick={() => setPaymentMethod('cash')}
+                    className="rounded-xl"
+                    size="sm"
+                  >
+                    <DollarSign className="w-4 h-4 mr-1" />
+                    Cash
+                  </Button>
+                  <Button
+                    variant={paymentMethod === 'card' ? 'default' : 'outline'}
+                    onClick={() => setPaymentMethod('card')}
+                    className="rounded-xl"
+                    size="sm"
+                  >
+                    <CreditCard className="w-4 h-4 mr-1" />
+                    Card
+                  </Button>
+                  <Button
+                    variant={paymentMethod === 'mobile' ? 'default' : 'outline'}
+                    onClick={() => setPaymentMethod('mobile')}
+                    className="rounded-xl"
+                    size="sm"
+                  >
+                    <Smartphone className="w-4 h-4 mr-1" />
+                    Mobile
+                  </Button>
+                  <Button
+                    variant={paymentMethod === 'qr' ? 'default' : 'outline'}
+                    onClick={() => setPaymentMethod('qr')}
+                    className="rounded-xl"
+                    size="sm"
+                  >
+                    <QrCode className="w-4 h-4 mr-1" />
+                    QR Code
+                  </Button>
+                </div>
+              </div>
+
+              {/* Cash Payment Amount Input */}
+              {paymentMethod === 'cash' && (
+                <div>
+                  <Label className="text-sm font-medium">Amount Received</Label>
+                  <Input
+                    type="number"
+                    value={amountReceived}
+                    onChange={(e) => setAmountReceived(parseFloat(e.target.value) || 0)}
+                    placeholder="Enter amount received"
+                    className="rounded-xl h-12 text-lg text-center mt-2"
+                    step="0.01"
+                    autoFocus
+                  />
+                  
+                  {/* Quick Amount Buttons */}
+                  <div className="grid grid-cols-3 gap-2 mt-3">
+                    {[10, 20, 50, 100].map((amount) => (
+                      <Button
+                        key={amount}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAmountReceived(amount)}
+                        className="rounded-lg text-xs"
+                      >
+                        {formatCurrencyValue(amount)}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAmountReceived(getGrandTotal())}
+                      className="rounded-lg text-xs col-span-2 bg-blue-50 text-blue-600 border-blue-200"
+                    >
+                      Exact Amount
+                    </Button>
+                  </div>
+
+                  {/* Change Calculation */}
+                  {amountReceived > 0 && (
+                    <div className="bg-green-50 rounded-xl p-3 mt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-green-700">Change Due:</span>
+                        <span className="text-lg font-bold text-green-800">
+                          {formatCurrencyValue(Math.max(0, amountReceived - getGrandTotal()))}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Customer Info Display */}
+              {selectedCustomerId && (
+                <div className="bg-blue-50 rounded-xl p-3">
+                  <div className="text-sm text-blue-700">
+                    Customer: {customers?.find(c => c.id === selectedCustomerId)?.name}
+                  </div>
+                  {paymentMethod === 'cash' && amountReceived < getGrandTotal() && (
+                    <div className="text-xs text-blue-600 mt-1">
+                      Remaining balance will be added to customer ledger
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex space-x-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowPaymentDialog(false);
+                    setAmountReceived(0);
+                  }}
+                  className="flex-1 rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={processSale}
+                  disabled={
+                    processSaleMutation.isPending || 
+                    (paymentMethod === 'cash' && amountReceived <= 0) ||
+                    (!selectedCustomerId && paymentMethod === 'cash' && amountReceived < getGrandTotal())
+                  }
+                  className="flex-1 rounded-xl bg-green-600 hover:bg-green-700"
+                >
+                  {processSaleMutation.isPending ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <Check className="w-4 h-4 mr-2" />
+                      Complete Sale
+                    </div>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Invoice Modal */}
         <Dialog open={showInvoice} onOpenChange={setShowInvoice}>
