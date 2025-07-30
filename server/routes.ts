@@ -1607,6 +1607,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Units routes  
+  app.get("/api/units", isAuthenticated, async (req, res) => {
+    try {
+      // For now, return static units data - in real implementation this would come from database
+      const units = [
+        { id: 1, name: "Each", short_name: "ea" },
+        { id: 2, name: "Pounds", short_name: "lbs" },
+        { id: 3, name: "Kilograms", short_name: "kg" },
+        { id: 4, name: "Meters", short_name: "m" },
+        { id: 5, name: "Liters", short_name: "L" },
+        { id: 6, name: "Pieces", short_name: "pcs" },
+        { id: 7, name: "Bottles", short_name: "btl" },
+        { id: 8, name: "Boxes", short_name: "box" }
+      ];
+      res.json(units);
+    } catch (error) {
+      console.error("Error fetching units:", error);
+      res.status(500).json({ message: "Failed to fetch units" });
+    }
+  });
+
   // Other module routes with placeholder implementations
   app.get("/api/stock", isAuthenticated, async (req, res) => {
     try {

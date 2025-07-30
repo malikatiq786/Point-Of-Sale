@@ -6,6 +6,7 @@ import {
   productPrices,
   categories,
   brands,
+  units,
   stock,
   customers,
   sales,
@@ -153,10 +154,16 @@ export class DatabaseStorage implements IStorage {
           id: brands.id,
           name: brands.name,
         },
+        unit: {
+          id: units.id,
+          name: units.name,
+          shortName: units.shortName,
+        },
       })
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id))
       .leftJoin(brands, eq(products.brandId, brands.id))
+      .leftJoin(units, eq(products.unitId, units.id))
       .limit(limit);
   }
 
