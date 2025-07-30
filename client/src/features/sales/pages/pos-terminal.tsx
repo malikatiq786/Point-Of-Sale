@@ -279,6 +279,19 @@ export default function POSTerminal() {
     return () => clearInterval(timer);
   }, []);
 
+  // Scroll selected suggestion into view
+  React.useEffect(() => {
+    if (selectedSuggestionIndex >= 0 && showSuggestions) {
+      const suggestionElement = document.querySelector(`[data-suggestion-index="${selectedSuggestionIndex}"]`);
+      if (suggestionElement) {
+        suggestionElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest'
+        });
+      }
+    }
+  }, [selectedSuggestionIndex, showSuggestions]);
+
   // Add global keyboard listener
   React.useEffect(() => {
     document.addEventListener('keydown', handleGlobalKeyPress);
@@ -1477,6 +1490,7 @@ export default function POSTerminal() {
                           {searchSuggestions.map((product, index) => (
                             <div
                               key={product.id}
+                              data-suggestion-index={index}
                               className={`px-3 py-2 cursor-pointer text-xs border-b border-gray-100 last:border-b-0 ${
                                 index === selectedSuggestionIndex 
                                   ? 'bg-blue-100 border-blue-200' 
