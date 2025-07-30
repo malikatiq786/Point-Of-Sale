@@ -1174,28 +1174,28 @@ export default function POSTerminal() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className={`max-w-7xl mx-auto ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
         {/* Modern Header */}
-        <div className="bg-white rounded-2xl shadow-lg border-0 p-6 mb-6">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="bg-blue-500 rounded-full p-3">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-3 shadow-lg">
                 <Receipt className="w-8 h-8 text-white" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Modern POS Terminal</h1>
-                <p className="text-gray-500">Advanced point of sale system with full features</p>
+                <p className="text-gray-500 font-medium">Advanced point of sale system with full features</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               {/* Register Status */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3 bg-gray-50 rounded-xl p-3 border border-gray-200">
                 {registerStatus === 'open' && selectedRegister ? (
-                  <Badge variant="default" className="bg-green-500 text-white px-3 py-1">
-                    <CheckCircle className="w-4 h-4 mr-1" />
+                  <Badge variant="default" className="bg-emerald-500 text-white px-3 py-2 rounded-lg font-medium shadow-sm">
+                    <CheckCircle className="w-4 h-4 mr-2" />
                     {selectedRegister.name} - ${cashDrawerBalance.toFixed(2)}
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 px-3 py-1">
-                    <AlertCircle className="w-4 h-4 mr-1" />
+                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300 px-3 py-2 rounded-lg font-medium">
+                    <AlertCircle className="w-4 h-4 mr-2" />
                     Register Closed
                   </Badge>
                 )}
@@ -1203,34 +1203,43 @@ export default function POSTerminal() {
                   variant="outline"
                   size="sm"
                   onClick={() => registerStatus === 'open' ? closeRegister() : setIsRegisterSetupOpen(true)}
-                  className="flex items-center space-x-2"
+                  className="bg-white border-gray-300 hover:bg-gray-50 rounded-lg px-3 py-2 font-medium"
                 >
-                  <Settings className="w-4 h-4" />
+                  <Settings className="w-4 h-4 mr-2" />
                   <span>{registerStatus === 'open' ? 'Close Register' : 'Open Register'}</span>
                 </Button>
               </div>
               
-              <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 px-3 py-1">
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 px-4 py-2 rounded-lg font-semibold shadow-sm">
                 {(user as any)?.name || 'Cashier'} • Staff
               </Badge>
+              
               {/* Layout Switcher */}
-              <div className="flex bg-gray-100 rounded-lg p-1">
+              <div className="flex bg-gray-50 rounded-xl p-2 border border-gray-200 shadow-sm">
                 <Button
                   variant={posLayout === 'grid' ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setPosLayout('grid')}
-                  className={`px-3 py-1 text-xs ${posLayout === 'grid' ? 'bg-white shadow-sm' : ''}`}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    posLayout === 'grid' 
+                      ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700' 
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
                 >
-                  <Package className="w-4 h-4 mr-1" />
+                  <Package className="w-4 h-4 mr-2" />
                   Grid View
                 </Button>
                 <Button
                   variant={posLayout === 'search' ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setPosLayout('search')}
-                  className={`px-3 py-1 text-xs ${posLayout === 'search' ? 'bg-white shadow-sm' : ''}`}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    posLayout === 'search' 
+                      ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700' 
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
                 >
-                  <Search className="w-4 h-4 mr-1" />
+                  <Search className="w-4 h-4 mr-2" />
                   Search View
                 </Button>
               </div>
@@ -1238,7 +1247,7 @@ export default function POSTerminal() {
               <Button 
                 variant="outline" 
                 onClick={clearCart}
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-red-600 border-red-300 hover:bg-red-50 bg-white rounded-lg px-4 py-2 font-medium shadow-sm"
               >
                 <X className="w-4 h-4 mr-2" />
                 Clear All
@@ -1253,21 +1262,23 @@ export default function POSTerminal() {
             {/* Full Traditional POS Interface - No Sidebar */}
             <div className="bg-white border border-gray-400 rounded-none shadow-sm min-h-96">
               {/* Top Customer Selection Bar */}
-              <div className="bg-gray-100 border-b border-gray-400 p-3">
+              <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-300 p-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <label className="text-xs font-bold text-gray-700">Find Customer By:</label>
-                      <select className="text-xs border border-gray-300 px-2 py-1 rounded">
+                  <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-3">
+                      <label className="text-sm font-semibold text-gray-800">Find Customer By:</label>
+                      <select className="text-sm border border-gray-300 px-3 py-2 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option>Name</option>
                         <option>Phone</option>
                         <option>Email</option>
                       </select>
-                      <span className="text-xs font-bold text-gray-700">Select Customer</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-sm font-semibold text-gray-800">Select Customer:</span>
                       <select 
                         value={selectedCustomerId || ''} 
                         onChange={(e) => setSelectedCustomerId(e.target.value ? Number(e.target.value) : null)}
-                        className="text-xs border border-gray-300 px-3 py-1 rounded w-48"
+                        className="text-sm border border-gray-300 px-4 py-2 rounded-lg bg-white shadow-sm w-56 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="">Walk-in Customer</option>
                         {customers?.map((customer: any) => (
@@ -1280,33 +1291,33 @@ export default function POSTerminal() {
                   </div>
                   
                   {/* Customer Action Buttons */}
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3">
                     <Button 
                       size="sm" 
-                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg font-medium shadow-sm"
                       onClick={() => setShowAddCustomerDialog(true)}
                     >
-                      <Plus className="w-3 h-3 mr-1" />
+                      <Plus className="w-4 h-4 mr-2" />
                       Add Customer
                     </Button>
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="text-xs px-3 py-1"
+                      className="text-sm px-4 py-2 rounded-lg bg-white border-gray-300 hover:bg-gray-50 font-medium shadow-sm"
                       onClick={() => setShowCustomerHistoryDialog(true)}
                       disabled={!selectedCustomerId}
                     >
-                      <User className="w-3 h-3 mr-1" />
+                      <User className="w-4 h-4 mr-2" />
                       Customer History
                     </Button>
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="text-xs px-3 py-1"
+                      className="text-sm px-4 py-2 rounded-lg bg-white border-gray-300 hover:bg-gray-50 font-medium shadow-sm"
                       onClick={() => setShowPaymentOnAccountDialog(true)}
                       disabled={!selectedCustomerId}
                     >
-                      <CreditCard className="w-3 h-3 mr-1" />
+                      <CreditCard className="w-4 h-4 mr-2" />
                       Payment On Account
                     </Button>
                   </div>
