@@ -118,6 +118,10 @@ export default function POSTerminal() {
   const [editQuantity, setEditQuantity] = useState<string>("");
   const [editingDiscount, setEditingDiscount] = useState<number | null>(null);
   const [editDiscountValue, setEditDiscountValue] = useState<string>("");
+  const [editingGlobalDiscount, setEditingGlobalDiscount] = useState<boolean>(false);
+  const [editGlobalDiscountValue, setEditGlobalDiscountValue] = useState<string>("");
+  const [editingTaxRate, setEditingTaxRate] = useState<boolean>(false);
+  const [editTaxRateValue, setEditTaxRateValue] = useState<string>("");
 
   // Layout management state
   const [posLayout, setPosLayout] = useState<'grid' | 'search'>('grid');
@@ -254,6 +258,10 @@ export default function POSTerminal() {
     setEditQuantity('');
     setEditPrice('');
     setEditDiscountValue('');
+    setEditingGlobalDiscount(false);
+    setEditGlobalDiscountValue('');
+    setEditingTaxRate(false);
+    setEditTaxRateValue('');
     toast({
       title: "Reset Complete",
       description: "All data has been cleared",
@@ -584,7 +592,21 @@ export default function POSTerminal() {
       }
       return item;
     }));
+  }
+
+  // Apply global discount to entire transaction
+  const applyGlobalDiscount = (discountValue: number, type: 'percentage' | 'fixed') => {
+    setDiscount({
+      type: type,
+      value: discountValue,
+      applyTo: 'total'
+    });
   };
+
+  // Update tax rate
+  const updateTaxRate = (newTaxRate: number) => {
+    setTaxRate(Math.max(0, Math.min(100, newTaxRate))); // Ensure tax rate is between 0-100%
+  };;
 
   const removeFromCart = (id: number) => {
     setCart(cart.filter(item => item.id !== id));
@@ -1464,11 +1486,79 @@ export default function POSTerminal() {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-blue-100">Discount</span>
-                        <span className="text-lg font-semibold text-green-300">-{formatCurrencyValue(getItemDiscountTotal() + getGlobalDiscountAmount())}</span>
+                        {editingGlobalDiscount ? (
+                          <Input
+                            value={editGlobalDiscountValue}
+                            onChange={(e) => setEditGlobalDiscountValue(e.target.value)}
+                            onBlur={() => {
+                              const value = parseFloat(editGlobalDiscountValue) || 0;
+                              if (value >= 0) {
+                                const isPercentage = editGlobalDiscountValue.includes('%');
+                                applyGlobalDiscount(value, isPercentage ? 'percentage' : 'fixed');
+                              }
+                              setEditingGlobalDiscount(false);
+                            }}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                const value = parseFloat(editGlobalDiscountValue) || 0;
+                                if (value >= 0) {
+                                  const isPercentage = editGlobalDiscountValue.includes('%');
+                                  applyGlobalDiscount(value, isPercentage ? 'percentage' : 'fixed');
+                                }
+                                setEditingGlobalDiscount(false);
+                              }
+                            }}
+                            className="w-20 h-6 text-xs text-right bg-white text-black rounded"
+                            placeholder="0% or 0.00"
+                            autoFocus
+                          />
+                        ) : (
+                          <span 
+                            className="text-lg font-semibold text-green-300 cursor-pointer hover:bg-blue-800 rounded px-1"
+                            onClick={() => {
+                              setEditingGlobalDiscount(true);
+                              setEditGlobalDiscountValue(discount.value > 0 ? `${discount.value}${discount.type === 'percentage' ? '%' : ''}` : '');
+                            }}
+                          >
+                            -{formatCurrencyValue(getItemDiscountTotal() + getGlobalDiscountAmount())}
+                          </span>
+                        )}
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-blue-100">Sales Tax (10%)</span>
-                        <span className="text-lg font-semibold text-yellow-300">{formatCurrencyValue(getTaxAmount())}</span>
+                        <span className="text-sm font-medium text-blue-100">Sales Tax</span>
+                        <div className="flex items-center space-x-1">
+                          {editingTaxRate ? (
+                            <Input
+                              value={editTaxRateValue}
+                              onChange={(e) => setEditTaxRateValue(e.target.value)}
+                              onBlur={() => {
+                                const value = parseFloat(editTaxRateValue) || 10;
+                                updateTaxRate(value);
+                                setEditingTaxRate(false);
+                              }}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  const value = parseFloat(editTaxRateValue) || 10;
+                                  updateTaxRate(value);
+                                  setEditingTaxRate(false);
+                                }
+                              }}
+                              className="w-12 h-5 text-xs text-center bg-white text-black rounded"
+                              autoFocus
+                            />
+                          ) : (
+                            <span 
+                              className="text-xs text-blue-200 cursor-pointer hover:bg-blue-800 rounded px-1"
+                              onClick={() => {
+                                setEditingTaxRate(true);
+                                setEditTaxRateValue(taxRate.toString());
+                              }}
+                            >
+                              ({taxRate}%)
+                            </span>
+                          )}
+                          <span className="text-lg font-semibold text-yellow-300">{formatCurrencyValue(getTaxAmount())}</span>
+                        </div>
                       </div>
                       <div className="border-t border-blue-600 pt-3">
                         <div className="flex justify-between items-center">
@@ -1942,73 +2032,87 @@ export default function POSTerminal() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 space-y-3">
-                {/* Global Discount */}
-                <Dialog open={showDiscountDialog} onOpenChange={setShowDiscountDialog}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full rounded-xl justify-between">
-                      <span className="flex items-center">
-                        <Gift className="w-4 h-4 mr-2" />
-                        Total Discount
-                      </span>
-                      <span className="text-blue-600">
-                        {discount.value > 0 ? 
-                          (discount.type === 'percentage' ? `${discount.value}%` : formatCurrencyValue(discount.value)) 
-                          : 'None'
+                {/* Global Discount - Inline Editing */}
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center text-sm">
+                    <Gift className="w-4 h-4 mr-2" />
+                    Total Discount
+                  </span>
+                  {editingGlobalDiscount ? (
+                    <Input
+                      value={editGlobalDiscountValue}
+                      onChange={(e) => setEditGlobalDiscountValue(e.target.value)}
+                      onBlur={() => {
+                        const value = parseFloat(editGlobalDiscountValue) || 0;
+                        if (value >= 0) {
+                          const isPercentage = editGlobalDiscountValue.includes('%');
+                          applyGlobalDiscount(value, isPercentage ? 'percentage' : 'fixed');
                         }
-                      </span>
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="rounded-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Apply Total Discount</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Discount Type</Label>
-                        <Select value={discount.type} onValueChange={(value: 'percentage' | 'fixed') => 
-                          setDiscount({ ...discount, type: value })
-                        }>
-                          <SelectTrigger className="rounded-xl">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="percentage">Percentage (%)</SelectItem>
-                            <SelectItem value="fixed">Fixed Amount ({defaultCurrency.symbol})</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Discount Value</Label>
-                        <Input
-                          type="number"
-                          value={discount.value}
-                          onChange={(e) => setDiscount({ ...discount, value: parseFloat(e.target.value) || 0 })}
-                          placeholder={discount.type === 'percentage' ? 'Enter percentage' : 'Enter amount'}
-                          className="rounded-xl"
-                        />
-                      </div>
-                      <Button 
-                        onClick={() => setShowDiscountDialog(false)}
-                        className="w-full rounded-xl"
-                      >
-                        Apply Discount
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                        setEditingGlobalDiscount(false);
+                      }}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          const value = parseFloat(editGlobalDiscountValue) || 0;
+                          if (value >= 0) {
+                            const isPercentage = editGlobalDiscountValue.includes('%');
+                            applyGlobalDiscount(value, isPercentage ? 'percentage' : 'fixed');
+                          }
+                          setEditingGlobalDiscount(false);
+                        }
+                      }}
+                      className="w-24 h-8 text-sm text-center rounded-lg"
+                      placeholder="0% or 0.00"
+                      autoFocus
+                    />
+                  ) : (
+                    <span 
+                      className="text-blue-600 cursor-pointer hover:bg-gray-100 rounded px-2 py-1"
+                      onClick={() => {
+                        setEditingGlobalDiscount(true);
+                        setEditGlobalDiscountValue(discount.value > 0 ? `${discount.value}${discount.type === 'percentage' ? '%' : ''}` : '');
+                      }}
+                    >
+                      {discount.value > 0 ? 
+                        (discount.type === 'percentage' ? `${discount.value}%` : formatCurrencyValue(discount.value)) 
+                        : 'Click to add'
+                      }
+                    </span>
+                  )}
+                </div>
 
-                {/* Tax Rate */}
+                {/* Tax Rate - Inline Editing */}
                 <div className="flex items-center justify-between">
                   <Label className="text-sm">Tax Rate (%)</Label>
-                  <Input
-                    type="number"
-                    value={taxRate}
-                    onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-                    className="w-20 h-8 text-sm text-center rounded-lg"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                  />
+                  {editingTaxRate ? (
+                    <Input
+                      value={editTaxRateValue}
+                      onChange={(e) => setEditTaxRateValue(e.target.value)}
+                      onBlur={() => {
+                        const value = parseFloat(editTaxRateValue) || 10;
+                        updateTaxRate(value);
+                        setEditingTaxRate(false);
+                      }}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          const value = parseFloat(editTaxRateValue) || 10;
+                          updateTaxRate(value);
+                          setEditingTaxRate(false);
+                        }
+                      }}
+                      className="w-20 h-8 text-sm text-center rounded-lg"
+                      autoFocus
+                    />
+                  ) : (
+                    <span 
+                      className="w-20 h-8 text-sm text-center rounded-lg bg-gray-50 border flex items-center justify-center cursor-pointer hover:bg-gray-100"
+                      onClick={() => {
+                        setEditingTaxRate(true);
+                        setEditTaxRateValue(taxRate.toString());
+                      }}
+                    >
+                      {taxRate}%
+                    </span>
+                  )}
                 </div>
               </CardContent>
             </Card>
