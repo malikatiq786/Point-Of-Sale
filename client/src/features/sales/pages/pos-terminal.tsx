@@ -799,7 +799,8 @@ export default function POSTerminal() {
 
     try {
       const subtotal = getSubtotal();
-      const discountAmount = getDiscountAmount();
+      const discountAmount = discount.applyTo === 'total' ? 
+        (discount.type === 'percentage' ? subtotal * (discount.value / 100) : discount.value) : 0;
       const taxAmount = getTaxAmount();
       const total = getGrandTotal();
       
@@ -811,7 +812,7 @@ export default function POSTerminal() {
           <div>
             Date: ${new Date().toLocaleDateString()}<br/>
             Time: ${new Date().toLocaleTimeString()}<br/>
-            Cashier: ${user?.name || 'System User'}
+            Cashier: ${(user as any)?.name || 'System User'}
           </div>
           ${selectedCustomerId ? (() => {
             const customer = customers?.find(c => c.id === selectedCustomerId);
