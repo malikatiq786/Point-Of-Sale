@@ -1175,8 +1175,9 @@ export default function POSTerminal() {
       <div className={`max-w-7xl mx-auto ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
         {/* Modern Header */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+          {/* Top Center Title */}
+          <div className="text-center mb-6">
+            <div className="flex items-center justify-center space-x-4 mb-2">
               <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-3 shadow-lg">
                 <Receipt className="w-8 h-8 text-white" />
               </div>
@@ -1185,6 +1186,10 @@ export default function POSTerminal() {
                 <p className="text-gray-500 font-medium">Advanced point of sale system with full features</p>
               </div>
             </div>
+          </div>
+          
+          {/* Bottom Controls */}
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {/* Register Status */}
               <div className="flex items-center space-x-3 bg-gray-50 rounded-xl p-3 border border-gray-200">
@@ -1213,7 +1218,9 @@ export default function POSTerminal() {
               <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 px-4 py-2 rounded-lg font-semibold shadow-sm">
                 {(user as any)?.name || 'Cashier'} • Staff
               </Badge>
-              
+            </div>
+            
+            <div className="flex items-center space-x-3">
               {/* Layout Switcher */}
               <div className="flex bg-gray-50 rounded-xl p-2 border border-gray-200 shadow-sm">
                 <Button
