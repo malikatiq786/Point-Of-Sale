@@ -117,7 +117,7 @@ export default function POSTerminal() {
   const [selectedRegisterId, setSelectedRegisterId] = useState<number | null>(null);
   const [registerStatus, setRegisterStatus] = useState<'closed' | 'opening' | 'open'>('closed');
   const [cashDrawerBalance, setCashDrawerBalance] = useState(0);
-  const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(true); // Open by default
+  const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(false); // Start closed to allow POS usage
 
   // Fetch products
   const { data: products = [], isLoading } = useQuery<any[]>({
@@ -552,7 +552,7 @@ export default function POSTerminal() {
   return (
     <PosLayout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className={`max-w-7xl mx-auto ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
+      <div className="max-w-7xl mx-auto">
         {/* Modern Header */}
         <div className="bg-white rounded-2xl shadow-lg border-0 p-6 mb-6">
           <div className="flex items-center justify-between">
@@ -1277,8 +1277,8 @@ export default function POSTerminal() {
                       <tr key={index}>
                         <td>{item.name}</td>
                         <td className="center">{item.quantity}</td>
-                        <td className="right">${item.price.toFixed(2)}</td>
-                        <td className="right">${item.total.toFixed(2)}</td>
+                        <td className="right">{formatCurrencyValue(item.price)}</td>
+                        <td className="right">{formatCurrencyValue(item.total)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1289,22 +1289,22 @@ export default function POSTerminal() {
                 <div className="space-y-1">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>${lastInvoice.subtotal.toFixed(2)}</span>
+                    <span>{formatCurrencyValue(lastInvoice.subtotal)}</span>
                   </div>
                   {lastInvoice.totalDiscount > 0 && (
                     <div className="flex justify-between">
                       <span>Discount:</span>
-                      <span>-${lastInvoice.totalDiscount.toFixed(2)}</span>
+                      <span>-{formatCurrencyValue(lastInvoice.totalDiscount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
                     <span>Tax:</span>
-                    <span>${lastInvoice.tax.toFixed(2)}</span>
+                    <span>{formatCurrencyValue(lastInvoice.tax)}</span>
                   </div>
                   <div className="divider"></div>
                   <div className="flex justify-between bold text-lg">
                     <span>TOTAL:</span>
-                    <span>${lastInvoice.grandTotal.toFixed(2)}</span>
+                    <span>{formatCurrencyValue(lastInvoice.grandTotal)}</span>
                   </div>
                 </div>
 
@@ -1317,12 +1317,12 @@ export default function POSTerminal() {
                   </div>
                   <div className="flex justify-between">
                     <span>Amount Received:</span>
-                    <span>${lastInvoice.payment.amountReceived.toFixed(2)}</span>
+                    <span>{formatCurrencyValue(lastInvoice.payment.amountReceived)}</span>
                   </div>
                   {lastInvoice.payment.change > 0 && (
                     <div className="flex justify-between bold">
                       <span>Change:</span>
-                      <span>${lastInvoice.payment.change.toFixed(2)}</span>
+                      <span>{formatCurrencyValue(lastInvoice.payment.change)}</span>
                     </div>
                   )}
                 </div>
@@ -1370,7 +1370,7 @@ export default function POSTerminal() {
                       .filter((register) => register.isActive)
                       .map((register) => (
                       <SelectItem key={register.id} value={register.id.toString()}>
-                        {register.name} ({register.branchName}) - Expected: ${parseFloat(String(register.openingBalance)).toFixed(2)}
+                        {register.name} ({register.branchName}) - Expected: {formatCurrencyValue(parseFloat(String(register.openingBalance)))}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1382,7 +1382,7 @@ export default function POSTerminal() {
                   <Label>Opening Balance Verification</Label>
                   <div className="mt-2 p-3 bg-blue-50 rounded-lg">
                     <div className="text-sm text-blue-800">
-                      <strong>Expected Opening Balance:</strong> ${parseFloat(String(selectedRegister?.openingBalance || 0)).toFixed(2)}
+                      <strong>Expected Opening Balance:</strong> {formatCurrencyValue(parseFloat(String(selectedRegister?.openingBalance || 0)))}
                     </div>
                     <div className="text-xs text-blue-600 mt-1">
                       Please count the cash drawer and confirm this amount matches
