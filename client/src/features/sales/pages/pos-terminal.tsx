@@ -2338,6 +2338,12 @@ export default function POSTerminal() {
                       <span>{formatCurrencyValue(lastInvoice.payment.change)}</span>
                     </div>
                   )}
+                  {selectedCustomerId && lastInvoice.grandTotal > lastInvoice.payment.amountReceived && (
+                    <div className="flex justify-between bold text-red-600">
+                      <span>Remaining Balance:</span>
+                      <span>{formatCurrencyValue(lastInvoice.grandTotal - lastInvoice.payment.amountReceived)}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Customer Balance Information Section */}
