@@ -91,6 +91,7 @@ export default function POSTerminal() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'qr'>("cash");
@@ -135,9 +136,49 @@ export default function POSTerminal() {
       
       setSearchSuggestions(suggestions);
       setShowSuggestions(suggestions.length > 0);
+      setSelectedSuggestionIndex(-1);
     } else {
       setSearchSuggestions([]);
       setShowSuggestions(false);
+      setSelectedSuggestionIndex(-1);
+    }
+  };
+
+  // Enhanced search keyboard handler
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || searchSuggestions.length === 0) {
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev < searchSuggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : searchSuggestions.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < searchSuggestions.length) {
+          const selectedProduct = searchSuggestions[selectedSuggestionIndex];
+          addToCart(selectedProduct);
+          setSearchQuery("");
+          setShowSuggestions(false);
+          setSelectedSuggestionIndex(-1);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+        setSearchQuery("");
+        break;
     }
   };
 
@@ -152,11 +193,8 @@ export default function POSTerminal() {
       case 'enter':
         e.preventDefault();
         if (cart.length > 0 && registerStatus === 'open') {
-          // Quick sale completion - set exact amount and process immediately
-          setAmountReceived(getGrandTotal());
-          setTimeout(() => {
-            processSale();
-          }, 100);
+          // Open payment dialog for selection
+          setShowPaymentDialog(true);
         } else if (cart.length === 0) {
           toast({
             title: "Empty Cart",
@@ -934,18 +972,28 @@ export default function POSTerminal() {
                         <option>Email</option>
                       </select>
                       <span className="text-xs font-bold text-gray-700">Select Customer</span>
-                      <select className="text-xs border border-gray-300 px-3 py-1 rounded w-48">
-                        <option>Walk-in Customer</option>
-                        <option>John Smith</option>
-                        <option>Sarah Wilson</option>
-                        <option>Mike Johnson</option>
+                      <select 
+                        value={selectedCustomerId || ''} 
+                        onChange={(e) => setSelectedCustomerId(e.target.value ? Number(e.target.value) : null)}
+                        className="text-xs border border-gray-300 px-3 py-1 rounded w-48"
+                      >
+                        <option value="">Walk-in Customer</option>
+                        {customers?.map((customer: any) => (
+                          <option key={customer.id} value={customer.id}>
+                            {customer.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
                   
                   {/* Customer Action Buttons */}
                   <div className="flex items-center space-x-2">
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1">
+                    <Button 
+                      size="sm" 
+                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1"
+                      onClick={() => setShowAddCustomerDialog(true)}
+                    >
                       <Plus className="w-3 h-3 mr-1" />
                       Add Customer
                     </Button>
@@ -963,17 +1011,37 @@ export default function POSTerminal() {
                 {/* Customer Details Row */}
                 <div className="flex items-center mt-2 text-xs">
                   <span className="font-bold text-gray-700 mr-2">Customer:</span>
-                  <span className="mr-6">Walk-in Customer</span>
+                  <span className="mr-6">
+                    {selectedCustomerId 
+                      ? customers?.find(c => c.id === selectedCustomerId)?.name || 'Unknown Customer'
+                      : 'Walk-in Customer'
+                    }
+                  </span>
                   <span className="font-bold text-gray-700 mr-2">ID:</span>
-                  <span className="mr-6">376</span>
-                  <span className="font-bold text-gray-700 mr-2">Dry Lic:</span>
-                  <span className="mr-6">-</span>
-                  <span className="font-bold text-gray-700 mr-2">SalesRep:</span>
-                  <span>No Employee</span>
+                  <span className="mr-6">{selectedCustomerId || 'N/A'}</span>
+                  <span className="font-bold text-gray-700 mr-2">Phone:</span>
+                  <span className="mr-6">
+                    {selectedCustomerId 
+                      ? customers?.find(c => c.id === selectedCustomerId)?.phone || '-'
+                      : '-'
+                    }
+                  </span>
+                  <span className="font-bold text-gray-700 mr-2">Email:</span>
+                  <span>
+                    {selectedCustomerId 
+                      ? customers?.find(c => c.id === selectedCustomerId)?.email || '-'
+                      : '-'
+                    }
+                  </span>
                 </div>
                 <div className="text-xs mt-1">
                   <span className="font-bold text-gray-700 mr-2">Address:</span>
-                  <span>PO Box 840565 Houston, TX 77076</span>
+                  <span>
+                    {selectedCustomerId 
+                      ? customers?.find(c => c.id === selectedCustomerId)?.address || 'No address provided'
+                      : 'No address for walk-in customer'
+                    }
+                  </span>
                 </div>
               </div>
 
@@ -992,10 +1060,11 @@ export default function POSTerminal() {
                         placeholder="Enter item code or scan barcode..."
                         value={searchQuery}
                         onChange={(e) => handleSearchChange(e.target.value)}
-                        onKeyPress={handleSearchKeyPress}
+                        onKeyDown={handleSearchKeyDown}
                         onFocus={() => setShowSuggestions(searchSuggestions.length > 0)}
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                         className="h-7 text-xs w-64 border-gray-300"
+                        autoComplete="off"
                       />
                       
                       {/* Autocomplete Suggestions Dropdown */}
@@ -1004,7 +1073,11 @@ export default function POSTerminal() {
                           {searchSuggestions.map((product, index) => (
                             <div
                               key={product.id}
-                              className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-xs border-b border-gray-100 last:border-b-0"
+                              className={`px-3 py-2 cursor-pointer text-xs border-b border-gray-100 last:border-b-0 ${
+                                index === selectedSuggestionIndex 
+                                  ? 'bg-blue-100 border-blue-200' 
+                                  : 'hover:bg-blue-50'
+                              }`}
                               onClick={() => selectSuggestion(product)}
                             >
                               <div className="flex justify-between items-center">
@@ -1250,9 +1323,10 @@ export default function POSTerminal() {
                   <Input
                     placeholder="Search products by name, barcode, or category..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={undefined}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
                     className="pl-10 h-12 text-lg rounded-xl border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    autoComplete="off"
                   />
                 </div>
               </CardContent>
