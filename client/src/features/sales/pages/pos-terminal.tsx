@@ -117,7 +117,7 @@ export default function POSTerminal() {
   const [selectedRegisterId, setSelectedRegisterId] = useState<number | null>(null);
   const [registerStatus, setRegisterStatus] = useState<'closed' | 'opening' | 'open'>('closed');
   const [cashDrawerBalance, setCashDrawerBalance] = useState(0);
-  const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(false); // Start closed to allow POS usage
+  const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(true); // Show register setup when closed
 
   // Fetch products
   const { data: products = [], isLoading } = useQuery<any[]>({
@@ -253,6 +253,16 @@ export default function POSTerminal() {
 
   // Enhanced cart operations
   const addToCart = (product: any) => {
+    if (registerStatus !== 'open') {
+      toast({
+        title: "Register Closed",
+        description: "Please open a register before adding products to cart",
+        variant: "destructive",
+      });
+      setIsRegisterSetupOpen(true);
+      return;
+    }
+    
     const existingItem = cart.find(item => item.id === product.id);
     
     if (existingItem) {
@@ -552,7 +562,7 @@ export default function POSTerminal() {
   return (
     <PosLayout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-7xl mx-auto">
+      <div className={`max-w-7xl mx-auto ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
         {/* Modern Header */}
         <div className="bg-white rounded-2xl shadow-lg border-0 p-6 mb-6">
           <div className="flex items-center justify-between">
@@ -1207,13 +1217,18 @@ export default function POSTerminal() {
             {/* Process Sale Button */}
             <Button
               onClick={processSale}
-              disabled={cart.length === 0 || processSaleMutation.isPending}
+              disabled={cart.length === 0 || processSaleMutation.isPending || registerStatus !== 'open'}
               className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:opacity-50"
             >
               {processSaleMutation.isPending ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                   Processing...
+                </div>
+              ) : registerStatus !== 'open' ? (
+                <div className="flex items-center">
+                  <AlertCircle className="w-6 h-6 mr-2" />
+                  Register Closed
                 </div>
               ) : (
                 <div className="flex items-center">
@@ -1337,7 +1352,7 @@ export default function POSTerminal() {
           </DialogContent>
         </Dialog>
 
-        {/* Register Setup Dialog - Required on POS Terminal Load */}
+        {/* Register Setup Dialog - Required when register is closed */}
         <Dialog open={isRegisterSetupOpen} onOpenChange={(open) => {
           // Only allow closing if register is open
           if (!open && registerStatus === 'open') {
@@ -1347,11 +1362,13 @@ export default function POSTerminal() {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center text-lg">
-                <AlertCircle className="w-6 h-6 mr-2 text-red-500" />
-                Register Setup Required
+                <AlertCircle className="w-6 h-6 mr-2 text-orange-500" />
+                {registerStatus === 'closed' ? 'Register Setup Required' : 'Opening Register...'}
               </DialogTitle>
               <div className="text-sm text-gray-600 mt-2">
-                You must open a register with verified opening balance before using the POS terminal.
+                {registerStatus === 'closed' 
+                  ? 'Please open a register with verified opening balance to start using the POS terminal.'
+                  : 'Verifying register balance and initializing POS system...'}
               </div>
             </DialogHeader>
             
@@ -1405,12 +1422,21 @@ export default function POSTerminal() {
               <div className="flex space-x-2">
                 <Button
                   onClick={() => openRegister(selectedRegisterId!, cashDrawerBalance)}
-                  disabled={!selectedRegisterId || cashDrawerBalance === 0}
+                  disabled={!selectedRegisterId || cashDrawerBalance === 0 || registerStatus === 'opening'}
                   className="w-full bg-green-600 hover:bg-green-700 text-white"
                   size="lg"
                 >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Open Register & Start POS
+                  {registerStatus === 'opening' ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Opening Register...
+                    </div>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Open Register & Start POS
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
