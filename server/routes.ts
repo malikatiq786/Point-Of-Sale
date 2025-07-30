@@ -1582,9 +1582,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const category = await storage.createCategory(req.body);
       
-      // Log activity
+      // Log activity - handle both user formats
+      const userId = req.user?.claims?.sub || req.user?.id || "system";
       await storage.logActivity(
-        req.user.claims.sub,
+        userId,
         `Created category: ${category.name}`,
         req.ip
       );

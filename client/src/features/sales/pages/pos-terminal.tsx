@@ -1332,17 +1332,61 @@ export default function POSTerminal() {
               </div>
             </div>
 
-            {/* Central Branding */}
+            {/* Company Logo - Central Branding */}
             <div className="text-center">
-              <div className="flex items-center justify-center space-x-4 mb-3">
-                <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-4 shadow-xl">
-                  <Receipt className="w-10 h-10 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-800 bg-clip-text text-transparent">
-                    Modern POS Terminal
-                  </h1>
-                  <p className="text-slate-600 font-medium text-lg">Advanced point of sale system with full features</p>
+              <div className="flex items-center justify-center space-x-6 mb-3">
+                {/* Professional Company Logo */}
+                <div className="flex items-center space-x-4">
+                  <div className="relative">
+                    <svg width="80" height="80" viewBox="0 0 80 80" className="drop-shadow-2xl">
+                      {/* Logo Background */}
+                      <defs>
+                        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#1e40af" />
+                          <stop offset="50%" stopColor="#3b82f6" />
+                          <stop offset="100%" stopColor="#60a5fa" />
+                        </linearGradient>
+                        <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#1e3a8a" />
+                          <stop offset="50%" stopColor="#3730a3" />
+                          <stop offset="100%" stopColor="#581c87" />
+                        </linearGradient>
+                      </defs>
+                      
+                      {/* Main Logo Circle */}
+                      <circle cx="40" cy="40" r="38" fill="url(#logoGradient)" stroke="#f8fafc" strokeWidth="2"/>
+                      
+                      {/* Letter "U" */}
+                      <path d="M20 25 L20 45 Q20 55 30 55 L50 55 Q60 55 60 45 L60 25" 
+                            stroke="white" strokeWidth="4" fill="none" strokeLinecap="round"/>
+                      
+                      {/* Letter "P" */}
+                      <path d="M25 35 L25 65 M25 35 L40 35 Q50 35 50 45 Q50 55 40 55 L25 55" 
+                            stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
+                      
+                      {/* Decorative Elements */}
+                      <circle cx="65" cy="20" r="3" fill="white" opacity="0.8"/>
+                      <circle cx="15" cy="65" r="2" fill="white" opacity="0.6"/>
+                      <circle cx="70" cy="60" r="2" fill="white" opacity="0.7"/>
+                    </svg>
+                  </div>
+                  
+                  <div className="text-left">
+                    <h1 className="text-5xl font-black tracking-tight">
+                      <span style={{background: 'linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #581c87 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text'}}>
+                        Universal
+                      </span>
+                    </h1>
+                    <div className="flex items-center space-x-2">
+                      <h2 className="text-3xl font-bold text-blue-700 tracking-wide">POS</h2>
+                      <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                        SYSTEM
+                      </span>
+                    </div>
+                    <p className="text-slate-600 font-medium text-sm mt-1 tracking-wide">
+                      Professional Point of Sale Solution
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
