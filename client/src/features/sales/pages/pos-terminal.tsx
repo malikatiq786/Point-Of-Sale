@@ -335,14 +335,14 @@ export default function POSTerminal() {
   });
 
   // Fetch customer ledger balance for selected customer
-  const { data: customerLedger = [] } = useQuery({
+  const { data: customerLedger = [] } = useQuery<any[]>({
     queryKey: ['/api/customer-ledgers', selectedCustomerId],
     enabled: !!selectedCustomerId,
   });
 
   // Calculate customer's current balance (debit - credit)
   const getCustomerBalance = () => {
-    if (!selectedCustomerId || !customerLedger.length) return 0;
+    if (!selectedCustomerId || !Array.isArray(customerLedger) || customerLedger.length === 0) return 0;
     
     return customerLedger.reduce((balance: number, entry: any) => {
       const amount = parseFloat(entry.amount) || 0;
@@ -778,11 +778,13 @@ export default function POSTerminal() {
               ${lastInvoice.customer.phone ? `Phone: ${lastInvoice.customer.phone}<br/>` : ''}
               ${selectedCustomerId ? (() => {
                 const balance = getCustomerBalance();
-                return `Previous Balance: ${balance > 0 
-                  ? `${formatCurrencyValue(balance)} (Due)`
-                  : balance < 0 
-                    ? `${formatCurrencyValue(Math.abs(balance))} (Credit)`
-                    : `${formatCurrencyValue(0)} (Clear)`}`;
+                if (balance !== 0) {
+                  return `Previous Balance: ${balance > 0 
+                    ? `${formatCurrencyValue(balance)} (Due)`
+                    : `${formatCurrencyValue(Math.abs(balance))} (Credit)`}`;
+                } else {
+                  return `Previous Balance: ${formatCurrencyValue(0)} (Clear)`;
+                }
               })() : ''}
             </div>
           ` : ''}
@@ -1106,8 +1108,8 @@ export default function POSTerminal() {
                   <span className="font-bold text-gray-700 mr-2">Address:</span>
                   <span>
                     {selectedCustomerId 
-                      ? customers?.find(c => c.id === selectedCustomerId)?.address || 'No address provided'
-                      : 'No address for walk-in customer'
+                      ? customers?.find(c => c.id === selectedCustomerId)?.email || 'No email provided'
+                      : 'No email for walk-in customer'
                     }
                   </span>
                 </div>
@@ -2232,16 +2234,19 @@ export default function POSTerminal() {
                       Customer: {lastInvoice.customer.name}<br/>
                       {lastInvoice.customer.phone && `Phone: ${lastInvoice.customer.phone}`}<br/>
                       {selectedCustomerId && (
-                        <>
+                        <div>
                           Previous Balance: {(() => {
                             const balance = getCustomerBalance();
-                            return balance > 0 
-                              ? `${formatCurrencyValue(balance)} (Due)`
-                              : balance < 0 
-                                ? `${formatCurrencyValue(Math.abs(balance))} (Credit)`
-                                : `${formatCurrencyValue(0)} (Clear)`;
+                            console.log('Customer Balance Debug:', { selectedCustomerId, customerLedger, balance });
+                            if (balance > 0) {
+                              return `${formatCurrencyValue(balance)} (Due)`;
+                            } else if (balance < 0) {
+                              return `${formatCurrencyValue(Math.abs(balance))} (Credit)`;
+                            } else {
+                              return `${formatCurrencyValue(0)} (Clear)`;
+                            }
                           })()}
-                        </>
+                        </div>
                       )}
                     </div>
                   )}
