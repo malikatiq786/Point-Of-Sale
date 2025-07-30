@@ -722,58 +722,95 @@ export default function POSTerminal() {
               </Card>
             )}
 
-            {/* Search Layout - Search Results Table */}
+            {/* Search Layout - Professional Search Results Table */}
             {posLayout === 'search' && searchResults.length > 0 && (
-              <Card className="rounded-2xl shadow-lg border-0">
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center">
-                    <Search className="w-5 h-5 mr-2" />
-                    Search Results ({searchResults.length} found)
+              <Card className="rounded-lg border shadow-sm bg-white">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg border-b">
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="bg-blue-600 p-2 rounded-lg mr-3">
+                        <Search className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Product Search Results</h3>
+                        <p className="text-sm text-gray-600">{searchResults.length} items found for "{searchQuery}"</p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                      {searchResults.length} Results
+                    </Badge>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-0">
+                <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Product</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Category</th>
-                          <th className="text-center py-3 px-4 text-sm font-medium text-gray-600">Price</th>
-                          <th className="text-center py-3 px-4 text-sm font-medium text-gray-600">Action</th>
+                      <thead className="bg-gray-50 border-b-2 border-gray-200">
+                        <tr>
+                          <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Item Details
+                          </th>
+                          <th className="text-center py-4 px-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Category
+                          </th>
+                          <th className="text-center py-4 px-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Unit Price
+                          </th>
+                          <th className="text-center py-4 px-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Stock
+                          </th>
+                          <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Action
+                          </th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {searchResults.map((product: any) => (
-                          <tr key={product.id} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-4">
-                              <div>
-                                <div className="font-medium text-sm text-gray-900">{product.name}</div>
-                                <div className="text-xs text-gray-500">{product.description}</div>
-                                {product.barcode && (
-                                  <div className="text-xs text-blue-600 mt-1">Barcode: {product.barcode}</div>
-                                )}
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {searchResults.map((product: any, index: number) => (
+                          <tr key={product.id} className={`hover:bg-blue-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                            <td className="py-4 px-6">
+                              <div className="flex items-start space-x-3">
+                                <div className="flex-shrink-0">
+                                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <Tag className="w-5 h-5 text-blue-600" />
+                                  </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-gray-900 text-sm">{product.name}</div>
+                                  <div className="text-xs text-gray-500 mt-1 line-clamp-2">{product.description}</div>
+                                  {product.barcode && (
+                                    <div className="inline-flex items-center mt-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                                      <Receipt className="w-3 h-3 mr-1" />
+                                      {product.barcode}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </td>
-                            <td className="py-3 px-4">
-                              <span className="text-sm text-gray-700">{product.category?.name || 'General'}</span>
+                            <td className="py-4 px-4 text-center">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                {product.category?.name || 'General'}
+                              </span>
                             </td>
-                            <td className="py-3 px-4 text-center">
-                              <span className="font-semibold text-sm text-blue-600">
+                            <td className="py-4 px-4 text-center">
+                              <div className="text-lg font-bold text-green-600">
                                 {formatCurrencyValue(
                                   product.category?.name === 'Electronics' ? 599.99 : 
                                   product.category?.name === 'Food & Beverages' ? 2.99 :
                                   product.category?.name === 'Clothing' ? 79.99 : 19.99
                                 )}
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                {product.stock || 'In Stock'}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-center">
+                            <td className="py-4 px-6 text-center">
                               <Button
                                 onClick={() => addFromSearchResults(product)}
-                                size="sm"
-                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium px-6 py-2 rounded-lg shadow-sm transition-all duration-200 transform hover:scale-105"
                               >
-                                <Plus className="w-4 h-4 mr-1" />
-                                Add
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add to Cart
                               </Button>
                             </td>
                           </tr>
@@ -781,28 +818,102 @@ export default function POSTerminal() {
                       </tbody>
                     </table>
                   </div>
+                  
+                  {/* Professional Footer */}
+                  <div className="bg-gray-50 px-6 py-4 border-t">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-gray-600">
+                        Showing {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{searchQuery}"
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setSearchQuery("");
+                          setSearchResults([]);
+                        }}
+                        className="text-gray-600 hover:text-gray-800"
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Clear Search
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Search Layout - No Results Message */}
+            {/* Search Layout - Professional No Results Message */}
             {posLayout === 'search' && searchResults.length === 0 && searchQuery && (
-              <Card className="rounded-2xl shadow-lg border-0">
-                <CardContent className="p-8 text-center">
-                  <Search className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                  <p className="text-gray-500 text-lg mb-2">No products found</p>
-                  <p className="text-gray-400 text-sm">Try searching with a different product name, barcode, or category</p>
+              <Card className="rounded-lg border shadow-sm bg-white">
+                <CardContent className="p-12 text-center">
+                  <div className="bg-gray-100 p-4 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                    <Search className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3">No Products Found</h3>
+                  <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                    We couldn't find any products matching "<span className="font-medium text-gray-700">{searchQuery}</span>". 
+                    Try searching with a different product name, barcode, or category.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSearchResults([]);
+                      }}
+                      className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Clear Search
+                    </Button>
+                    <Button
+                      onClick={() => setPosLayout('grid')}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Package className="w-4 h-4 mr-2" />
+                      Browse All Products
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Search Layout - Instructions */}
+            {/* Search Layout - Professional Instructions */}
             {posLayout === 'search' && !searchQuery && (
-              <Card className="rounded-2xl shadow-lg border-0">
-                <CardContent className="p-8 text-center">
-                  <Search className="w-12 h-12 mx-auto mb-4 text-blue-500" />
-                  <p className="text-gray-700 text-lg mb-2">Search Mode Active</p>
-                  <p className="text-gray-500 text-sm">Type product name or barcode above and press Enter to search</p>
+              <Card className="rounded-lg border shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50">
+                <CardContent className="p-12 text-center">
+                  <div className="bg-blue-600 p-4 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                    <Search className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">Product Search</h3>
+                  <p className="text-gray-600 mb-8 max-w-lg mx-auto text-lg leading-relaxed">
+                    Use the search field above to find products by name, barcode, or description. 
+                    Press <kbd className="px-2 py-1 bg-gray-200 rounded text-sm font-mono">Enter</kbd> to search.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto">
+                    <div className="text-center">
+                      <div className="bg-white p-3 rounded-lg shadow-sm mb-3 inline-block">
+                        <Tag className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Product Name</h4>
+                      <p className="text-sm text-gray-600">Search by product title</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="bg-white p-3 rounded-lg shadow-sm mb-3 inline-block">
+                        <Receipt className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Barcode</h4>
+                      <p className="text-sm text-gray-600">Scan or type barcode</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="bg-white p-3 rounded-lg shadow-sm mb-3 inline-block">
+                        <Package className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Category</h4>
+                      <p className="text-sm text-gray-600">Filter by category</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}
