@@ -335,19 +335,28 @@ export default function POSTerminal() {
   });
 
   // Fetch customer ledger balance for selected customer
-  const { data: customerLedger = [] } = useQuery<any[]>({
-    queryKey: ['/api/customer-ledgers', selectedCustomerId],
+  const { data: customerLedgerData } = useQuery<any[]>({
+    queryKey: ['/api/customer-ledgers'],
     enabled: !!selectedCustomerId,
   });
 
+  // Filter customer ledger for selected customer
+  const customerLedger = customerLedgerData?.filter(entry => entry.customerId === selectedCustomerId) || [];
+
   // Calculate customer's current balance (debit - credit)
   const getCustomerBalance = () => {
-    if (!selectedCustomerId || !Array.isArray(customerLedger) || customerLedger.length === 0) return 0;
+    if (!selectedCustomerId || !Array.isArray(customerLedger) || customerLedger.length === 0) {
+      console.log('Customer Balance Debug: No ledger data', { selectedCustomerId, customerLedger });
+      return 0;
+    }
     
-    return customerLedger.reduce((balance: number, entry: any) => {
+    const balance = customerLedger.reduce((balance: number, entry: any) => {
       const amount = parseFloat(entry.amount) || 0;
       return entry.type === 'debit' ? balance + amount : balance - amount;
     }, 0);
+    
+    console.log('Customer Balance Debug: Calculated balance', { selectedCustomerId, customerLedger, balance });
+    return balance;
   };
 
   // Get selected register info
@@ -778,12 +787,13 @@ export default function POSTerminal() {
               ${lastInvoice.customer.phone ? `Phone: ${lastInvoice.customer.phone}<br/>` : ''}
               ${selectedCustomerId ? (() => {
                 const balance = getCustomerBalance();
+                console.log('Print Customer Balance Debug:', { selectedCustomerId, customerLedger, balance });
                 if (balance !== 0) {
                   return `Previous Balance: ${balance > 0 
                     ? `${formatCurrencyValue(balance)} (Due)`
-                    : `${formatCurrencyValue(Math.abs(balance))} (Credit)`}`;
+                    : `${formatCurrencyValue(Math.abs(balance))} (Credit)`}<br/>`;
                 } else {
-                  return `Previous Balance: ${formatCurrencyValue(0)} (Clear)`;
+                  return `Previous Balance: ${formatCurrencyValue(0)} (Clear)<br/>`;
                 }
               })() : ''}
             </div>
@@ -2237,7 +2247,7 @@ export default function POSTerminal() {
                         <div>
                           Previous Balance: {(() => {
                             const balance = getCustomerBalance();
-                            console.log('Customer Balance Debug:', { selectedCustomerId, customerLedger, balance });
+                            console.log('Invoice Customer Balance Debug:', { selectedCustomerId, customerLedger, balance });
                             if (balance > 0) {
                               return `${formatCurrencyValue(balance)} (Due)`;
                             } else if (balance < 0) {
