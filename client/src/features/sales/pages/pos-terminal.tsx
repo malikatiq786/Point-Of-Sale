@@ -122,6 +122,11 @@ export default function POSTerminal() {
     if (e.key === 'Enter' && searchQuery.trim()) {
       e.preventDefault();
       
+      if (!products || products.length === 0) {
+        console.log('No products available for search');
+        return;
+      }
+      
       const filteredProducts = products.filter(product => 
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (product.barcode && product.barcode.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -129,6 +134,7 @@ export default function POSTerminal() {
         (product.category?.name && product.category.name.toLowerCase().includes(searchQuery.toLowerCase()))
       );
       
+      console.log(`Search for "${searchQuery}" found ${filteredProducts.length} products`);
       setSearchResults(filteredProducts);
       
       // If exactly one result, automatically add to cart and clear search
@@ -137,6 +143,13 @@ export default function POSTerminal() {
         setSearchResults([]);
         setSearchQuery('');
       }
+    }
+  };
+
+  // Manual search trigger for Find Now button
+  const triggerSearch = () => {
+    if (searchQuery.trim()) {
+      handleSearchKeyPress({ key: 'Enter', preventDefault: () => {} } as any);
     }
   };
 
@@ -152,9 +165,9 @@ export default function POSTerminal() {
   const [cashDrawerBalance, setCashDrawerBalance] = useState(0);
   const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(true); // Show register setup when closed
 
-  // Fetch products
+  // Fetch all products (no server-side search)
   const { data: products = [], isLoading } = useQuery<any[]>({
-    queryKey: searchQuery ? ["/api/products?search=" + encodeURIComponent(searchQuery)] : ["/api/products"],
+    queryKey: ["/api/products"],
     retry: false,
   });
 
@@ -747,18 +760,10 @@ export default function POSTerminal() {
                       onKeyPress={handleSearchKeyPress}
                       className="h-7 text-xs w-64 border-gray-300"
                     />
-                    <Button size="sm" className="text-xs px-3 py-1 h-7" onClick={() => {
-                      if (searchQuery.trim()) {
-                        handleSearchKeyPress({ key: 'Enter', preventDefault: () => {} } as any);
-                      }
-                    }}>
+                    <Button size="sm" className="text-xs px-3 py-1 h-7" onClick={triggerSearch}>
                       Find Now
                     </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-3 py-1 h-7" onClick={() => {
-                      if (searchQuery.trim()) {
-                        handleSearchKeyPress({ key: 'Enter', preventDefault: () => {} } as any);
-                      }
-                    }}>
+                    <Button size="sm" variant="outline" className="text-xs px-3 py-1 h-7" onClick={triggerSearch}>
                       <Search className="w-3 h-3 mr-1" />
                       F8-Search
                     </Button>
