@@ -1920,71 +1920,15 @@ export default function POSTerminal() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label>Select Customer</Label>
-                    <Dialog open={showAddCustomerDialog} onOpenChange={setShowAddCustomerDialog}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="rounded-xl">
-                          <Plus className="w-4 h-4 mr-1" />
-                          Add New
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="rounded-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Add New Customer</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="newCustomerName">Name *</Label>
-                            <Input
-                              id="newCustomerName"
-                              value={newCustomer.name}
-                              onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                              placeholder="Customer name"
-                              className="rounded-xl"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="newCustomerPhone">Phone</Label>
-                            <Input
-                              id="newCustomerPhone"
-                              value={newCustomer.phone}
-                              onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                              placeholder="Phone number"
-                              className="rounded-xl"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="newCustomerEmail">Email</Label>
-                            <Input
-                              id="newCustomerEmail"
-                              value={newCustomer.email}
-                              onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                              placeholder="Email address"
-                              className="rounded-xl"
-                            />
-                          </div>
-                          <div className="flex space-x-2">
-                            <Button 
-                              onClick={() => setShowAddCustomerDialog(false)}
-                              variant="outline"
-                              className="flex-1 rounded-xl"
-                            >
-                              Cancel
-                            </Button>
-                            <Button 
-                              onClick={() => {
-                                if (newCustomer.name.trim()) {
-                                  addCustomerMutation.mutate(newCustomer);
-                                }
-                              }}
-                              disabled={!newCustomer.name.trim() || addCustomerMutation.isPending}
-                              className="flex-1 rounded-xl"
-                            >
-                              {addCustomerMutation.isPending ? "Adding..." : "Add Customer"}
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="rounded-xl"
+                      onClick={() => setShowAddCustomerDialog(true)}
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add New
+                    </Button>
                   </div>
                   
                   {/* Customer Dropdown Selection */}
@@ -2847,6 +2791,74 @@ export default function POSTerminal() {
               customerLedger={customerLedger}
               onClose={() => setShowPaymentOnAccountDialog(false)}
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Customer Dialog - Shared between both layouts */}
+        <Dialog open={showAddCustomerDialog} onOpenChange={setShowAddCustomerDialog}>
+          <DialogContent className="max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <User className="w-5 h-5 mr-2" />
+                Add New Customer
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="sharedNewCustomerName">Name *</Label>
+                <Input
+                  id="sharedNewCustomerName"
+                  value={newCustomer.name}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                  placeholder="Customer name"
+                  className="rounded-xl"
+                />
+              </div>
+              <div>
+                <Label htmlFor="sharedNewCustomerPhone">Phone</Label>
+                <Input
+                  id="sharedNewCustomerPhone"
+                  value={newCustomer.phone}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                  placeholder="Phone number"
+                  className="rounded-xl"
+                />
+              </div>
+              <div>
+                <Label htmlFor="sharedNewCustomerEmail">Email</Label>
+                <Input
+                  id="sharedNewCustomerEmail"
+                  value={newCustomer.email}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                  placeholder="Email address"
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={() => {
+                    setShowAddCustomerDialog(false);
+                    setNewCustomer({ name: "", phone: "", email: "" }); // Reset form
+                  }}
+                  variant="outline"
+                  className="flex-1 rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => {
+                    if (newCustomer.name.trim()) {
+                      addCustomerMutation.mutate(newCustomer);
+                    }
+                  }}
+                  disabled={!newCustomer.name.trim() || addCustomerMutation.isPending}
+                  className="flex-1 rounded-xl bg-green-600 hover:bg-green-700"
+                >
+                  {addCustomerMutation.isPending ? "Adding..." : "Add Customer"}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
