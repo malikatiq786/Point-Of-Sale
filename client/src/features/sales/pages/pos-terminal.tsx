@@ -1914,8 +1914,40 @@ export default function POSTerminal() {
                       })
                     ) : (
                       <tr>
-                        <td colSpan={10} className="py-8 text-center text-gray-500">
-                          {searchQuery ? 'No items found. Try different search terms.' : 'Enter item code or scan barcode to add items'}
+                        <td colSpan={10} className="py-12 text-center">
+                          {searchQuery ? (
+                            <div className="text-gray-500">No items found. Try different search terms.</div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center space-y-4">
+                              {/* Company Logo in Empty Table Space */}
+                              <div className="flex items-center space-x-4 mb-2">
+                                <svg width="60" height="60" viewBox="0 0 80 80" className="drop-shadow-lg">
+                                  <defs>
+                                    <linearGradient id="tableLogoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                      <stop offset="0%" stopColor="#1e40af" />
+                                      <stop offset="50%" stopColor="#3b82f6" />
+                                      <stop offset="100%" stopColor="#60a5fa" />
+                                    </linearGradient>
+                                  </defs>
+                                  <circle cx="40" cy="40" r="38" fill="url(#tableLogoGradient)" stroke="#f8fafc" strokeWidth="2"/>
+                                  <path d="M20 25 L20 45 Q20 55 30 55 L50 55 Q60 55 60 45 L60 25" 
+                                        stroke="white" strokeWidth="4" fill="none" strokeLinecap="round"/>
+                                  <path d="M25 35 L25 65 M25 35 L40 35 Q50 35 50 45 Q50 55 40 55 L25 55" 
+                                        stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
+                                  <circle cx="65" cy="20" r="3" fill="white" opacity="0.8"/>
+                                  <circle cx="15" cy="65" r="2" fill="white" opacity="0.6"/>
+                                  <circle cx="70" cy="60" r="2" fill="white" opacity="0.7"/>
+                                </svg>
+                                <div className="text-center">
+                                  <h3 className="text-2xl font-bold text-gray-700">Universal POS</h3>
+                                  <p className="text-sm text-gray-500">Professional Point of Sale System</p>
+                                </div>
+                              </div>
+                              <div className="text-gray-500 text-sm">
+                                Enter item code or scan barcode to add items
+                              </div>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}
@@ -1928,10 +1960,6 @@ export default function POSTerminal() {
                 <div className="flex justify-between">
                   {/* Left Side Buttons */}
                   <div className="flex space-x-1">
-                    <div className="flex items-center space-x-1">
-                      <span className="text-xs font-bold">Line:</span>
-                      <input type="number" defaultValue="3" className="w-8 h-6 text-xs text-center border border-gray-300" />
-                    </div>
                     <Button 
                       size="sm" 
                       variant="outline" 
