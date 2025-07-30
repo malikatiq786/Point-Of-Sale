@@ -618,10 +618,7 @@ export default function POSTerminal() {
   };
 
   const getChange = () => {
-    if (isChangeEditable) {
-      return changeAmount;
-    }
-    return Math.max(0, amountReceived - getGrandTotal());
+    return changeAmount > 0 ? changeAmount : Math.max(0, amountReceived - getGrandTotal());
   };
 
   const processSale = async () => {
@@ -687,7 +684,7 @@ export default function POSTerminal() {
       payment: {
         method: paymentMethod,
         amountReceived: paidAmount,
-        change: paymentMethod === 'cash' ? Math.max(0, paidAmount - grandTotal) : 0
+        change: paymentMethod === 'cash' ? (changeAmount > 0 ? changeAmount : Math.max(0, paidAmount - grandTotal)) : 0
       }
     };
 
@@ -2163,14 +2160,31 @@ export default function POSTerminal() {
                     </Button>
                   </div>
 
-                  {/* Change Calculation */}
+                  {/* Change Amount - Editable */}
                   {amountReceived > 0 && (
                     <div className="bg-green-50 rounded-xl p-3 mt-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-green-700">Change Due:</span>
-                        <span className="text-lg font-bold text-green-800">
-                          {formatCurrencyValue(Math.max(0, amountReceived - getGrandTotal()))}
-                        </span>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-green-700">Change Due:</span>
+                          <span className="text-lg font-bold text-green-800">
+                            {formatCurrencyValue(Math.max(0, amountReceived - getGrandTotal()))}
+                          </span>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-xs text-green-700">Edit Change Amount (Optional)</Label>
+                          <Input
+                            type="number"
+                            value={changeAmount}
+                            onChange={(e) => setChangeAmount(parseFloat(e.target.value) || 0)}
+                            placeholder="Override change amount"
+                            className="rounded-lg h-8 text-sm mt-1 bg-white"
+                            step="0.01"
+                          />
+                          <div className="text-xs text-green-600 mt-1">
+                            Leave at 0 to use calculated change: {formatCurrencyValue(Math.max(0, amountReceived - getGrandTotal()))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
