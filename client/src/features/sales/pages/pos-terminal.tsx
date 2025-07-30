@@ -334,6 +334,22 @@ export default function POSTerminal() {
     queryKey: ['/api/customers'],
   });
 
+  // Fetch customer ledger balance for selected customer
+  const { data: customerLedger = [] } = useQuery({
+    queryKey: ['/api/customer-ledgers', selectedCustomerId],
+    enabled: !!selectedCustomerId,
+  });
+
+  // Calculate customer's current balance (debit - credit)
+  const getCustomerBalance = () => {
+    if (!selectedCustomerId || !customerLedger.length) return 0;
+    
+    return customerLedger.reduce((balance: number, entry: any) => {
+      const amount = parseFloat(entry.amount) || 0;
+      return entry.type === 'debit' ? balance + amount : balance - amount;
+    }, 0);
+  };
+
   // Get selected register info
   const selectedRegister = registers.find((r) => r.id === selectedRegisterId);
 
@@ -759,7 +775,15 @@ export default function POSTerminal() {
           ${lastInvoice.customer ? `
             <div>
               Customer: ${lastInvoice.customer.name}<br/>
-              ${lastInvoice.customer.phone ? `Phone: ${lastInvoice.customer.phone}` : ''}
+              ${lastInvoice.customer.phone ? `Phone: ${lastInvoice.customer.phone}<br/>` : ''}
+              ${selectedCustomerId ? (() => {
+                const balance = getCustomerBalance();
+                return `Previous Balance: ${balance > 0 
+                  ? `${formatCurrencyValue(balance)} (Due)`
+                  : balance < 0 
+                    ? `${formatCurrencyValue(Math.abs(balance))} (Credit)`
+                    : `${formatCurrencyValue(0)} (Clear)`}`;
+              })() : ''}
             </div>
           ` : ''}
           <div class="divider"></div>
@@ -824,6 +848,48 @@ export default function POSTerminal() {
             </div>
           ` : ''}
         </div>
+
+        ${selectedCustomerId ? `
+          <div class="divider"></div>
+          <div>
+            <div class="center bold">Customer Balance Status</div>
+            ${(() => {
+              const previousBalance = getCustomerBalance();
+              const unpaidAmount = lastInvoice.grandTotal - lastInvoice.payment.amountReceived;
+              const newBalance = previousBalance + unpaidAmount;
+              
+              return `
+                <div class="flex">
+                  <span>Previous Balance:</span>
+                  <span class="right">
+                    ${previousBalance > 0 
+                      ? `${formatCurrencyValue(previousBalance)} (Due)`
+                      : previousBalance < 0 
+                        ? `${formatCurrencyValue(Math.abs(previousBalance))} (Credit)`
+                        : `${formatCurrencyValue(0)} (Clear)`}
+                  </span>
+                </div>
+                ${unpaidAmount > 0 ? `
+                  <div class="flex">
+                    <span>This Sale (Unpaid):</span>
+                    <span class="right">+${formatCurrencyValue(unpaidAmount)}</span>
+                  </div>
+                ` : ''}
+                <div class="divider"></div>
+                <div class="bold flex">
+                  <span>New Balance:</span>
+                  <span class="right">
+                    ${newBalance > 0 
+                      ? `${formatCurrencyValue(newBalance)} (Due)`
+                      : newBalance < 0 
+                        ? `${formatCurrencyValue(Math.abs(newBalance))} (Credit)`
+                        : `${formatCurrencyValue(0)} (Clear)`}
+                  </span>
+                </div>
+              `;
+            })()}
+          </div>
+        ` : ''}
 
         <div class="center" style="margin-top: 20px;">
           <div>Thank you for your business!</div>
@@ -2164,7 +2230,19 @@ export default function POSTerminal() {
                   {lastInvoice.customer && (
                     <div className="text-sm">
                       Customer: {lastInvoice.customer.name}<br/>
-                      {lastInvoice.customer.phone && `Phone: ${lastInvoice.customer.phone}`}
+                      {lastInvoice.customer.phone && `Phone: ${lastInvoice.customer.phone}`}<br/>
+                      {selectedCustomerId && (
+                        <>
+                          Previous Balance: {(() => {
+                            const balance = getCustomerBalance();
+                            return balance > 0 
+                              ? `${formatCurrencyValue(balance)} (Due)`
+                              : balance < 0 
+                                ? `${formatCurrencyValue(Math.abs(balance))} (Credit)`
+                                : `${formatCurrencyValue(0)} (Clear)`;
+                          })()}
+                        </>
+                      )}
                     </div>
                   )}
                   <div className="divider"></div>
@@ -2230,6 +2308,50 @@ export default function POSTerminal() {
                     <div className="flex justify-between bold">
                       <span>Change:</span>
                       <span>{formatCurrencyValue(lastInvoice.payment.change)}</span>
+                    </div>
+                  )}
+                  
+                  {/* Customer Balance Information */}
+                  {selectedCustomerId && (
+                    <div className="mt-2 pt-2 border-t border-dashed">
+                      <div className="center text-sm bold">Customer Balance Status</div>
+                      {(() => {
+                        const previousBalance = getCustomerBalance();
+                        const unpaidAmount = lastInvoice.grandTotal - lastInvoice.payment.amountReceived;
+                        const newBalance = previousBalance + unpaidAmount;
+                        
+                        return (
+                          <div className="space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>Previous Balance:</span>
+                              <span>
+                                {previousBalance > 0 
+                                  ? `${formatCurrencyValue(previousBalance)} (Due)`
+                                  : previousBalance < 0 
+                                    ? `${formatCurrencyValue(Math.abs(previousBalance))} (Credit)`
+                                    : `${formatCurrencyValue(0)} (Clear)`}
+                              </span>
+                            </div>
+                            {unpaidAmount > 0 && (
+                              <div className="flex justify-between">
+                                <span>This Sale (Unpaid):</span>
+                                <span>+{formatCurrencyValue(unpaidAmount)}</span>
+                              </div>
+                            )}
+                            <div className="divider"></div>
+                            <div className="flex justify-between bold">
+                              <span>New Balance:</span>
+                              <span>
+                                {newBalance > 0 
+                                  ? `${formatCurrencyValue(newBalance)} (Due)`
+                                  : newBalance < 0 
+                                    ? `${formatCurrencyValue(Math.abs(newBalance))} (Credit)`
+                                    : `${formatCurrencyValue(0)} (Clear)`}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
