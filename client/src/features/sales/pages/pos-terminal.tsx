@@ -778,6 +778,165 @@ export default function POSTerminal() {
     }
   };
 
+  const printCurrentCart = () => {
+    if (cart.length === 0) {
+      toast({
+        title: "Empty Cart",
+        description: "No items in cart to print",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const subtotal = getSubtotal();
+      const discountAmount = getDiscountAmount();
+      const taxAmount = getTaxAmount();
+      const total = getGrandTotal();
+      
+      const printContent = `
+        <div class="center">
+          <div class="bold text-lg">UNIVERSAL POS SYSTEM</div>
+          <div>Point of Sale - Current Cart</div>
+          <div class="divider"></div>
+          <div>
+            Date: ${new Date().toLocaleDateString()}<br/>
+            Time: ${new Date().toLocaleTimeString()}<br/>
+            Cashier: ${user?.name || 'System User'}
+          </div>
+          ${selectedCustomerId ? (() => {
+            const customer = customers?.find(c => c.id === selectedCustomerId);
+            return customer ? `
+              <div>
+                Customer: ${customer.name}<br/>
+                ${customer.phone ? `Phone: ${customer.phone}<br/>` : ''}
+                ${customer.email ? `Email: ${customer.email}<br/>` : ''}
+              </div>
+            ` : '';
+          })() : ''}
+          <div class="divider"></div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="center">Qty</th>
+              <th class="right">Price</th>
+              <th class="right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cart.map(item => `
+              <tr>
+                <td>${item.name}</td>
+                <td class="center">${item.quantity}</td>
+                <td class="right">${formatCurrencyValue(item.price)}</td>
+                <td class="right">${formatCurrencyValue(item.total)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="divider"></div>
+        
+        <div>
+          <div class="flex">
+            <span>Subtotal:</span>
+            <span class="right">${formatCurrencyValue(subtotal)}</span>
+          </div>
+          ${discountAmount > 0 ? `
+            <div class="flex">
+              <span>Discount:</span>
+              <span class="right">-${formatCurrencyValue(discountAmount)}</span>
+            </div>
+          ` : ''}
+          <div class="flex">
+            <span>Tax (${taxRate}%):</span>
+            <span class="right">${formatCurrencyValue(taxAmount)}</span>
+          </div>
+          <div class="divider"></div>
+          <div class="bold">
+            <span>TOTAL:</span>
+            <span class="right">${formatCurrencyValue(total)}</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="center">
+          ** DRAFT - NOT A COMPLETED SALE **<br/>
+          Current cart contents for review
+        </div>
+      `;
+
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Cart Contents - ${new Date().toLocaleDateString()}</title>
+              <style>
+                body { 
+                  font-family: 'Courier New', monospace; 
+                  font-size: 12px; 
+                  line-height: 1.4; 
+                  max-width: 300px; 
+                  margin: 0 auto; 
+                  padding: 10px; 
+                }
+                .center { text-align: center; }
+                .right { text-align: right; }
+                .bold { font-weight: bold; }
+                .divider { 
+                  border-top: 1px dashed #000; 
+                  margin: 8px 0; 
+                  height: 1px; 
+                }
+                table { 
+                  width: 100%; 
+                  border-collapse: collapse; 
+                  margin: 8px 0; 
+                }
+                th, td { 
+                  padding: 2px 4px; 
+                  text-align: left; 
+                  border-bottom: 1px solid #ddd; 
+                }
+                th { 
+                  font-weight: bold; 
+                  background-color: #f5f5f5; 
+                }
+                .flex { 
+                  display: flex; 
+                  justify-content: space-between; 
+                  margin: 2px 0; 
+                }
+              </style>
+            </head>
+            <body>
+              ${printContent}
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+        printWindow.close();
+        
+        toast({
+          title: "Cart Printed",
+          description: "Current cart contents sent to printer",
+        });
+      }
+    } catch (error) {
+      console.error('Print error:', error);
+      toast({
+        title: "Print Failed",
+        description: "Failed to print cart contents",
+        variant: "destructive",
+      });
+    }
+  };
+
   const clearCart = () => {
     setCart([]);
     setSelectedCustomerId(null);
@@ -788,10 +947,16 @@ export default function POSTerminal() {
   };
 
   const printInvoice = () => {
+    // If no invoice but cart has items, print current cart
+    if (!lastInvoice && cart.length > 0) {
+      printCurrentCart();
+      return;
+    }
+    
     if (!lastInvoice) {
       toast({
-        title: "No Invoice",
-        description: "No invoice available to print",
+        title: "Nothing to Print",
+        description: "No invoice or cart items available to print",
         variant: "destructive",
       });
       return;
@@ -1253,7 +1418,13 @@ export default function POSTerminal() {
                       <Receipt className="w-3 h-3 mr-1" />
                       No Sale
                     </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-3 py-1 h-7">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-xs px-3 py-1 h-7"
+                      onClick={printInvoice}
+                      disabled={!lastInvoice && cart.length === 0}
+                    >
                       <Printer className="w-3 h-3 mr-1" />
                       Print
                     </Button>
