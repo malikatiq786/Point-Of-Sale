@@ -1610,21 +1610,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Units routes  
   app.get("/api/units", isAuthenticated, async (req, res) => {
     try {
-      // For now, return static units data - in real implementation this would come from database
-      const units = [
-        { id: 1, name: "Each", short_name: "ea" },
-        { id: 2, name: "Pounds", short_name: "lbs" },
-        { id: 3, name: "Kilograms", short_name: "kg" },
-        { id: 4, name: "Meters", short_name: "m" },
-        { id: 5, name: "Liters", short_name: "L" },
-        { id: 6, name: "Pieces", short_name: "pcs" },
-        { id: 7, name: "Bottles", short_name: "btl" },
-        { id: 8, name: "Boxes", short_name: "box" }
-      ];
-      res.json(units);
+      console.log("Fetching units, total:", unitsStorage.length);
+      res.json(unitsStorage);
     } catch (error) {
       console.error("Error fetching units:", error);
       res.status(500).json({ message: "Failed to fetch units" });
+    }
+  });
+
+  // Units storage for in-memory persistence
+  let unitsStorage: any[] = [
+    { id: 1, name: "Each", shortName: "ea" },
+    { id: 2, name: "Pounds", shortName: "lbs" },
+    { id: 3, name: "Kilograms", shortName: "kg" },
+    { id: 4, name: "Meters", shortName: "m" },
+    { id: 5, name: "Liters", shortName: "L" },
+    { id: 6, name: "Pieces", shortName: "pcs" },
+    { id: 7, name: "Bottles", shortName: "btl" },
+    { id: 8, name: "Boxes", shortName: "box" }
+  ];
+
+  app.post("/api/units", isAuthenticated, async (req, res) => {
+    try {
+      const unitData = {
+        id: Date.now(),
+        name: req.body.name,
+        shortName: req.body.shortName || req.body.symbol, // Support both shortName and symbol
+      };
+      unitsStorage.push(unitData);
+      console.log("Unit created:", unitData);
+      res.status(201).json(unitData);
+    } catch (error) {
+      console.error("Error creating unit:", error);
+      res.status(500).json({ message: "Failed to create unit" });
+    }
+  });
+
+  app.put("/api/units/:id", isAuthenticated, async (req, res) => {
+    try {
+      const unitId = parseInt(req.params.id);
+      const unitIndex = unitsStorage.findIndex(u => u.id === unitId);
+      
+      if (unitIndex === -1) {
+        return res.status(404).json({ message: "Unit not found" });
+      }
+      
+      unitsStorage[unitIndex] = {
+        ...unitsStorage[unitIndex],
+        name: req.body.name,
+        shortName: req.body.shortName || req.body.symbol,
+      };
+      
+      console.log("Unit updated:", unitsStorage[unitIndex]);
+      res.json(unitsStorage[unitIndex]);
+    } catch (error) {
+      console.error("Error updating unit:", error);
+      res.status(500).json({ message: "Failed to update unit" });
+    }
+  });
+
+  app.delete("/api/units/:id", isAuthenticated, async (req, res) => {
+    try {
+      const unitId = parseInt(req.params.id);
+      const unitIndex = unitsStorage.findIndex(u => u.id === unitId);
+      
+      if (unitIndex === -1) {
+        return res.status(404).json({ message: "Unit not found" });
+      }
+      
+      const deletedUnit = unitsStorage.splice(unitIndex, 1)[0];
+      console.log("Unit deleted:", deletedUnit);
+      res.json({ message: "Unit deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting unit:", error);
+      res.status(500).json({ message: "Failed to delete unit" });
     }
   });
 

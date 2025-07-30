@@ -40,26 +40,25 @@ export default function Units() {
     },
   });
 
-  // Mock units data (replace with actual API call)
+  // Fetch units
   const { data: units = [], isLoading } = useQuery({
     queryKey: ['/api/units'],
-    queryFn: () => Promise.resolve([
-      { id: 1, name: "Kilogram", symbol: "kg", type: "weight", description: "Base unit of mass" },
-      { id: 2, name: "Gram", symbol: "g", type: "weight", description: "Smaller unit of mass" },
-      { id: 3, name: "Liter", symbol: "L", type: "volume", description: "Base unit of volume" },
-      { id: 4, name: "Milliliter", symbol: "ml", type: "volume", description: "Smaller unit of volume" },
-      { id: 5, name: "Piece", symbol: "pcs", type: "count", description: "Individual items" },
-      { id: 6, name: "Box", symbol: "box", type: "packaging", description: "Packaged items" },
-      { id: 7, name: "Meter", symbol: "m", type: "length", description: "Base unit of length" },
-      { id: 8, name: "Centimeter", symbol: "cm", type: "length", description: "Smaller unit of length" },
-    ]),
+    retry: false,
   });
 
-  // Create unit mutation (mock)
+  // Create unit mutation
   const createUnitMutation = useMutation({
     mutationFn: async (data: UnitFormData) => {
-      // Mock API call
-      return Promise.resolve({ id: Date.now(), ...data });
+      const response = await fetch('/api/units', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name,
+          shortName: data.symbol, // Map symbol to shortName for backend compatibility
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to create unit');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/units'] });
@@ -72,11 +71,19 @@ export default function Units() {
     },
   });
 
-  // Update unit mutation (mock)
+  // Update unit mutation
   const updateUnitMutation = useMutation({
     mutationFn: async ({ id, ...data }: UnitFormData & { id: number }) => {
-      // Mock API call
-      return Promise.resolve({ id, ...data });
+      const response = await fetch(`/api/units/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name,
+          shortName: data.symbol, // Map symbol to shortName for backend compatibility
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to update unit');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/units'] });
@@ -89,11 +96,12 @@ export default function Units() {
     },
   });
 
-  // Delete unit mutation (mock)
+  // Delete unit mutation
   const deleteUnitMutation = useMutation({
     mutationFn: async (id: number) => {
-      // Mock API call
-      return Promise.resolve({ id });
+      const response = await fetch(`/api/units/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete unit');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/units'] });
@@ -116,8 +124,8 @@ export default function Units() {
     setEditingUnit(unit);
     form.reset({
       name: unit.name,
-      symbol: unit.symbol,
-      type: unit.type,
+      symbol: unit.shortName || unit.symbol, // Handle both shortName and symbol
+      type: unit.type || "count",
       description: unit.description || "",
     });
   };
