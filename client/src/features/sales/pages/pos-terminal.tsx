@@ -116,6 +116,8 @@ export default function POSTerminal() {
   const [editingItem, setEditingItem] = useState<number | null>(null);
   const [editPrice, setEditPrice] = useState<string>("");
   const [editQuantity, setEditQuantity] = useState<string>("");
+  const [editingDiscount, setEditingDiscount] = useState<number | null>(null);
+  const [editDiscountValue, setEditDiscountValue] = useState<string>("");
 
   // Layout management state
   const [posLayout, setPosLayout] = useState<'grid' | 'search'>('grid');
@@ -247,6 +249,11 @@ export default function POSTerminal() {
     setShowDiscountDialog(false);
     setShowCustomerDialog(false);
     setShowInvoice(false);
+    setEditingItem(null);
+    setEditingDiscount(null);
+    setEditQuantity('');
+    setEditPrice('');
+    setEditDiscountValue('');
     toast({
       title: "Reset Complete",
       description: "All data has been cleared",
@@ -1504,6 +1511,7 @@ export default function POSTerminal() {
                           <th className="text-left py-2 px-2 text-sm font-medium text-gray-600">Product</th>
                           <th className="text-center py-2 px-2 text-sm font-medium text-gray-600">Qty</th>
                           <th className="text-right py-2 px-2 text-sm font-medium text-gray-600">Price</th>
+                          <th className="text-center py-2 px-2 text-sm font-medium text-gray-600">Discount</th>
                           <th className="text-right py-2 px-2 text-sm font-medium text-gray-600">Total</th>
                           <th className="text-center py-2 px-2 text-sm font-medium text-gray-600">Action</th>
                         </tr>
@@ -1606,6 +1614,50 @@ export default function POSTerminal() {
                                 </span>
                               )}
                             </td>
+                            <td className="py-3 px-2 text-center">
+                              {editingDiscount === item.id ? (
+                                <div className="flex flex-col space-y-1">
+                                  <Input
+                                    value={editDiscountValue}
+                                    onChange={(e) => setEditDiscountValue(e.target.value)}
+                                    onBlur={() => {
+                                      const value = parseFloat(editDiscountValue) || 0;
+                                      if (value > 0) {
+                                        const isPercentage = editDiscountValue.includes('%');
+                                        applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
+                                      }
+                                      setEditingDiscount(null);
+                                    }}
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter') {
+                                        const value = parseFloat(editDiscountValue) || 0;
+                                        if (value > 0) {
+                                          const isPercentage = editDiscountValue.includes('%');
+                                          applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
+                                        }
+                                        setEditingDiscount(null);
+                                      }
+                                    }}
+                                    className="w-20 h-6 text-xs text-center rounded"
+                                    placeholder="0% or 0.00"
+                                    autoFocus
+                                  />
+                                </div>
+                              ) : (
+                                <span 
+                                  className="text-xs cursor-pointer hover:bg-gray-200 rounded px-1 py-1 min-w-[60px] inline-block"
+                                  onClick={() => {
+                                    setEditingDiscount(item.id);
+                                    setEditDiscountValue((item.discount && item.discount > 0) ? `${item.discount}${item.discountType === 'percentage' ? '%' : ''}` : '');
+                                  }}
+                                >
+                                  {(item.discount && item.discount > 0)
+                                    ? (item.discountType === 'percentage' ? `${item.discount}%` : formatCurrencyValue(item.discount))
+                                    : 'Click to add'
+                                  }
+                                </span>
+                              )}
+                            </td>
                             <td className="py-3 px-2 text-right">
                               <span className="font-semibold text-sm text-gray-900">
                                 {formatCurrencyValue(item.total)}
@@ -1613,24 +1665,7 @@ export default function POSTerminal() {
                             </td>
                             <td className="py-3 px-2 text-center">
                               <div className="flex justify-center space-x-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    const discountValue = prompt(`Enter discount for ${item.name}:`);
-                                    if (discountValue) {
-                                      const isPercentage = discountValue.includes('%');
-                                      const value = parseFloat(discountValue.replace('%', ''));
-                                      if (!isNaN(value)) {
-                                        applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
-                                      }
-                                    }
-                                  }}
-                                  className="text-blue-600 hover:bg-blue-50 w-6 h-6 p-0"
-                                  title="Apply Discount"
-                                >
-                                  <Percent className="w-3 h-3" />
-                                </Button>
+
                                 <Button
                                   variant="ghost"
                                   size="sm"
