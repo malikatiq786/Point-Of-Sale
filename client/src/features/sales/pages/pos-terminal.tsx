@@ -120,12 +120,23 @@ export default function POSTerminal() {
   // Search functionality for search layout
   const handleSearchKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
+      e.preventDefault();
+      
       const filteredProducts = products.filter(product => 
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.barcode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        (product.barcode && product.barcode.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (product.category?.name && product.category.name.toLowerCase().includes(searchQuery.toLowerCase()))
       );
+      
       setSearchResults(filteredProducts);
+      
+      // If exactly one result, automatically add to cart and clear search
+      if (filteredProducts.length === 1) {
+        addToCart(filteredProducts[0]);
+        setSearchResults([]);
+        setSearchQuery('');
+      }
     }
   };
 
@@ -659,19 +670,277 @@ export default function POSTerminal() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Side - Product Selection */}
-          <div className="lg:col-span-2 space-y-6">
+        {/* Traditional POS Layout - Full Width */}
+        {posLayout === 'search' ? (
+          <div className="w-full">
+            {/* Full Traditional POS Interface - No Sidebar */}
+            <div className="bg-white border border-gray-400 rounded-none shadow-sm min-h-96">
+              {/* Top Customer Selection Bar */}
+              <div className="bg-gray-100 border-b border-gray-400 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <label className="text-xs font-bold text-gray-700">Find Customer By:</label>
+                      <select className="text-xs border border-gray-300 px-2 py-1 rounded">
+                        <option>Name</option>
+                        <option>Phone</option>
+                        <option>Email</option>
+                      </select>
+                      <span className="text-xs font-bold text-gray-700">Select Customer</span>
+                      <select className="text-xs border border-gray-300 px-3 py-1 rounded w-48">
+                        <option>Walk-in Customer</option>
+                        <option>John Smith</option>
+                        <option>Sarah Wilson</option>
+                        <option>Mike Johnson</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  {/* Customer Action Buttons */}
+                  <div className="flex items-center space-x-2">
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1">
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Customer
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs px-3 py-1">
+                      <User className="w-3 h-3 mr-1" />
+                      Customer History
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs px-3 py-1">
+                      <CreditCard className="w-3 h-3 mr-1" />
+                      Payment On Account
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Customer Details Row */}
+                <div className="flex items-center mt-2 text-xs">
+                  <span className="font-bold text-gray-700 mr-2">Customer:</span>
+                  <span className="mr-6">Walk-in Customer</span>
+                  <span className="font-bold text-gray-700 mr-2">ID:</span>
+                  <span className="mr-6">376</span>
+                  <span className="font-bold text-gray-700 mr-2">Dry Lic:</span>
+                  <span className="mr-6">-</span>
+                  <span className="font-bold text-gray-700 mr-2">SalesRep:</span>
+                  <span>No Employee</span>
+                </div>
+                <div className="text-xs mt-1">
+                  <span className="font-bold text-gray-700 mr-2">Address:</span>
+                  <span>PO Box 840565 Houston, TX 77076</span>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="bg-gray-50 border-b border-gray-400 p-3">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <label className="text-xs font-bold text-gray-700">Find Item</label>
+                    <select className="text-xs border border-gray-300 px-2 py-1 rounded">
+                      <option>Scan Code</option>
+                      <option>Item Name</option>
+                      <option>Barcode</option>
+                    </select>
+                    <Input
+                      placeholder="Enter item code or scan barcode..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyPress={handleSearchKeyPress}
+                      className="h-7 text-xs w-64 border-gray-300"
+                    />
+                    <Button size="sm" className="text-xs px-3 py-1 h-7" onClick={() => {
+                      if (searchQuery.trim()) {
+                        handleSearchKeyPress({ key: 'Enter', preventDefault: () => {} } as any);
+                      }
+                    }}>
+                      Find Now
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs px-3 py-1 h-7" onClick={() => {
+                      if (searchQuery.trim()) {
+                        handleSearchKeyPress({ key: 'Enter', preventDefault: () => {} } as any);
+                      }
+                    }}>
+                      <Search className="w-3 h-3 mr-1" />
+                      F8-Search
+                    </Button>
+                  </div>
+                  
+                  {/* Right Side Buttons */}
+                  <div className="flex items-center space-x-2 ml-auto">
+                    <Button size="sm" variant="outline" className="text-xs px-3 py-1 h-7">
+                      <Receipt className="w-3 h-3 mr-1" />
+                      No Sale
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs px-3 py-1 h-7">
+                      <Printer className="w-3 h-3 mr-1" />
+                      Print
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs px-3 py-1 h-7" onClick={() => setPosLayout('grid')}>
+                      <X className="w-3 h-3 mr-1" />
+                      Exit
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-gray-100 border-b border-gray-400">
+                      <th className="text-left py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-12">Line</th>
+                      <th className="text-left py-2 px-2 font-bold text-gray-800 border-r border-gray-300">Item Name</th>
+                      <th className="text-left py-2 px-2 font-bold text-gray-800 border-r border-gray-300">Employee Name</th>
+                      <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Quantity</th>
+                      <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Discount</th>
+                      <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Price</th>
+                      <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Sub Total</th>
+                      <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Sales Tax</th>
+                      <th className="text-center py-2 px-2 font-bold text-gray-800 w-20">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cart.length > 0 ? (
+                      cart.map((item: CartItem, index: number) => (
+                        <tr key={index} className="border-b border-gray-200 hover:bg-blue-50">
+                          <td className="py-1 px-2 text-center border-r border-gray-200">{index + 1}</td>
+                          <td className="py-1 px-2 border-r border-gray-200">{item.name}</td>
+                          <td className="py-1 px-2 border-r border-gray-200">No Employee</td>
+                          <td className="py-1 px-2 text-center border-r border-gray-200">{item.quantity}</td>
+                          <td className="py-1 px-2 text-center border-r border-gray-200">0.00</td>
+                          <td className="py-1 px-2 text-center border-r border-gray-200">{item.price.toFixed(2)}</td>
+                          <td className="py-1 px-2 text-center border-r border-gray-200">{item.total.toFixed(2)}</td>
+                          <td className="py-1 px-2 text-center border-r border-gray-200">{(item.total * 0.1).toFixed(2)}</td>
+                          <td className="py-1 px-2 text-center">{(item.total + item.total * 0.1).toFixed(2)}</td>
+                        </tr>
+                      ))
+                    ) : searchResults.length > 0 ? (
+                      searchResults.map((product: any, index: number) => {
+                        const price = product.category?.name === 'Electronics' ? 599.99 : 
+                                     product.category?.name === 'Food & Beverages' ? 2.99 :
+                                     product.category?.name === 'Clothing' ? 79.99 : 19.99;
+                        return (
+                          <tr key={product.id} className="border-b border-gray-200 hover:bg-blue-50 cursor-pointer" onClick={() => addFromSearchResults(product)}>
+                            <td className="py-1 px-2 text-center border-r border-gray-200">{index + 1}</td>
+                            <td className="py-1 px-2 border-r border-gray-200">{product.name}</td>
+                            <td className="py-1 px-2 border-r border-gray-200">No Employee</td>
+                            <td className="py-1 px-2 text-center border-r border-gray-200">1</td>
+                            <td className="py-1 px-2 text-center border-r border-gray-200">0.00</td>
+                            <td className="py-1 px-2 text-center border-r border-gray-200">{price.toFixed(2)}</td>
+                            <td className="py-1 px-2 text-center border-r border-gray-200">{price.toFixed(2)}</td>
+                            <td className="py-1 px-2 text-center border-r border-gray-200">{(price * 0.1).toFixed(2)}</td>
+                            <td className="py-1 px-2 text-center">{(price + price * 0.1).toFixed(2)}</td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={9} className="py-8 text-center text-gray-500">
+                          {searchQuery ? 'No items found. Try different search terms.' : 'Enter item code or scan barcode to add items'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Bottom Toolbar */}
+              <div className="bg-gray-100 border-t border-gray-400 p-2">
+                <div className="flex justify-between">
+                  {/* Left Side Buttons */}
+                  <div className="flex space-x-1">
+                    <div className="flex items-center space-x-1">
+                      <span className="text-xs font-bold">Line:</span>
+                      <input type="number" defaultValue="3" className="w-8 h-6 text-xs text-center border border-gray-300" />
+                    </div>
+                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                      <div className="w-3 h-3 bg-blue-600 mr-1"></div>
+                      F2-Discount
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                      <X className="w-3 h-3 mr-1 text-red-600" />
+                      F3-Delete Line
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                      <RotateCcw className="w-3 h-3 mr-1 text-green-600" />
+                      F4-Refund
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                      <Tag className="w-3 h-3 mr-1 text-orange-600" />
+                      F5-Void
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                      <DollarSign className="w-3 h-3 mr-1 text-green-600" />
+                      F6-Payout
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                      <Calculator className="w-3 h-3 mr-1 text-blue-600" />
+                      F7-Enter Qty To Finish
+                    </Button>
+                  </div>
+
+                  {/* Right Side - Totals */}
+                  <div className="bg-purple-900 text-white px-4 py-2 rounded flex flex-col items-end">
+                    <div className="flex justify-between w-32 mb-1">
+                      <span className="text-xs">Subtotal</span>
+                      <span className="text-lg font-bold">{formatCurrencyValue(getSubtotal())}</span>
+                    </div>
+                    <div className="flex justify-between w-32 mb-1">
+                      <span className="text-xs">Sales Tax</span>
+                      <span className="text-sm">{formatCurrencyValue(getSubtotal() * 0.1)}</span>
+                    </div>
+                    <div className="flex justify-between w-32 border-t border-purple-700 pt-1">
+                      <span className="text-sm font-bold">Total</span>
+                      <span className="text-xl font-bold">{formatCurrencyValue(getSubtotal() * 1.1)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Second Row of Buttons */}
+                <div className="flex space-x-1 mt-2">
+                  <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                    <Gift className="w-3 h-3 mr-1 text-blue-600" />
+                    F9-Sell Gift Card/Certificate
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                    <Receipt className="w-3 h-3 mr-1 text-green-600" />
+                    F10-Put Invoice On Hold
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
+                    <CheckCircle className="w-3 h-3 mr-1 text-blue-600" />
+                    F11-Get Invoice From Hold
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-xs px-2 py-1 h-6 flex items-center"
+                    onClick={() => {
+                      if (cart.length > 0) {
+                        setShowPaymentDialog(true);
+                      }
+                    }}
+                  >
+                    <Printer className="w-3 h-3 mr-1 text-gray-600" />
+                    F12-Complete Sale
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Grid Layout with Sidebar
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Side - Product Selection */}
+            <div className="lg:col-span-2 space-y-6">
             {/* Search Bar */}
             <Card className="rounded-2xl shadow-lg border-0">
               <CardContent className="p-6">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
-                    placeholder={posLayout === 'search' ? "Search and press Enter to add products..." : "Search products by name, barcode, or category..."}
+                    placeholder="Search products by name, barcode, or category..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={posLayout === 'search' ? handleSearchKeyPress : undefined}
+                    onKeyPress={undefined}
                     className="pl-10 h-12 text-lg rounded-xl border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -679,7 +948,7 @@ export default function POSTerminal() {
             </Card>
 
             {/* Grid Layout - Products Grid */}
-            {posLayout === 'grid' && (
+            <div>
               <Card className="rounded-2xl shadow-lg border-0">
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center">
@@ -720,245 +989,9 @@ export default function POSTerminal() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            </div>
 
-            {/* Search Layout - Full Traditional POS Interface */}
-            {posLayout === 'search' && (
-              <div className="bg-white border border-gray-400 rounded-none shadow-sm min-h-96">
-                {/* Top Customer Selection Bar */}
-                <div className="bg-gray-100 border-b border-gray-400 p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
-                        <label className="text-xs font-bold text-gray-700">Find Customer By:</label>
-                        <select className="text-xs border border-gray-300 px-2 py-1 rounded">
-                          <option>Name</option>
-                          <option>Phone</option>
-                          <option>Email</option>
-                        </select>
-                        <span className="text-xs font-bold text-gray-700">Select Customer</span>
-                        <select className="text-xs border border-gray-300 px-3 py-1 rounded w-48">
-                          <option>Walk-in Customer</option>
-                          <option>John Smith</option>
-                          <option>Sarah Wilson</option>
-                          <option>Mike Johnson</option>
-                        </select>
-                      </div>
-                    </div>
-                    
-                    {/* Customer Action Buttons */}
-                    <div className="flex items-center space-x-2">
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1">
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add Customer
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-xs px-3 py-1">
-                        <User className="w-3 h-3 mr-1" />
-                        Customer History
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-xs px-3 py-1">
-                        <CreditCard className="w-3 h-3 mr-1" />
-                        Payment On Account
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Customer Details Row */}
-                  <div className="flex items-center mt-2 text-xs">
-                    <span className="font-bold text-gray-700 mr-2">Customer:</span>
-                    <span className="mr-6">Walk-in Customer</span>
-                    <span className="font-bold text-gray-700 mr-2">ID:</span>
-                    <span className="mr-6">376</span>
-                    <span className="font-bold text-gray-700 mr-2">Dry Lic:</span>
-                    <span className="mr-6">-</span>
-                    <span className="font-bold text-gray-700 mr-2">SalesRep:</span>
-                    <span>No Employee</span>
-                  </div>
-                  <div className="text-xs mt-1">
-                    <span className="font-bold text-gray-700 mr-2">Address:</span>
-                    <span>PO Box 840565 Houston, TX 77076</span>
-                  </div>
-                </div>
 
-                {/* Search Bar */}
-                <div className="bg-gray-50 border-b border-gray-400 p-3">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <label className="text-xs font-bold text-gray-700">Find Item</label>
-                      <select className="text-xs border border-gray-300 px-2 py-1 rounded">
-                        <option>Scan Code</option>
-                        <option>Item Name</option>
-                        <option>Barcode</option>
-                      </select>
-                      <Input
-                        placeholder="Enter item code or scan barcode..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyPress={handleSearchKeyPress}
-                        className="h-7 text-xs w-64 border-gray-300"
-                      />
-                      <Button size="sm" className="text-xs px-3 py-1 h-7">
-                        Find Now
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-xs px-3 py-1 h-7">
-                        <Search className="w-3 h-3 mr-1" />
-                        F8-Search
-                      </Button>
-                    </div>
-                    
-                    {/* Right Side Buttons */}
-                    <div className="flex items-center space-x-2 ml-auto">
-                      <Button size="sm" variant="outline" className="text-xs px-3 py-1 h-7">
-                        <Receipt className="w-3 h-3 mr-1" />
-                        No Sale
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-xs px-3 py-1 h-7">
-                        <Printer className="w-3 h-3 mr-1" />
-                        Print
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-xs px-3 py-1 h-7">
-                        <X className="w-3 h-3 mr-1" />
-                        Exit
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Items Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-gray-100 border-b border-gray-400">
-                        <th className="text-left py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-12">Line</th>
-                        <th className="text-left py-2 px-2 font-bold text-gray-800 border-r border-gray-300">Item Name</th>
-                        <th className="text-left py-2 px-2 font-bold text-gray-800 border-r border-gray-300">Employee Name</th>
-                        <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Quantity</th>
-                        <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Discount</th>
-                        <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Price</th>
-                        <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Sub Total</th>
-                        <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Sales Tax</th>
-                        <th className="text-center py-2 px-2 font-bold text-gray-800 w-20">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cart.length > 0 ? (
-                        cart.map((item: CartItem, index: number) => (
-                          <tr key={index} className="border-b border-gray-200 hover:bg-blue-50">
-                            <td className="py-1 px-2 text-center border-r border-gray-200">{index + 1}</td>
-                            <td className="py-1 px-2 border-r border-gray-200">{item.name}</td>
-                            <td className="py-1 px-2 border-r border-gray-200">No Employee</td>
-                            <td className="py-1 px-2 text-center border-r border-gray-200">{item.quantity}</td>
-                            <td className="py-1 px-2 text-center border-r border-gray-200">0.00</td>
-                            <td className="py-1 px-2 text-center border-r border-gray-200">{item.price.toFixed(2)}</td>
-                            <td className="py-1 px-2 text-center border-r border-gray-200">{item.total.toFixed(2)}</td>
-                            <td className="py-1 px-2 text-center border-r border-gray-200">{(item.total * 0.1).toFixed(2)}</td>
-                            <td className="py-1 px-2 text-center">{(item.total + item.total * 0.1).toFixed(2)}</td>
-                          </tr>
-                        ))
-                      ) : searchResults.length > 0 ? (
-                        searchResults.map((product: any, index: number) => {
-                          const price = product.category?.name === 'Electronics' ? 599.99 : 
-                                       product.category?.name === 'Food & Beverages' ? 2.99 :
-                                       product.category?.name === 'Clothing' ? 79.99 : 19.99;
-                          return (
-                            <tr key={product.id} className="border-b border-gray-200 hover:bg-blue-50 cursor-pointer" onClick={() => addFromSearchResults(product)}>
-                              <td className="py-1 px-2 text-center border-r border-gray-200">{index + 1}</td>
-                              <td className="py-1 px-2 border-r border-gray-200">{product.name}</td>
-                              <td className="py-1 px-2 border-r border-gray-200">No Employee</td>
-                              <td className="py-1 px-2 text-center border-r border-gray-200">1</td>
-                              <td className="py-1 px-2 text-center border-r border-gray-200">0.00</td>
-                              <td className="py-1 px-2 text-center border-r border-gray-200">{price.toFixed(2)}</td>
-                              <td className="py-1 px-2 text-center border-r border-gray-200">{price.toFixed(2)}</td>
-                              <td className="py-1 px-2 text-center border-r border-gray-200">{(price * 0.1).toFixed(2)}</td>
-                              <td className="py-1 px-2 text-center">{(price + price * 0.1).toFixed(2)}</td>
-                            </tr>
-                          );
-                        })
-                      ) : (
-                        <tr>
-                          <td colSpan={9} className="py-8 text-center text-gray-500">
-                            {searchQuery ? 'No items found. Try different search terms.' : 'Enter item code or scan barcode to add items'}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Bottom Toolbar */}
-                <div className="bg-gray-100 border-t border-gray-400 p-2">
-                  <div className="flex justify-between">
-                    {/* Left Side Buttons */}
-                    <div className="flex space-x-1">
-                      <div className="flex items-center space-x-1">
-                        <span className="text-xs font-bold">Line:</span>
-                        <input type="number" defaultValue="3" className="w-8 h-6 text-xs text-center border border-gray-300" />
-                      </div>
-                      <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
-                        <div className="w-3 h-3 bg-blue-600 mr-1"></div>
-                        F2-Discount
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
-                        <X className="w-3 h-3 mr-1 text-red-600" />
-                        F3-Delete Line
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
-                        <RotateCcw className="w-3 h-3 mr-1 text-green-600" />
-                        F4-Refund
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
-                        <Tag className="w-3 h-3 mr-1 text-orange-600" />
-                        F5-Void
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
-                        <DollarSign className="w-3 h-3 mr-1 text-green-600" />
-                        F6-Payout
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
-                        <Calculator className="w-3 h-3 mr-1 text-blue-600" />
-                        F7-Enter Qty To Finish
-                      </Button>
-                    </div>
-
-                    {/* Right Side - Totals */}
-                    <div className="bg-purple-900 text-white px-4 py-2 rounded flex flex-col items-end">
-                      <div className="flex justify-between w-32 mb-1">
-                        <span className="text-xs">Subtotal</span>
-                        <span className="text-lg font-bold">{formatCurrencyValue(getSubtotal())}</span>
-                      </div>
-                      <div className="flex justify-between w-32 mb-1">
-                        <span className="text-xs">Sales Tax</span>
-                        <span className="text-sm">{formatCurrencyValue(getSubtotal() * 0.1)}</span>
-                      </div>
-                      <div className="flex justify-between w-32 border-t border-purple-700 pt-1">
-                        <span className="text-sm font-bold">Total</span>
-                        <span className="text-xl font-bold">{formatCurrencyValue(getSubtotal() * 1.1)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Second Row of Buttons */}
-                  <div className="flex space-x-1 mt-2">
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
-                      <Gift className="w-3 h-3 mr-1 text-blue-600" />
-                      F9-Sell Gift Card/Certificate
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
-                      <Receipt className="w-3 h-3 mr-1 text-green-600" />
-                      F10-Put Invoice On Hold
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
-                      <CheckCircle className="w-3 h-3 mr-1 text-blue-600" />
-                      F11-Get Invoice From Hold
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center">
-                      <Printer className="w-3 h-3 mr-1 text-gray-600" />
-                      F12-Print Last Invoice
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
 
 
 
@@ -1528,6 +1561,7 @@ export default function POSTerminal() {
             </Button>
           </div>
         </div>
+        )}
 
         {/* Invoice Modal */}
         <Dialog open={showInvoice} onOpenChange={setShowInvoice}>
