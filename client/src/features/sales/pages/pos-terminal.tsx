@@ -859,6 +859,12 @@ export default function POSTerminal() {
               <span class="right">${formatCurrencyValue(lastInvoice.payment.change)}</span>
             </div>
           ` : ''}
+          ${selectedCustomerId && lastInvoice.grandTotal > lastInvoice.payment.amountReceived ? `
+            <div class="flex bold">
+              <span>Remaining Balance:</span>
+              <span class="right">${formatCurrencyValue(lastInvoice.grandTotal - lastInvoice.payment.amountReceived)}</span>
+            </div>
+          ` : ''}
         </div>
 
         <div class="divider"></div>
@@ -867,6 +873,14 @@ export default function POSTerminal() {
           const previousBalance = getCustomerBalance();
           const unpaidAmount = lastInvoice.grandTotal - lastInvoice.payment.amountReceived;
           const newBalance = previousBalance + unpaidAmount;
+          
+          console.log('Print Template Customer Balance:', { 
+            selectedCustomerId, 
+            previousBalance, 
+            unpaidAmount, 
+            newBalance, 
+            customerLedger: customerLedger?.length || 0 
+          });
           
           return `
             <div>
