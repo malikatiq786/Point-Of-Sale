@@ -1303,6 +1303,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(sortedSales);
   });
 
+  // Customer sales history endpoint
+  app.get('/api/customers/:customerId/sales', (req, res) => {
+    try {
+      const customerId = parseInt(req.params.customerId);
+      console.log('Fetching sales for customer ID:', customerId);
+      
+      // Filter sales by customer ID
+      const customerSales = salesStorage.filter(sale => sale.customerId === customerId);
+      
+      // Sort by date descending (most recent first)
+      const sortedCustomerSales = customerSales.sort((a, b) => 
+        new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
+      );
+      
+      console.log(`Found ${sortedCustomerSales.length} sales for customer ${customerId}`);
+      res.json(sortedCustomerSales);
+    } catch (error) {
+      console.error('Error fetching customer sales:', error);
+      res.status(500).json({ message: 'Failed to fetch customer sales' });
+    }
+  });
+
   app.post('/api/sales', (req, res) => {
     try {
       console.log('SIMPLE SALES API: Received request body:', JSON.stringify(req.body, null, 2));

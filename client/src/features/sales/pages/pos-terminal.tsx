@@ -101,6 +101,8 @@ export default function POSTerminal() {
   
   // Customer management state
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
+  const [showCustomerHistoryDialog, setShowCustomerHistoryDialog] = useState(false);
+  const [showPaymentOnAccountDialog, setShowPaymentOnAccountDialog] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", email: "" });
   
   // Discount and tax state
@@ -1122,11 +1124,23 @@ export default function POSTerminal() {
                       <Plus className="w-3 h-3 mr-1" />
                       Add Customer
                     </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-3 py-1">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-xs px-3 py-1"
+                      onClick={() => setShowCustomerHistoryDialog(true)}
+                      disabled={!selectedCustomerId}
+                    >
                       <User className="w-3 h-3 mr-1" />
                       Customer History
                     </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-3 py-1">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-xs px-3 py-1"
+                      onClick={() => setShowPaymentOnAccountDialog(true)}
+                      disabled={!selectedCustomerId}
+                    >
                       <CreditCard className="w-3 h-3 mr-1" />
                       Payment On Account
                     </Button>
@@ -2007,6 +2021,28 @@ export default function POSTerminal() {
                             {customer.phone && <div className="text-gray-600">{customer.phone}</div>}
                             {customer.email && <div className="text-gray-600">{customer.email}</div>}
                             <div className="text-xs text-blue-600 mt-1">✓ Partial payments allowed</div>
+                            
+                            {/* Customer Action Buttons for Grid Layout */}
+                            <div className="flex space-x-2 mt-3">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="text-xs px-2 py-1 h-7"
+                                onClick={() => setShowCustomerHistoryDialog(true)}
+                              >
+                                <User className="w-3 h-3 mr-1" />
+                                History
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="text-xs px-2 py-1 h-7"
+                                onClick={() => setShowPaymentOnAccountDialog(true)}
+                              >
+                                <CreditCard className="w-3 h-3 mr-1" />
+                                Payment
+                              </Button>
+                            </div>
                           </div>
                         ) : null;
                       })()
@@ -2776,8 +2812,289 @@ export default function POSTerminal() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Customer History Dialog */}
+        <Dialog open={showCustomerHistoryDialog} onOpenChange={setShowCustomerHistoryDialog}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <User className="w-5 h-5 mr-2" />
+                Customer Sales History
+                {selectedCustomerId && (
+                  <span className="ml-2 text-sm text-gray-500">
+                    - {customers?.find(c => c.id === selectedCustomerId)?.name}
+                  </span>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <CustomerHistoryContent customerId={selectedCustomerId} />
+          </DialogContent>
+        </Dialog>
+
+        {/* Payment On Account Dialog */}
+        <Dialog open={showPaymentOnAccountDialog} onOpenChange={setShowPaymentOnAccountDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <CreditCard className="w-5 h-5 mr-2" />
+                Payment On Account
+              </DialogTitle>
+            </DialogHeader>
+            
+            <PaymentOnAccountContent 
+              customerId={selectedCustomerId}
+              customerLedger={customerLedger}
+              onClose={() => setShowPaymentOnAccountDialog(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
     </PosLayout>
+  );
+}
+
+// Customer History Component
+function CustomerHistoryContent({ customerId }: { customerId: number | null }) {
+  const { formatCurrencyValue } = useCurrency();
+  
+  // Fetch customer sales history
+  const { data: customerSales = [], isLoading } = useQuery<any[]>({
+    queryKey: [`/api/customers/${customerId}/sales`],
+    enabled: !!customerId,
+    retry: false,
+  });
+
+  if (!customerId) {
+    return (
+      <div className="text-center py-8">
+        <User className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+        <p className="text-gray-500">Please select a customer to view sales history</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-500">Loading customer sales history...</p>
+      </div>
+    );
+  }
+
+  if (customerSales.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Receipt className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+        <p className="text-gray-500">No sales history found for this customer</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="text-sm text-gray-600">
+        Total Sales: {customerSales.length} • 
+        Total Amount: {formatCurrencyValue(customerSales.reduce((sum, sale) => sum + parseFloat(sale.totalAmount), 0))}
+      </div>
+      
+      <div className="space-y-3 max-h-96 overflow-y-auto">
+        {customerSales.map((sale: any) => (
+          <Card key={sale.id} className="p-4">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <div className="font-semibold">Sale #{sale.id}</div>
+                <div className="text-sm text-gray-500">
+                  {new Date(sale.saleDate).toLocaleDateString()} at {new Date(sale.saleDate).toLocaleTimeString()}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-semibold">{formatCurrencyValue(sale.totalAmount)}</div>
+                <Badge variant={sale.status === 'completed' ? 'default' : sale.status === 'pending' ? 'destructive' : 'secondary'}>
+                  {sale.status}
+                </Badge>
+              </div>
+            </div>
+            
+            <div className="text-sm space-y-1">
+              <div className="flex justify-between">
+                <span>Payment Method:</span>
+                <span className="capitalize">{sale.paymentMethod}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Amount Paid:</span>
+                <span>{formatCurrencyValue(sale.paidAmount)}</span>
+              </div>
+              {parseFloat(sale.totalAmount) > parseFloat(sale.paidAmount) && (
+                <div className="flex justify-between text-red-600">
+                  <span>Outstanding:</span>
+                  <span>{formatCurrencyValue(parseFloat(sale.totalAmount) - parseFloat(sale.paidAmount))}</span>
+                </div>
+              )}
+            </div>
+            
+            {sale.items && sale.items.length > 0 && (
+              <div className="mt-3 pt-3 border-t">
+                <div className="text-xs font-semibold mb-2">Items:</div>
+                <div className="space-y-1">
+                  {sale.items.map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between text-xs">
+                      <span>{item.productName} × {item.quantity}</span>
+                      <span>{formatCurrencyValue(item.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Payment On Account Component
+function PaymentOnAccountContent({ 
+  customerId, 
+  customerLedger, 
+  onClose 
+}: { 
+  customerId: number | null;
+  customerLedger: any[];
+  onClose: () => void;
+}) {
+  const { formatCurrencyValue } = useCurrency();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile'>('cash');
+  const [description, setDescription] = useState('');
+
+  // Calculate current customer balance
+  const currentBalance = customerLedger.reduce((balance: number, entry: any) => {
+    const amount = parseFloat(entry.amount) || 0;
+    return entry.type === 'debit' ? balance + amount : balance - amount;
+  }, 0);
+
+  const handlePayment = async () => {
+    if (!customerId || paymentAmount <= 0) {
+      toast({
+        title: "Invalid Payment",
+        description: "Please enter a valid payment amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Create credit entry in customer ledger
+      const ledgerEntry = {
+        customerId: customerId,
+        amount: paymentAmount.toFixed(2),
+        type: 'credit',
+        reference: `PAYMENT-${Date.now()}`,
+        description: description || 'Payment on account',
+        paymentMethod: paymentMethod,
+        date: new Date().toISOString().split('T')[0]
+      };
+
+      await apiRequest('POST', '/api/customer-ledgers', ledgerEntry);
+      
+      toast({
+        title: "Payment Recorded",
+        description: `Payment of ${formatCurrencyValue(paymentAmount)} has been recorded`,
+      });
+
+      // Refresh customer ledger data
+      queryClient.invalidateQueries({ queryKey: ['/api/customer-ledgers'] });
+      
+      // Reset form
+      setPaymentAmount(0);
+      setDescription('');
+      onClose();
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast({
+        title: "Payment Failed",
+        description: "Failed to record payment. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (!customerId) {
+    return (
+      <div className="text-center py-8">
+        <CreditCard className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+        <p className="text-gray-500">Please select a customer to process payment</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 p-3 rounded-lg">
+        <div className="text-sm text-gray-600">Current Balance</div>
+        <div className={`text-lg font-bold ${currentBalance > 0 ? 'text-red-600' : currentBalance < 0 ? 'text-green-600' : 'text-gray-900'}`}>
+          {currentBalance > 0 
+            ? `${formatCurrencyValue(currentBalance)} (Due)`
+            : currentBalance < 0 
+              ? `${formatCurrencyValue(Math.abs(currentBalance))} (Credit)`
+              : `${formatCurrencyValue(0)} (Clear)`}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <Label>Payment Amount</Label>
+          <Input
+            type="number"
+            step="0.01"
+            value={paymentAmount}
+            onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+            placeholder="Enter payment amount"
+            className="text-lg"
+          />
+        </div>
+
+        <div>
+          <Label>Payment Method</Label>
+          <Select value={paymentMethod} onValueChange={(value: 'cash' | 'card' | 'mobile') => setPaymentMethod(value)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cash">Cash</SelectItem>
+              <SelectItem value="card">Card</SelectItem>
+              <SelectItem value="mobile">Mobile Payment</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label>Description (Optional)</Label>
+          <Input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Payment description"
+          />
+        </div>
+      </div>
+
+      <div className="flex space-x-2 pt-4">
+        <Button variant="outline" onClick={onClose} className="flex-1">
+          Cancel
+        </Button>
+        <Button 
+          onClick={handlePayment}
+          disabled={paymentAmount <= 0}
+          className="flex-1 bg-green-600 hover:bg-green-700"
+        >
+          Record Payment
+        </Button>
+      </div>
+    </div>
   );
 }
