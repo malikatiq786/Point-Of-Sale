@@ -104,6 +104,12 @@ export default function POSTerminal() {
   const [showCustomerHistoryDialog, setShowCustomerHistoryDialog] = useState(false);
   const [showPaymentOnAccountDialog, setShowPaymentOnAccountDialog] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Customer search state
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+  const [customerSearchSuggestions, setCustomerSearchSuggestions] = useState<any[]>([]);
+  const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+  const [selectedCustomerSuggestionIndex, setSelectedCustomerSuggestionIndex] = useState(-1);
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", email: "" });
   
   // Discount and tax state
@@ -128,6 +134,84 @@ export default function POSTerminal() {
 
   // Layout management state
   const [posLayout, setPosLayout] = useState<'grid' | 'search'>('grid');
+
+  // Customer search functionality with autocomplete
+  const handleCustomerSearchChange = (value: string) => {
+    setCustomerSearchQuery(value);
+    
+    if (value.trim().length > 0 && customers && customers.length > 0) {
+      // Get customer suggestions based on partial matches
+      const suggestions = customers.filter(customer => 
+        customer.name.toLowerCase().includes(value.toLowerCase()) ||
+        (customer.phone && customer.phone.toLowerCase().includes(value.toLowerCase())) ||
+        (customer.email && customer.email.toLowerCase().includes(value.toLowerCase()))
+      ).slice(0, 6); // Limit to 6 suggestions
+      
+      setCustomerSearchSuggestions(suggestions);
+      setShowCustomerSuggestions(suggestions.length > 0);
+      setSelectedCustomerSuggestionIndex(-1);
+    } else {
+      setCustomerSearchSuggestions([]);
+      setShowCustomerSuggestions(false);
+      setSelectedCustomerSuggestionIndex(-1);
+    }
+  };
+
+  // Customer search keyboard handler
+  const handleCustomerSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (!showCustomerSuggestions || customerSearchSuggestions.length === 0) {
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedCustomerSuggestionIndex(prev => 
+          prev < customerSearchSuggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedCustomerSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : customerSearchSuggestions.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedCustomerSuggestionIndex >= 0 && selectedCustomerSuggestionIndex < customerSearchSuggestions.length) {
+          const selectedCustomer = customerSearchSuggestions[selectedCustomerSuggestionIndex];
+          selectCustomer(selectedCustomer);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowCustomerSuggestions(false);
+        setSelectedCustomerSuggestionIndex(-1);
+        if (selectedCustomerId) {
+          const customer = customers?.find(c => c.id === selectedCustomerId);
+          setCustomerSearchQuery(customer?.name || "");
+        } else {
+          setCustomerSearchQuery("");
+        }
+        break;
+    }
+  };
+
+  // Select customer function
+  const selectCustomer = (customer: any) => {
+    setSelectedCustomerId(customer.id);
+    setCustomerSearchQuery(customer.name);
+    setShowCustomerSuggestions(false);
+    setSelectedCustomerSuggestionIndex(-1);
+  };
+
+  // Clear customer selection
+  const clearCustomerSelection = () => {
+    setSelectedCustomerId(null);
+    setCustomerSearchQuery("");
+    setShowCustomerSuggestions(false);
+    setSelectedCustomerSuggestionIndex(-1);
+  };
 
   // Enhanced search functionality with autocomplete
   const handleSearchChange = (value: string) => {
@@ -292,6 +376,21 @@ export default function POSTerminal() {
     }
   }, [selectedSuggestionIndex, showSuggestions]);
 
+  // Scroll selected customer suggestion into view
+  React.useEffect(() => {
+    if (selectedCustomerSuggestionIndex >= 0 && showCustomerSuggestions) {
+      const suggestionElement = document.querySelector(`[data-customer-suggestion-index="${selectedCustomerSuggestionIndex}"]`);
+      if (suggestionElement) {
+        suggestionElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest'
+        });
+      }
+    }
+  }, [selectedCustomerSuggestionIndex, showCustomerSuggestions]);
+
+
+
   // Add global keyboard listener
   React.useEffect(() => {
     document.addEventListener('keydown', handleGlobalKeyPress);
@@ -377,6 +476,18 @@ export default function POSTerminal() {
   const { data: customerLedgerData } = useQuery<any[]>({
     queryKey: ['/api/customer-ledgers'],
   });
+
+  // Initialize customer search query when customer is selected
+  React.useEffect(() => {
+    if (selectedCustomerId && customers) {
+      const customer = customers.find(c => c.id === selectedCustomerId);
+      if (customer) {
+        setCustomerSearchQuery(customer.name);
+      }
+    } else {
+      setCustomerSearchQuery("");
+    }
+  }, [selectedCustomerId, customers]);
 
   // Filter customer ledger for selected customer
   const customerLedger = customerLedgerData?.filter(entry => entry.customerId === selectedCustomerId) || [];
@@ -1377,18 +1488,60 @@ export default function POSTerminal() {
                     </div>
                     <div className="flex items-center space-x-3">
                       <span className="text-sm font-semibold text-gray-800">Select Customer:</span>
-                      <select 
-                        value={selectedCustomerId || ''} 
-                        onChange={(e) => setSelectedCustomerId(e.target.value ? Number(e.target.value) : null)}
-                        className="text-sm border border-gray-300 px-4 py-2 rounded-lg bg-white shadow-sm w-56 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Walk-in Customer</option>
-                        {customers?.map((customer: any) => (
-                          <option key={customer.id} value={customer.id}>
-                            {customer.name}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <Input
+                          placeholder="Walk-in Customer"
+                          value={customerSearchQuery}
+                          onChange={(e) => handleCustomerSearchChange(e.target.value)}
+                          onKeyDown={handleCustomerSearchKeyDown}
+                          onFocus={() => setShowCustomerSuggestions(customerSearchSuggestions.length > 0)}
+                          onBlur={() => setTimeout(() => setShowCustomerSuggestions(false), 200)}
+                          className="text-sm border border-gray-300 px-4 py-2 rounded-lg bg-white shadow-sm w-56 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          autoComplete="off"
+                        />
+                        
+                        {/* Walk-in Customer Button */}
+                        {customerSearchQuery && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={clearCustomerSelection}
+                            className="absolute right-1 top-1 h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                        
+                        {/* Customer Autocomplete Suggestions Dropdown */}
+                        {showCustomerSuggestions && customerSearchSuggestions.length > 0 && (
+                          <div className="absolute top-full left-0 w-full bg-white border border-gray-300 shadow-lg rounded-md mt-1 z-50 max-h-48 overflow-y-auto">
+                            {customerSearchSuggestions.map((customer, index) => (
+                              <div
+                                key={customer.id}
+                                data-customer-suggestion-index={index}
+                                className={`px-3 py-2 cursor-pointer text-sm border-b border-gray-100 last:border-b-0 ${
+                                  index === selectedCustomerSuggestionIndex 
+                                    ? 'bg-blue-100 border-blue-200' 
+                                    : 'hover:bg-blue-50'
+                                }`}
+                                onClick={() => selectCustomer(customer)}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <div className="font-medium text-gray-900">{customer.name}</div>
+                                    <div className="text-gray-500 text-xs">
+                                      {customer.phone && <span>{customer.phone}</span>}
+                                      {customer.email && customer.phone && <span> • </span>}
+                                      {customer.email && <span>{customer.email}</span>}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
