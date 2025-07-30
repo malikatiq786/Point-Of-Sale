@@ -20,6 +20,7 @@ export default function Sales() {
 
   const filteredSales = sales.filter((sale: any) => {
     const matchesSearch = sale.id?.toString().includes(searchQuery) ||
+      sale.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sale.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sale.user?.name?.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -123,7 +124,7 @@ export default function Sales() {
                           
                           <div className="flex items-center space-x-2">
                             <User className="w-4 h-4" />
-                            <span>{sale.customer?.name || 'Walk-in Customer'}</span>
+                            <span>{sale.customerName || sale.customer?.name || 'Walk-in Customer'}</span>
                           </div>
                           
                           <div className="flex items-center space-x-2">
