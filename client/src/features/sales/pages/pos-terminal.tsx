@@ -151,8 +151,24 @@ export default function POSTerminal() {
     switch (e.key.toLowerCase()) {
       case 'enter':
         e.preventDefault();
-        if (cart.length > 0) {
-          setShowPaymentDialog(true);
+        if (cart.length > 0 && registerStatus === 'open') {
+          // Quick sale completion - set exact amount and process immediately
+          setAmountReceived(getGrandTotal());
+          setTimeout(() => {
+            processSale();
+          }, 100);
+        } else if (cart.length === 0) {
+          toast({
+            title: "Empty Cart",
+            description: "Add items to cart before completing sale",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Register Closed",
+            description: "Please open a register before processing sales",
+            variant: "destructive",
+          });
         }
         break;
       case 'escape':
@@ -649,7 +665,16 @@ export default function POSTerminal() {
       setLastInvoice(invoiceData);
       setShowInvoice(true);
       
-      // Reset form
+      // Auto-print invoice
+      setTimeout(() => {
+        printInvoice();
+        toast({
+          title: "Sale Completed!",
+          description: `Invoice ${invoiceData.id} processed. Press ESC to start new sale.`,
+        });
+      }, 500);
+      
+      // Reset form but keep cart for review
       setDiscount({ type: 'percentage', value: 0, applyTo: 'total' });
       setAmountReceived(0);
       setChangeAmount(0);
@@ -671,25 +696,119 @@ export default function POSTerminal() {
   };
 
   const printInvoice = () => {
-    if (printRef.current) {
-      const printContent = printRef.current.innerHTML;
+    if (!lastInvoice) {
+      toast({
+        title: "No Invoice",
+        description: "No invoice available to print",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const printContent = `
+        <div class="center">
+          <div class="bold text-lg">UNIVERSAL POS SYSTEM</div>
+          <div>Modern Point of Sale</div>
+          <div class="divider"></div>
+          <div>
+            Invoice: ${lastInvoice.id}<br/>
+            Date: ${lastInvoice.date} ${lastInvoice.time}<br/>
+            Cashier: ${lastInvoice.cashier}
+          </div>
+          ${lastInvoice.customer ? `
+            <div>
+              Customer: ${lastInvoice.customer.name}<br/>
+              ${lastInvoice.customer.phone ? `Phone: ${lastInvoice.customer.phone}` : ''}
+            </div>
+          ` : ''}
+          <div class="divider"></div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="center">Qty</th>
+              <th class="right">Price</th>
+              <th class="right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lastInvoice.items.map(item => `
+              <tr>
+                <td>${item.name}</td>
+                <td class="center">${item.quantity}</td>
+                <td class="right">${formatCurrencyValue(item.price)}</td>
+                <td class="right">${formatCurrencyValue(item.total)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="divider"></div>
+        
+        <div>
+          <div class="flex">
+            <span>Subtotal:</span>
+            <span class="right">${formatCurrencyValue(lastInvoice.subtotal)}</span>
+          </div>
+          ${lastInvoice.totalDiscount > 0 ? `
+            <div class="flex">
+              <span>Discount:</span>
+              <span class="right">-${formatCurrencyValue(lastInvoice.totalDiscount)}</span>
+            </div>
+          ` : ''}
+          <div class="flex">
+            <span>Tax:</span>
+            <span class="right">${formatCurrencyValue(lastInvoice.tax)}</span>
+          </div>
+          <div class="divider"></div>
+          <div class="bold">
+            <span>TOTAL:</span>
+            <span class="right">${formatCurrencyValue(lastInvoice.grandTotal)}</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        
+        <div>
+          <div class="flex">
+            <span>Payment (${lastInvoice.payment.method}):</span>
+            <span class="right">${formatCurrencyValue(lastInvoice.payment.amountReceived)}</span>
+          </div>
+          ${lastInvoice.payment.change > 0 ? `
+            <div class="flex">
+              <span>Change:</span>
+              <span class="right">${formatCurrencyValue(lastInvoice.payment.change)}</span>
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="center" style="margin-top: 20px;">
+          <div>Thank you for your business!</div>
+          <div>Visit us again</div>
+        </div>
+      `;
+
       const printWindow = window.open('', '', 'height=600,width=400');
       if (printWindow) {
         printWindow.document.write(`
           <html>
             <head>
-              <title>Invoice</title>
+              <title>Invoice ${lastInvoice.id}</title>
               <style>
                 body { font-family: monospace; font-size: 12px; margin: 0; padding: 10px; }
                 .center { text-align: center; }
                 .right { text-align: right; }
                 .bold { font-weight: bold; }
                 .divider { border-top: 1px dashed #000; margin: 5px 0; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { text-align: left; padding: 2px 4px; }
-                .qty { width: 20px; }
-                .price { width: 60px; text-align: right; }
-                .total { width: 60px; text-align: right; }
+                table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+                th, td { text-align: left; padding: 2px 4px; border-bottom: 1px solid #eee; }
+                .flex { display: flex; justify-content: space-between; margin: 2px 0; }
+                @media print {
+                  body { margin: 0; }
+                }
               </style>
             </head>
             <body>${printContent}</body>
@@ -698,7 +817,25 @@ export default function POSTerminal() {
         printWindow.document.close();
         printWindow.print();
         printWindow.close();
+        
+        toast({
+          title: "Invoice Printed",
+          description: "Invoice sent to printer successfully",
+        });
+      } else {
+        toast({
+          title: "Print Failed",
+          description: "Unable to open print window",
+          variant: "destructive",
+        });
       }
+    } catch (error) {
+      console.error('Print error:', error);
+      toast({
+        title: "Print Error",
+        description: "Failed to print invoice",
+        variant: "destructive",
+      });
     }
   };
 
