@@ -103,6 +103,7 @@ export default function POSTerminal() {
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   const [showCustomerHistoryDialog, setShowCustomerHistoryDialog] = useState(false);
   const [showPaymentOnAccountDialog, setShowPaymentOnAccountDialog] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", email: "" });
   
   // Discount and tax state
@@ -269,6 +270,14 @@ export default function POSTerminal() {
       description: "All data has been cleared",
     });
   };
+
+  // Update current time every second
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Add global keyboard listener
   React.useEffect(() => {
@@ -1173,92 +1182,164 @@ export default function POSTerminal() {
     <PosLayout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className={`max-w-7xl mx-auto ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
-        {/* Modern Header */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 mb-6">
-          {/* Top Center Title */}
-          <div className="text-center mb-6">
-            <div className="flex items-center justify-center space-x-4 mb-2">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-3 shadow-lg">
-                <Receipt className="w-8 h-8 text-white" />
+        {/* Stunning Modern Header */}
+        <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-3xl shadow-2xl border border-slate-200/50 p-8 mb-6 backdrop-blur-sm">
+          {/* Top Row - Time, Title & Quick Stats */}
+          <div className="flex items-center justify-between mb-8">
+            {/* Current Date & Time */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/30 shadow-lg">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-slate-800 mb-1">
+                  {currentTime.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: true 
+                  })}
+                </div>
+                <div className="text-sm font-medium text-slate-600">
+                  {currentTime.toLocaleDateString('en-US', { 
+                    weekday: 'long',
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric' 
+                  })}
+                </div>
               </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Modern POS Terminal</h1>
-                <p className="text-gray-500 font-medium">Advanced point of sale system with full features</p>
+            </div>
+
+            {/* Central Branding */}
+            <div className="text-center">
+              <div className="flex items-center justify-center space-x-4 mb-3">
+                <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-4 shadow-xl">
+                  <Receipt className="w-10 h-10 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-800 bg-clip-text text-transparent">
+                    Modern POS Terminal
+                  </h1>
+                  <p className="text-slate-600 font-medium text-lg">Advanced point of sale system with full features</p>
+                </div>
+              </div>
+            </div>
+
+            {/* System Status */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/30 shadow-lg">
+              <div className="text-center">
+                <div className="text-xl font-bold text-emerald-600 mb-1">
+                  {cart.length}
+                </div>
+                <div className="text-sm font-medium text-slate-600">
+                  Items in Cart
+                </div>
               </div>
             </div>
           </div>
-          
-          {/* Bottom Controls */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+
+          {/* Middle Row - Main Controls */}
+          <div className="flex items-center justify-between mb-6">
+            {/* Left: Register & Staff Info */}
+            <div className="flex items-center space-x-4">
               {/* Register Status */}
-              <div className="flex items-center space-x-3 bg-gray-50 rounded-xl p-3 border border-gray-200">
-                {registerStatus === 'open' && selectedRegister ? (
-                  <Badge variant="default" className="bg-emerald-500 text-white px-3 py-2 rounded-lg font-medium shadow-sm">
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    {selectedRegister.name} - ${cashDrawerBalance.toFixed(2)}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300 px-3 py-2 rounded-lg font-medium">
-                    <AlertCircle className="w-4 h-4 mr-2" />
-                    Register Closed
-                  </Badge>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => registerStatus === 'open' ? closeRegister() : setIsRegisterSetupOpen(true)}
-                  className="bg-white border-gray-300 hover:bg-gray-50 rounded-lg px-3 py-2 font-medium"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  <span>{registerStatus === 'open' ? 'Close Register' : 'Open Register'}</span>
-                </Button>
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-white/40 shadow-lg">
+                <div className="flex items-center space-x-3">
+                  {registerStatus === 'open' && selectedRegister ? (
+                    <Badge variant="default" className="bg-gradient-to-r from-emerald-500 to-green-500 text-white px-4 py-2 rounded-xl font-semibold shadow-md">
+                      <CheckCircle className="w-5 h-5 mr-2" />
+                      {selectedRegister.name} - ${cashDrawerBalance.toFixed(2)}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-gradient-to-r from-red-50 to-rose-50 text-red-700 border-red-300 px-4 py-2 rounded-xl font-semibold">
+                      <AlertCircle className="w-5 h-5 mr-2" />
+                      Register Closed
+                    </Badge>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => registerStatus === 'open' ? closeRegister() : setIsRegisterSetupOpen(true)}
+                    className="bg-white/90 border-slate-300 hover:bg-slate-50 rounded-xl px-4 py-2 font-semibold shadow-sm"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    <span>{registerStatus === 'open' ? 'Close Register' : 'Open Register'}</span>
+                  </Button>
+                </div>
               </div>
               
-              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 px-4 py-2 rounded-lg font-semibold shadow-sm">
-                {(user as any)?.name || 'Cashier'} • Staff
-              </Badge>
+              {/* Staff Info */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-white/40 shadow-lg">
+                <Badge variant="outline" className="bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-800 border-emerald-300 px-5 py-2 rounded-xl font-bold shadow-sm">
+                  <User className="w-5 h-5 mr-2" />
+                  {(user as any)?.name || 'Cashier'} • Staff
+                </Badge>
+              </div>
             </div>
             
-            <div className="flex items-center space-x-3">
+            {/* Right: Layout Controls & Actions */}
+            <div className="flex items-center space-x-4">
               {/* Layout Switcher */}
-              <div className="flex bg-gray-50 rounded-xl p-2 border border-gray-200 shadow-sm">
-                <Button
-                  variant={posLayout === 'grid' ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setPosLayout('grid')}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    posLayout === 'grid' 
-                      ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700' 
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <Package className="w-4 h-4 mr-2" />
-                  Grid View
-                </Button>
-                <Button
-                  variant={posLayout === 'search' ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setPosLayout('search')}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    posLayout === 'search' 
-                      ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700' 
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <Search className="w-4 h-4 mr-2" />
-                  Search View
-                </Button>
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 border border-white/40 shadow-lg">
+                <div className="flex bg-slate-100/50 rounded-xl p-1">
+                  <Button
+                    variant={posLayout === 'grid' ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setPosLayout('grid')}
+                    className={`px-5 py-3 text-sm font-bold rounded-xl transition-all duration-300 ${
+                      posLayout === 'grid' 
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:from-blue-700 hover:to-indigo-700 transform scale-105' 
+                        : 'text-slate-700 hover:text-slate-900 hover:bg-white/70'
+                    }`}
+                  >
+                    <Package className="w-5 h-5 mr-2" />
+                    Grid View
+                  </Button>
+                  <Button
+                    variant={posLayout === 'search' ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setPosLayout('search')}
+                    className={`px-5 py-3 text-sm font-bold rounded-xl transition-all duration-300 ${
+                      posLayout === 'search' 
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:from-blue-700 hover:to-indigo-700 transform scale-105' 
+                        : 'text-slate-700 hover:text-slate-900 hover:bg-white/70'
+                    }`}
+                  >
+                    <Search className="w-5 h-5 mr-2" />
+                    Search View
+                  </Button>
+                </div>
               </div>
               
-              <Button 
-                variant="outline" 
-                onClick={clearCart}
-                className="text-red-600 border-red-300 hover:bg-red-50 bg-white rounded-lg px-4 py-2 font-medium shadow-sm"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Clear All
-              </Button>
+              {/* Clear Cart */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 border border-white/40 shadow-lg">
+                <Button 
+                  variant="outline" 
+                  onClick={clearCart}
+                  className="text-red-600 border-red-300 hover:bg-red-50 bg-white/90 rounded-xl px-5 py-3 font-bold shadow-sm hover:shadow-md transition-all duration-200"
+                >
+                  <X className="w-5 h-5 mr-2" />
+                  Clear All
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Row - Quick Stats */}
+          <div className="flex items-center justify-center space-x-6">
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
+              <span className="text-sm font-semibold text-slate-600">
+                Total: <span className="text-blue-700 font-bold">{formatCurrencyValue(getGrandTotal())}</span>
+              </span>
+            </div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
+              <span className="text-sm font-semibold text-slate-600">
+                Customer: <span className="text-indigo-700 font-bold">
+                  {selectedCustomerId ? customers?.find(c => c.id === selectedCustomerId)?.name : 'Walk-in'}
+                </span>
+              </span>
+            </div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
+              <span className="text-sm font-semibold text-slate-600">
+                Mode: <span className="text-purple-700 font-bold">{posLayout === 'grid' ? 'Grid View' : 'Search View'}</span>
+              </span>
             </div>
           </div>
         </div>
