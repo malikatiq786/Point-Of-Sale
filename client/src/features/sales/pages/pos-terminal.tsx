@@ -334,10 +334,9 @@ export default function POSTerminal() {
     queryKey: ['/api/customers'],
   });
 
-  // Fetch customer ledger balance for selected customer
+  // Fetch customer ledger balance for all customers
   const { data: customerLedgerData } = useQuery<any[]>({
     queryKey: ['/api/customer-ledgers'],
-    enabled: !!selectedCustomerId,
   });
 
   // Filter customer ledger for selected customer
@@ -859,7 +858,7 @@ export default function POSTerminal() {
               <span class="right">${formatCurrencyValue(lastInvoice.payment.change)}</span>
             </div>
           ` : ''}
-          ${selectedCustomerId && lastInvoice.grandTotal > lastInvoice.payment.amountReceived ? `
+          ${(selectedCustomerId || lastInvoice.customer) && lastInvoice.grandTotal > lastInvoice.payment.amountReceived ? `
             <div class="flex bold">
               <span>Remaining Balance:</span>
               <span class="right">${formatCurrencyValue(lastInvoice.grandTotal - lastInvoice.payment.amountReceived)}</span>
@@ -869,17 +868,24 @@ export default function POSTerminal() {
 
         <div class="divider"></div>
         
-        ${selectedCustomerId ? (() => {
-          const previousBalance = getCustomerBalance();
+        ${(selectedCustomerId || lastInvoice.customer) ? (() => {
+          const customerId = selectedCustomerId || lastInvoice.customer?.id;
+          const customerLedgerForPrint = customerLedgerData?.filter(entry => entry.customerId === customerId) || [];
+          
+          const previousBalance = customerLedgerForPrint.reduce((balance: number, entry: any) => {
+            const amount = parseFloat(entry.amount) || 0;
+            return entry.type === 'debit' ? balance + amount : balance - amount;
+          }, 0);
+          
           const unpaidAmount = lastInvoice.grandTotal - lastInvoice.payment.amountReceived;
           const newBalance = previousBalance + unpaidAmount;
           
           console.log('Print Template Customer Balance:', { 
-            selectedCustomerId, 
+            customerId, 
             previousBalance, 
             unpaidAmount, 
             newBalance, 
-            customerLedger: customerLedger?.length || 0 
+            customerLedgerForPrint: customerLedgerForPrint?.length || 0 
           });
           
           return `
@@ -2338,7 +2344,7 @@ export default function POSTerminal() {
                       <span>{formatCurrencyValue(lastInvoice.payment.change)}</span>
                     </div>
                   )}
-                  {selectedCustomerId && lastInvoice.grandTotal > lastInvoice.payment.amountReceived && (
+                  {(selectedCustomerId || lastInvoice?.customer) && lastInvoice.grandTotal > lastInvoice.payment.amountReceived && (
                     <div className="flex justify-between bold text-red-600">
                       <span>Remaining Balance:</span>
                       <span>{formatCurrencyValue(lastInvoice.grandTotal - lastInvoice.payment.amountReceived)}</span>
@@ -2347,15 +2353,24 @@ export default function POSTerminal() {
                 </div>
 
                 {/* Customer Balance Information Section */}
-                {selectedCustomerId && (
+                {(selectedCustomerId || lastInvoice?.customer) && (
                   <div>
                     <div className="divider"></div>
                     <div className="space-y-1">
                       <div className="text-center text-sm font-bold">Customer Balance Status</div>
                       {(() => {
-                        const previousBalance = getCustomerBalance();
+                        const customerId = selectedCustomerId || lastInvoice?.customer?.id;
+                        const customerLedgerForInvoice = customerLedgerData?.filter(entry => entry.customerId === customerId) || [];
+                        
+                        const previousBalance = customerLedgerForInvoice.reduce((balance: number, entry: any) => {
+                          const amount = parseFloat(entry.amount) || 0;
+                          return entry.type === 'debit' ? balance + amount : balance - amount;
+                        }, 0);
+                        
                         const unpaidAmount = lastInvoice.grandTotal - lastInvoice.payment.amountReceived;
                         const newBalance = previousBalance + unpaidAmount;
+                        
+                        console.log('Invoice Balance Debug:', { customerId, customerLedgerForInvoice, previousBalance, unpaidAmount, newBalance });
                         
                         return (
                           <div className="space-y-1 text-sm">
