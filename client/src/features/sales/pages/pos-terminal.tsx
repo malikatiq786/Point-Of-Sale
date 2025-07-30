@@ -722,119 +722,131 @@ export default function POSTerminal() {
               </Card>
             )}
 
-            {/* Search Layout - Professional Search Results Table */}
+            {/* Search Layout - Classic Invoice Style Table */}
             {posLayout === 'search' && searchResults.length > 0 && (
-              <Card className="rounded-lg border shadow-sm bg-white">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg border-b">
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="bg-blue-600 p-2 rounded-lg mr-3">
-                        <Search className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Product Search Results</h3>
-                        <p className="text-sm text-gray-600">{searchResults.length} items found for "{searchQuery}"</p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                      {searchResults.length} Results
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
+              <Card className="rounded-none border border-gray-300 bg-white shadow-sm">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50 border-b-2 border-gray-200">
-                        <tr>
-                          <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                            Item Details
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100 border-b border-gray-300">
+                          <th className="text-left py-2 px-3 text-xs font-bold text-gray-800 border-r border-gray-300 w-16">
+                            Item#
                           </th>
-                          <th className="text-center py-4 px-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                            Category
+                          <th className="text-left py-2 px-3 text-xs font-bold text-gray-800 border-r border-gray-300">
+                            Item description
                           </th>
-                          <th className="text-center py-4 px-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                            Unit Price
+                          <th className="text-center py-2 px-3 text-xs font-bold text-gray-800 border-r border-gray-300 w-20">
+                            Quantity
                           </th>
-                          <th className="text-center py-4 px-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                            Stock
+                          <th className="text-center py-2 px-3 text-xs font-bold text-gray-800 border-r border-gray-300 w-20">
+                            Price
                           </th>
-                          <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                            Action
+                          <th className="text-center py-2 px-3 text-xs font-bold text-gray-800 border-r border-gray-300 w-20">
+                            Discount
+                          </th>
+                          <th className="text-center py-2 px-3 text-xs font-bold text-gray-800 border-r border-gray-300 w-16">
+                            Tax
+                          </th>
+                          <th className="text-center py-2 px-3 text-xs font-bold text-gray-800 w-20">
+                            Amount
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {searchResults.map((product: any, index: number) => (
-                          <tr key={product.id} className={`hover:bg-blue-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                            <td className="py-4 px-6">
-                              <div className="flex items-start space-x-3">
-                                <div className="flex-shrink-0">
-                                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <Tag className="w-5 h-5 text-blue-600" />
-                                  </div>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-semibold text-gray-900 text-sm">{product.name}</div>
-                                  <div className="text-xs text-gray-500 mt-1 line-clamp-2">{product.description}</div>
-                                  {product.barcode && (
-                                    <div className="inline-flex items-center mt-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
-                                      <Receipt className="w-3 h-3 mr-1" />
-                                      {product.barcode}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="py-4 px-4 text-center">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                {product.category?.name || 'General'}
-                              </span>
-                            </td>
-                            <td className="py-4 px-4 text-center">
-                              <div className="text-lg font-bold text-green-600">
-                                {formatCurrencyValue(
-                                  product.category?.name === 'Electronics' ? 599.99 : 
-                                  product.category?.name === 'Food & Beverages' ? 2.99 :
-                                  product.category?.name === 'Clothing' ? 79.99 : 19.99
+                      <tbody>
+                        {searchResults.map((product: any, index: number) => {
+                          const price = product.category?.name === 'Electronics' ? 599.99 : 
+                                       product.category?.name === 'Food & Beverages' ? 2.99 :
+                                       product.category?.name === 'Clothing' ? 79.99 : 19.99;
+                          
+                          return (
+                            <tr key={product.id} className={`border-b border-gray-200 hover:bg-blue-50 ${index === 0 ? 'bg-yellow-100' : 'bg-white'}`}>
+                              <td className="py-2 px-3 text-xs border-r border-gray-200 text-center font-mono">
+                                {product.id || (index + 1)}
+                              </td>
+                              <td className="py-2 px-3 text-xs border-r border-gray-200">
+                                <div className="font-medium text-gray-900">{product.name}</div>
+                                {product.barcode && (
+                                  <div className="text-gray-500 text-xs mt-1">{product.barcode}</div>
                                 )}
-                              </div>
-                            </td>
-                            <td className="py-4 px-4 text-center">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                {product.stock || 'In Stock'}
-                              </span>
-                            </td>
-                            <td className="py-4 px-6 text-center">
-                              <Button
-                                onClick={() => addFromSearchResults(product)}
-                                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium px-6 py-2 rounded-lg shadow-sm transition-all duration-200 transform hover:scale-105"
-                              >
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add to Cart
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
+                              </td>
+                              <td className="py-2 px-3 text-xs border-r border-gray-200 text-center">
+                                <input 
+                                  type="number" 
+                                  defaultValue="1" 
+                                  className="w-12 px-1 py-1 text-center border border-gray-300 rounded text-xs"
+                                  min="1"
+                                />
+                              </td>
+                              <td className="py-2 px-3 text-xs border-r border-gray-200 text-center font-mono">
+                                {price.toFixed(2)}
+                              </td>
+                              <td className="py-2 px-3 text-xs border-r border-gray-200 text-center">
+                                <input 
+                                  type="number" 
+                                  defaultValue="0.00" 
+                                  className="w-16 px-1 py-1 text-center border border-gray-300 rounded text-xs"
+                                  step="0.01"
+                                />
+                              </td>
+                              <td className="py-2 px-3 text-xs border-r border-gray-200 text-center">
+                                0.00
+                              </td>
+                              <td className="py-2 px-3 text-xs text-center font-mono font-bold">
+                                {price.toFixed(2)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        
+                        {/* New Line Entry Row - Similar to the original */}
+                        <tr className="bg-blue-100 border-b border-gray-300">
+                          <td className="py-2 px-3 text-xs border-r border-gray-200 text-center">
+                            <Button
+                              onClick={() => addFromSearchResults(searchResults[0])}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 text-xs"
+                            >
+                              Add
+                            </Button>
+                          </td>
+                          <td className="py-2 px-3 text-xs border-r border-gray-200 font-bold text-center">
+                            **** New Line ****
+                          </td>
+                          <td className="py-2 px-3 text-xs border-r border-gray-200 text-center">0</td>
+                          <td className="py-2 px-3 text-xs border-r border-gray-200 text-center">0</td>
+                          <td className="py-2 px-3 text-xs border-r border-gray-200 text-center">0.00</td>
+                          <td className="py-2 px-3 text-xs border-r border-gray-200 text-center">0.00</td>
+                          <td className="py-2 px-3 text-xs text-center">0.00</td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
                   
-                  {/* Professional Footer */}
-                  <div className="bg-gray-50 px-6 py-4 border-t">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-600">
-                        Showing {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{searchQuery}"
-                      </div>
-                      <Button
-                        variant="outline"
+                  {/* Bottom Action Buttons - Like Original */}
+                  <div className="bg-gray-50 px-4 py-2 border-t border-gray-300 flex justify-between items-center">
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" className="text-xs">
+                        Save invoice (F2)
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-xs">
+                        Cancel invoice (F3)
+                      </Button>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" className="text-xs">
+                        Discount (F6)
+                      </Button>
+                      <Button 
                         onClick={() => {
                           setSearchQuery("");
                           setSearchResults([]);
                         }}
-                        className="text-gray-600 hover:text-gray-800"
+                        variant="outline" 
+                        size="sm" 
+                        className="text-xs"
                       >
-                        <X className="w-4 h-4 mr-1" />
-                        Clear Search
+                        Close (F12)
                       </Button>
                     </div>
                   </div>
@@ -842,76 +854,88 @@ export default function POSTerminal() {
               </Card>
             )}
 
-            {/* Search Layout - Professional No Results Message */}
+            {/* Search Layout - Classic Invoice Style No Results */}
             {posLayout === 'search' && searchResults.length === 0 && searchQuery && (
-              <Card className="rounded-lg border shadow-sm bg-white">
-                <CardContent className="p-12 text-center">
-                  <div className="bg-gray-100 p-4 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                    <Search className="w-10 h-10 text-gray-400" />
+              <Card className="rounded-none border border-gray-300 bg-white shadow-sm">
+                <CardContent className="p-8 text-center">
+                  <div className="text-gray-500 text-sm mb-4">
+                    No items found matching: "{searchQuery}"
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">No Products Found</h3>
-                  <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                    We couldn't find any products matching "<span className="font-medium text-gray-700">{searchQuery}</span>". 
-                    Try searching with a different product name, barcode, or category.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <div className="flex justify-center space-x-2">
                     <Button
                       variant="outline"
                       onClick={() => {
                         setSearchQuery("");
                         setSearchResults([]);
                       }}
-                      className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                      size="sm"
+                      className="text-xs"
                     >
-                      <X className="w-4 h-4 mr-2" />
                       Clear Search
                     </Button>
                     <Button
                       onClick={() => setPosLayout('grid')}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
                     >
-                      <Package className="w-4 h-4 mr-2" />
-                      Browse All Products
+                      Switch to Grid View
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Search Layout - Professional Instructions */}
+            {/* Search Layout - Classic Invoice Style Instructions */}
             {posLayout === 'search' && !searchQuery && (
-              <Card className="rounded-lg border shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50">
-                <CardContent className="p-12 text-center">
-                  <div className="bg-blue-600 p-4 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                    <Search className="w-10 h-10 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">Product Search</h3>
-                  <p className="text-gray-600 mb-8 max-w-lg mx-auto text-lg leading-relaxed">
-                    Use the search field above to find products by name, barcode, or description. 
-                    Press <kbd className="px-2 py-1 bg-gray-200 rounded text-sm font-mono">Enter</kbd> to search.
-                  </p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto">
-                    <div className="text-center">
-                      <div className="bg-white p-3 rounded-lg shadow-sm mb-3 inline-block">
-                        <Tag className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Product Name</h4>
-                      <p className="text-sm text-gray-600">Search by product title</p>
+              <Card className="rounded-none border border-gray-300 bg-white shadow-sm">
+                <CardContent className="p-8">
+                  <div className="text-center">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">Invoice Item Entry</h3>
+                    <p className="text-gray-600 mb-6">
+                      Search for products by name, item number, or barcode. Press Enter to add items to the invoice.
+                    </p>
+                    
+                    {/* Classic Invoice Table Structure (Empty) */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-300">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="text-left py-2 px-3 text-xs font-bold text-gray-800 border-r border-gray-300 w-16">
+                              Item#
+                            </th>
+                            <th className="text-left py-2 px-3 text-xs font-bold text-gray-800 border-r border-gray-300">
+                              Item description
+                            </th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-gray-800 border-r border-gray-300 w-20">
+                              Quantity
+                            </th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-gray-800 border-r border-gray-300 w-20">
+                              Price
+                            </th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-gray-800 border-r border-gray-300 w-20">
+                              Discount
+                            </th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-gray-800 border-r border-gray-300 w-16">
+                              Tax
+                            </th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-gray-800 w-20">
+                              Amount
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="bg-blue-100 border-b border-gray-300">
+                            <td className="py-8 px-3 text-xs border-r border-gray-200 text-center text-gray-500" colSpan={7}>
+                              Search for products above to add items to this invoice
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
-                    <div className="text-center">
-                      <div className="bg-white p-3 rounded-lg shadow-sm mb-3 inline-block">
-                        <Receipt className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Barcode</h4>
-                      <p className="text-sm text-gray-600">Scan or type barcode</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="bg-white p-3 rounded-lg shadow-sm mb-3 inline-block">
-                        <Package className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Category</h4>
-                      <p className="text-sm text-gray-600">Filter by category</p>
+                    
+                    <div className="mt-4 text-xs text-gray-500">
+                      Tip: Type product name or barcode in the search field above and press Enter
                     </div>
                   </div>
                 </CardContent>
