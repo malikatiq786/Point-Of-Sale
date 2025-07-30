@@ -17,7 +17,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { 
   Search, ShoppingCart, Minus, Plus, Trash2, CreditCard, DollarSign, 
   Smartphone, Percent, Calculator, Receipt, Printer, QrCode, 
-  User, Edit3, X, Check, Tag, Gift, AlertCircle, CheckCircle, Settings
+  User, Edit3, X, Check, Tag, Gift, AlertCircle, CheckCircle, Settings, Package
 } from "lucide-react";
 
 interface CartItem {
@@ -88,6 +88,7 @@ export default function POSTerminal() {
   
   // Core state
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'qr'>("cash");
@@ -112,6 +113,27 @@ export default function POSTerminal() {
   const [editingItem, setEditingItem] = useState<number | null>(null);
   const [editPrice, setEditPrice] = useState<string>("");
   const [editQuantity, setEditQuantity] = useState<string>("");
+
+  // Layout management state
+  const [posLayout, setPosLayout] = useState<'grid' | 'search'>('grid');
+
+  // Search functionality for search layout
+  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      const filteredProducts = products.filter(product => 
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.barcode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setSearchResults(filteredProducts);
+    }
+  };
+
+  const addFromSearchResults = (product: any) => {
+    addToCart(product);
+    setSearchQuery("");
+    setSearchResults([]);
+  };
 
   // Register management state
   const [selectedRegisterId, setSelectedRegisterId] = useState<number | null>(null);
@@ -603,6 +625,28 @@ export default function POSTerminal() {
               <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 px-3 py-1">
                 {(user as any)?.name || 'Cashier'} • Staff
               </Badge>
+              {/* Layout Switcher */}
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <Button
+                  variant={posLayout === 'grid' ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setPosLayout('grid')}
+                  className={`px-3 py-1 text-xs ${posLayout === 'grid' ? 'bg-white shadow-sm' : ''}`}
+                >
+                  <Package className="w-4 h-4 mr-1" />
+                  Grid View
+                </Button>
+                <Button
+                  variant={posLayout === 'search' ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setPosLayout('search')}
+                  className={`px-3 py-1 text-xs ${posLayout === 'search' ? 'bg-white shadow-sm' : ''}`}
+                >
+                  <Search className="w-4 h-4 mr-1" />
+                  Search View
+                </Button>
+              </div>
+              
               <Button 
                 variant="outline" 
                 onClick={clearCart}
@@ -624,54 +668,144 @@ export default function POSTerminal() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
-                    placeholder="Search products by name, barcode, or category..."
+                    placeholder={posLayout === 'search' ? "Search and press Enter to add products..." : "Search products by name, barcode, or category..."}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={posLayout === 'search' ? handleSearchKeyPress : undefined}
                     className="pl-10 h-12 text-lg rounded-xl border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Products Grid */}
-            <Card className="rounded-2xl shadow-lg border-0">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center">
-                  <Tag className="w-5 h-5 mr-2" />
-                  Available Products
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
-                  {isLoading ? (
-                    Array.from({ length: 8 }).map((_, index) => (
-                      <div key={index} className="bg-gray-100 rounded-xl h-24 animate-pulse" />
-                    ))
-                  ) : (
-                    products.map((product: any) => (
-                      <Button
-                        key={product.id}
-                        variant="outline"
-                        onClick={() => addToCart(product)}
-                        className="h-auto p-4 rounded-xl border-2 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 flex flex-col items-center space-y-2"
-                      >
-                        <div className="text-sm font-semibold text-center truncate w-full">
-                          {product.name}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {product.category?.name || 'General'}
-                        </div>
-                        <div className="text-sm font-bold text-blue-600">
-                          ${(product.category?.name === 'Electronics' ? 599.99 : 
-                             product.category?.name === 'Food & Beverages' ? 2.99 :
-                             product.category?.name === 'Clothing' ? 79.99 : 19.99).toFixed(2)}
-                        </div>
-                      </Button>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Grid Layout - Products Grid */}
+            {posLayout === 'grid' && (
+              <Card className="rounded-2xl shadow-lg border-0">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center">
+                    <Tag className="w-5 h-5 mr-2" />
+                    Available Products
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
+                    {isLoading ? (
+                      Array.from({ length: 8 }).map((_, index) => (
+                        <div key={index} className="bg-gray-100 rounded-xl h-24 animate-pulse" />
+                      ))
+                    ) : (
+                      products.map((product: any) => (
+                        <Button
+                          key={product.id}
+                          variant="outline"
+                          onClick={() => addToCart(product)}
+                          className="h-auto p-4 rounded-xl border-2 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 flex flex-col items-center space-y-2"
+                        >
+                          <div className="text-sm font-semibold text-center truncate w-full">
+                            {product.name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {product.category?.name || 'General'}
+                          </div>
+                          <div className="text-sm font-bold text-blue-600">
+                            {formatCurrencyValue(
+                              product.category?.name === 'Electronics' ? 599.99 : 
+                              product.category?.name === 'Food & Beverages' ? 2.99 :
+                              product.category?.name === 'Clothing' ? 79.99 : 19.99
+                            )}
+                          </div>
+                        </Button>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Search Layout - Search Results Table */}
+            {posLayout === 'search' && searchResults.length > 0 && (
+              <Card className="rounded-2xl shadow-lg border-0">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center">
+                    <Search className="w-5 h-5 mr-2" />
+                    Search Results ({searchResults.length} found)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Product</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Category</th>
+                          <th className="text-center py-3 px-4 text-sm font-medium text-gray-600">Price</th>
+                          <th className="text-center py-3 px-4 text-sm font-medium text-gray-600">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {searchResults.map((product: any) => (
+                          <tr key={product.id} className="border-b hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                              <div>
+                                <div className="font-medium text-sm text-gray-900">{product.name}</div>
+                                <div className="text-xs text-gray-500">{product.description}</div>
+                                {product.barcode && (
+                                  <div className="text-xs text-blue-600 mt-1">Barcode: {product.barcode}</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-sm text-gray-700">{product.category?.name || 'General'}</span>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <span className="font-semibold text-sm text-blue-600">
+                                {formatCurrencyValue(
+                                  product.category?.name === 'Electronics' ? 599.99 : 
+                                  product.category?.name === 'Food & Beverages' ? 2.99 :
+                                  product.category?.name === 'Clothing' ? 79.99 : 19.99
+                                )}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <Button
+                                onClick={() => addFromSearchResults(product)}
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                              >
+                                <Plus className="w-4 h-4 mr-1" />
+                                Add
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Search Layout - No Results Message */}
+            {posLayout === 'search' && searchResults.length === 0 && searchQuery && (
+              <Card className="rounded-2xl shadow-lg border-0">
+                <CardContent className="p-8 text-center">
+                  <Search className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-500 text-lg mb-2">No products found</p>
+                  <p className="text-gray-400 text-sm">Try searching with a different product name, barcode, or category</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Search Layout - Instructions */}
+            {posLayout === 'search' && !searchQuery && (
+              <Card className="rounded-2xl shadow-lg border-0">
+                <CardContent className="p-8 text-center">
+                  <Search className="w-12 h-12 mx-auto mb-4 text-blue-500" />
+                  <p className="text-gray-700 text-lg mb-2">Search Mode Active</p>
+                  <p className="text-gray-500 text-sm">Type product name or barcode above and press Enter to search</p>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Shopping Cart Table */}
             <Card className="rounded-2xl shadow-lg border-0">
