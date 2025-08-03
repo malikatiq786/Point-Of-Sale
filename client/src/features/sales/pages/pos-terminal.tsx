@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import PosLayout from "@/layouts/app/pos-layout";
@@ -92,6 +92,9 @@ export default function POSTerminal() {
   const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanTimeout, setScanTimeout] = useState<NodeJS.Timeout | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'qr'>("cash");
@@ -213,27 +216,46 @@ export default function POSTerminal() {
     setSelectedCustomerSuggestionIndex(-1);
   };
 
-  // Enhanced search functionality with autocomplete
+  // Enhanced search functionality with autocomplete and barcode scanner support
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     
-    if (value.trim().length > 0 && products && products.length > 0) {
-      // Get suggestions based on partial matches
-      const suggestions = products.filter(product => 
-        product.name.toLowerCase().includes(value.toLowerCase()) ||
-        (product.barcode && product.barcode.toLowerCase().includes(value.toLowerCase())) ||
-        (product.description && product.description.toLowerCase().includes(value.toLowerCase())) ||
-        (product.category?.name && product.category.name.toLowerCase().includes(value.toLowerCase())) ||
-        (product.brand?.name && product.brand.name.toLowerCase().includes(value.toLowerCase()))
-      ).slice(0, 8); // Limit to 8 suggestions
-      
-      setSearchSuggestions(suggestions);
-      setShowSuggestions(suggestions.length > 0);
-      setSelectedSuggestionIndex(-1);
+    // Handle rapid barcode scanner input
+    if (scanTimeout) {
+      clearTimeout(scanTimeout);
+    }
+    
+    // Check if this looks like a barcode (only numbers/letters, no spaces, longer than 4 chars)
+    const isPossibleBarcode = /^[A-Za-z0-9]{4,}$/.test(value.trim());
+    
+    if (isPossibleBarcode) {
+      setIsScanning(true);
+      // Set a timeout to process barcode after scanner finishes
+      const timeout = setTimeout(() => {
+        processBarcodeScan(value.trim());
+        setIsScanning(false);
+      }, 100); // 100ms delay to allow scanner to finish
+      setScanTimeout(timeout);
     } else {
-      setSearchSuggestions([]);
-      setShowSuggestions(false);
-      setSelectedSuggestionIndex(-1);
+      setIsScanning(false);
+      if (value.trim().length > 0 && products && products.length > 0) {
+        // Get suggestions based on partial matches
+        const suggestions = products.filter(product => 
+          product.name.toLowerCase().includes(value.toLowerCase()) ||
+          (product.barcode && product.barcode.toLowerCase().includes(value.toLowerCase())) ||
+          (product.description && product.description.toLowerCase().includes(value.toLowerCase())) ||
+          (product.category?.name && product.category.name.toLowerCase().includes(value.toLowerCase())) ||
+          (product.brand?.name && product.brand.name.toLowerCase().includes(value.toLowerCase()))
+        ).slice(0, 8); // Limit to 8 suggestions
+        
+        setSearchSuggestions(suggestions);
+        setShowSuggestions(suggestions.length > 0);
+        setSelectedSuggestionIndex(-1);
+      } else {
+        setSearchSuggestions([]);
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+      }
     }
   };
 
@@ -391,6 +413,66 @@ export default function POSTerminal() {
 
 
 
+  // Process barcode scan with enhanced logic
+  const processBarcodeScan = (barcode: string) => {
+    if (!products || products.length === 0) {
+      toast({
+        title: "Error",
+        description: "No products available for scanning",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Look for exact barcode match first
+    const exactMatch = products.find(product => 
+      product.barcode && product.barcode.toLowerCase() === barcode.toLowerCase()
+    );
+    
+    if (exactMatch) {
+      addToCart(exactMatch);
+      setSearchQuery('');
+      setSearchResults([]);
+      toast({
+        title: "Item Scanned",
+        description: `${exactMatch.name} added to cart`,
+        variant: "default",
+      });
+      return;
+    }
+    
+    // If no exact match, try partial matches
+    const partialMatches = products.filter(product => 
+      (product.barcode && product.barcode.toLowerCase().includes(barcode.toLowerCase())) ||
+      product.name.toLowerCase().includes(barcode.toLowerCase())
+    );
+    
+    if (partialMatches.length === 1) {
+      addToCart(partialMatches[0]);
+      setSearchQuery('');
+      setSearchResults([]);
+      toast({
+        title: "Item Found",
+        description: `${partialMatches[0].name} added to cart`,
+        variant: "default",
+      });
+    } else if (partialMatches.length > 1) {
+      setSearchResults(partialMatches);
+      toast({
+        title: "Multiple Items Found",
+        description: `Found ${partialMatches.length} matching items`,
+        variant: "default",
+      });
+    } else {
+      setSearchResults([]);
+      toast({
+        title: "Item Not Found",
+        description: `No product found with barcode: ${barcode}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   // Add global keyboard listener
   React.useEffect(() => {
     document.addEventListener('keydown', handleGlobalKeyPress);
@@ -406,6 +488,15 @@ export default function POSTerminal() {
         return;
       }
       
+      // Check if this is a barcode-like input
+      const isPossibleBarcode = /^[A-Za-z0-9]{4,}$/.test(searchQuery.trim());
+      
+      if (isPossibleBarcode) {
+        processBarcodeScan(searchQuery.trim());
+        return;
+      }
+      
+      // Regular text search
       const filteredProducts = products.filter(product => 
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (product.barcode && product.barcode.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -428,6 +519,39 @@ export default function POSTerminal() {
       setShowSuggestions(false);
     }
   };
+
+  // Auto-focus search input for barcode scanners
+  useEffect(() => {
+    const focusSearchInput = () => {
+      if (searchInputRef.current && !searchInputRef.current.matches(':focus')) {
+        searchInputRef.current.focus();
+      }
+    };
+    
+    // Focus on mount
+    focusSearchInput();
+    
+    // Re-focus periodically to catch scanner input
+    const interval = setInterval(focusSearchInput, 1000);
+    
+    // Focus on any key press that's not in an input field
+    const handleKeyPress = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.matches('input, textarea, select') && searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyPress);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('keydown', handleKeyPress);
+      if (scanTimeout) {
+        clearTimeout(scanTimeout);
+      }
+    };
+  }, [scanTimeout]);
 
   // Manual search trigger for Find Now button
   const triggerSearch = () => {
@@ -1671,15 +1795,23 @@ export default function POSTerminal() {
                     </select>
                     <div className="relative">
                       <Input
+                        ref={searchInputRef}
                         placeholder="Enter item code or scan barcode..."
                         value={searchQuery}
                         onChange={(e) => handleSearchChange(e.target.value)}
                         onKeyDown={handleSearchKeyDown}
+                        onKeyPress={handleSearchKeyPress}
                         onFocus={() => setShowSuggestions(searchSuggestions.length > 0)}
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                        className="h-7 text-xs w-64 border-gray-300"
+                        className={`h-7 text-xs w-64 border-gray-300 ${isScanning ? 'bg-blue-50 border-blue-300' : ''}`}
                         autoComplete="off"
+                        autoFocus
                       />
+                      {isScanning && (
+                        <div className="absolute right-2 top-1 text-blue-600">
+                          <QrCode className="w-5 h-5 animate-pulse" />
+                        </div>
+                      )}
                       
                       {/* Autocomplete Suggestions Dropdown */}
                       {showSuggestions && searchSuggestions.length > 0 && (
@@ -1944,7 +2076,13 @@ export default function POSTerminal() {
                                 </div>
                               </div>
                               <div className="text-gray-500 text-sm">
-                                Enter item code or scan barcode to add items
+                                <div className="flex items-center justify-center space-x-2">
+                                  <QrCode className="w-4 h-4" />
+                                  <span>Scan barcode or enter item code to add items</span>
+                                </div>
+                                <div className="text-xs text-gray-400 mt-1">
+                                  Scanner automatically focused for instant scanning
+                                </div>
                               </div>
                             </div>
                           )}
@@ -2153,13 +2291,21 @@ export default function POSTerminal() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
+                    ref={searchInputRef}
                     placeholder="Search products by name, barcode, or category..."
                     value={searchQuery}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
-                    className="pl-10 h-12 text-lg rounded-xl border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onKeyPress={handleSearchKeyPress}
+                    className={`pl-10 h-12 text-lg rounded-xl border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isScanning ? 'bg-blue-50 border-blue-300' : ''}`}
                     autoComplete="off"
+                    autoFocus
                   />
+                  {isScanning && (
+                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-blue-600">
+                      <QrCode className="w-6 h-6 animate-pulse" />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
