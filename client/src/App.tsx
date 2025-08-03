@@ -30,6 +30,7 @@ import { BusinessProfile, Branches, Registers } from "@/features/business";
 import { Payments, Accounts, Transactions, Reports } from "@/features/financial";
 import CustomerLedgers from "@/features/customers/pages/customer-ledgers";
 import SupplierLedgers from "@/features/suppliers/pages/supplier-ledgers";
+import KitchenPOS from "@/features/kitchen/pages/kitchen-pos";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -51,6 +52,7 @@ function Router() {
           <Route path="/login" component={Login} />
           <Route path="/" component={Dashboard} />
           <Route path="/pos" component={POSTerminal} />
+          <Route path="/kitchen-pos" component={KitchenPOS} />
           <Route path="/products" component={Products} />
           <Route path="/products/add" component={AddProduct} />
           <Route path="/categories" component={Categories} />

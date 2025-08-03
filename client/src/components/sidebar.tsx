@@ -24,7 +24,8 @@ import {
   LogOut,
   ChevronDown,
   ChevronRight,
-  X
+  X,
+  ChefHat
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
@@ -66,7 +67,8 @@ export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) 
     {
       title: "POINT OF SALE",
       items: [
-        { name: "POS Terminal", href: "/pos", icon: ShoppingCart, roles: ["Super Admin", "Admin/Owner", "Manager", "Cashier"] },
+        { name: "Sales POS", href: "/pos", icon: ShoppingCart, roles: ["Super Admin", "Admin/Owner", "Manager", "Cashier"] },
+        { name: "Kitchen POS", href: "/kitchen-pos", icon: ChefHat, roles: ["Super Admin", "Admin/Owner", "Manager", "Kitchen Staff"] },
         { name: "Sales History", href: "/sales", icon: Receipt, roles: ["Super Admin", "Admin/Owner", "Manager", "Cashier"] },
         { name: "Returns", href: "/returns", icon: RotateCcw, roles: ["Super Admin", "Admin/Owner", "Manager"] },
       ]
@@ -232,8 +234,8 @@ export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) 
               {isExpanded && (
                 <div className="mt-2 space-y-1">
                   {visibleItems.map((item) => {
-                    // Special handling for POS Terminal to open in new tab
-                    if (item.name === "POS Terminal") {
+                    // Special handling for Sales POS to open in new tab
+                    if (item.name === "Sales POS") {
                       return (
                         <Button
                           key={item.name}

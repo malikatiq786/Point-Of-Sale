@@ -249,6 +249,11 @@ export const sales = pgTable("sales", {
   paidAmount: numeric("paid_amount", { precision: 12, scale: 2 }),
   saleDate: timestamp("sale_date").defaultNow(),
   status: varchar("status", { length: 50 }),
+  orderType: varchar("order_type", { length: 20 }).default("sale"), // sale, dine-in, takeaway, delivery
+  tableNumber: varchar("table_number", { length: 20 }),
+  kitchenStatus: varchar("kitchen_status", { length: 20 }).default("new"), // new, preparing, ready, served
+  specialInstructions: text("special_instructions"),
+  estimatedTime: integer("estimated_time"), // in minutes
 });
 
 export const saleItems = pgTable("sale_items", {
@@ -538,6 +543,8 @@ export const upsertUserSchema = createInsertSchema(users).omit({
 export const insertProductSchema = createInsertSchema(products);
 export const insertSaleSchema = createInsertSchema(sales).extend({
   status: z.enum(['completed', 'pending', 'cancelled']).optional(),
+  orderType: z.enum(['sale', 'dine-in', 'takeaway', 'delivery']).optional(),
+  kitchenStatus: z.enum(['new', 'preparing', 'ready', 'served']).optional(),
 });
 export const insertCustomerSchema = createInsertSchema(customers);
 export const insertSupplierSchema = createInsertSchema(suppliers);

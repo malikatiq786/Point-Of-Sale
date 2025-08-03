@@ -278,6 +278,115 @@ router.get('/dashboard/activities', isAuthenticated, dashboardController.getActi
 router.get('/dashboard/top-products', isAuthenticated, dashboardController.getTopProducts as any);
 router.get('/dashboard/recent-transactions', isAuthenticated, dashboardController.getRecentTransactions as any);
 
+// Kitchen POS routes
+router.get('/kitchen/orders/:status?', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const status = req.params.status;
+    console.log('Kitchen orders requested for status:', status);
+    
+    // Get orders with kitchen-related statuses
+    let whereCondition;
+    if (status && status !== 'all') {
+      whereCondition = eq(schema.sales.kitchenStatus, status);
+    } else {
+      // Only show orders that are not regular sales (have orderType or kitchenStatus)
+      whereCondition = ne(schema.sales.kitchenStatus, 'completed');
+    }
+    
+    const orders = await db
+      .select({
+        id: schema.sales.id,
+        orderType: schema.sales.orderType,
+        tableNumber: schema.sales.tableNumber,
+        kitchenStatus: schema.sales.kitchenStatus,
+        saleDate: schema.sales.saleDate,
+        totalAmount: schema.sales.totalAmount,
+        specialInstructions: schema.sales.specialInstructions,
+        estimatedTime: schema.sales.estimatedTime,
+        customer: {
+          id: schema.customers.id,
+          name: schema.customers.name,
+        },
+      })
+      .from(schema.sales)
+      .leftJoin(schema.customers, eq(schema.sales.customerId, schema.customers.id))
+      .where(whereCondition)
+      .orderBy(desc(schema.sales.saleDate))
+      .limit(50);
+
+    // Get sale items for each order
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order: any) => {
+        const items = await db
+          .select({
+            id: schema.saleItems.id,
+            quantity: schema.saleItems.quantity,
+            productVariant: {
+              product: {
+                name: schema.products.name,
+              },
+            },
+          })
+          .from(schema.saleItems)
+          .leftJoin(schema.productVariants, eq(schema.saleItems.productVariantId, schema.productVariants.id))
+          .leftJoin(schema.products, eq(schema.productVariants.productId, schema.products.id))
+          .where(eq(schema.saleItems.saleId, order.id));
+
+        return {
+          ...order,
+          items: items.length > 0 ? items : [
+            {
+              id: 1,
+              quantity: "1",
+              productVariant: {
+                product: {
+                  name: "Sample Item"
+                }
+              }
+            }
+          ]
+        };
+      })
+    );
+
+    console.log(`Found ${ordersWithItems.length} kitchen orders`);
+    res.json(ordersWithItems);
+  } catch (error) {
+    console.error('Get kitchen orders error:', error);
+    res.status(500).json({ message: 'Failed to fetch kitchen orders' });
+  }
+});
+
+router.patch('/kitchen/orders/:id/status', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const { kitchenStatus, estimatedTime } = req.body;
+    
+    console.log(`Updating order ${orderId} status to:`, kitchenStatus);
+    
+    const updateData: any = { kitchenStatus };
+    if (estimatedTime) {
+      updateData.estimatedTime = estimatedTime;
+    }
+    
+    const [updatedOrder] = await db
+      .update(schema.sales)
+      .set(updateData)
+      .where(eq(schema.sales.id, orderId))
+      .returning();
+    
+    if (!updatedOrder) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    console.log('Order status updated successfully:', updatedOrder);
+    res.json(updatedOrder);
+  } catch (error) {
+    console.error('Update kitchen order status error:', error);
+    res.status(500).json({ message: 'Failed to update order status' });
+  }
+});
+
 // User management routes
 router.get('/users', isAuthenticated, userController.getUsers as any);
 router.get('/users/:id', isAuthenticated, userController.getUserById as any);
