@@ -2753,32 +2753,45 @@ export default function POSTerminal() {
               </CardContent>
             </Card>
 
-            {/* Total Summary */}
-            <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-              <CardContent className="p-6">
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm opacity-90">
-                    <span>Subtotal:</span>
-                    <span>{formatCurrencyValue(getSubtotal())}</span>
+            {/* Total Summary - Horizontal Layout */}
+            <div className="grid grid-cols-4 gap-4">
+              {/* Subtotal Box */}
+              <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-br from-green-500 to-green-600 text-white">
+                <CardContent className="p-4 text-center">
+                  <div className="text-xs font-medium opacity-90 mb-1">Subtotal</div>
+                  <div className="text-lg font-bold">{formatCurrencyValue(getSubtotal())}</div>
+                </CardContent>
+              </Card>
+
+              {/* Discount Box */}
+              <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+                <CardContent className="p-4 text-center">
+                  <div className="text-xs font-medium opacity-90 mb-1">Discount</div>
+                  <div className="text-lg font-bold">
+                    {(getItemDiscountTotal() + getGlobalDiscountAmount()) > 0 
+                      ? `-${formatCurrencyValue(getItemDiscountTotal() + getGlobalDiscountAmount())}`
+                      : formatCurrencyValue(0)
+                    }
                   </div>
-                  {(getItemDiscountTotal() + getGlobalDiscountAmount()) > 0 && (
-                    <div className="flex justify-between text-sm opacity-90">
-                      <span>Total Discounts:</span>
-                      <span>-{formatCurrencyValue(getItemDiscountTotal() + getGlobalDiscountAmount())}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm opacity-90">
-                    <span>Tax ({taxRate}%):</span>
-                    <span>{formatCurrencyValue(getTaxAmount())}</span>
-                  </div>
-                  <Separator className="bg-white/20" />
-                  <div className="flex justify-between text-xl font-bold">
-                    <span>TOTAL:</span>
-                    <span>{formatCurrencyValue(getGrandTotal())}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* Tax Box */}
+              <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+                <CardContent className="p-4 text-center">
+                  <div className="text-xs font-medium opacity-90 mb-1">Tax ({taxRate}%)</div>
+                  <div className="text-lg font-bold">{formatCurrencyValue(getTaxAmount())}</div>
+                </CardContent>
+              </Card>
+
+              {/* Total Box */}
+              <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+                <CardContent className="p-4 text-center">
+                  <div className="text-xs font-medium opacity-90 mb-1">TOTAL</div>
+                  <div className="text-xl font-bold">{formatCurrencyValue(getGrandTotal())}</div>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Payment Methods */}
             <Card className="rounded-2xl shadow-lg border-0">
