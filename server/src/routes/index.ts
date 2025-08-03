@@ -294,43 +294,55 @@ router.get('/kitchen/test', async (req: any, res: any) => {
 
 // Kitchen POS routes - Simplified for debugging
 router.get('/kitchen/orders/:status?', isAuthenticated, async (req: any, res: any) => {
+  console.log('!!!!! KITCHEN ORDERS ENDPOINT HIT !!!!');
+  console.log('Request params:', req.params);
+  console.log('Request URL:', req.url);
+  
   try {
-    console.log('=== Kitchen API called ===');
-    
-    // Simple query first - get all sales with kitchen statuses
-    const allSales = await db
-      .select()
-      .from(schema.sales)
-      .where(ne(schema.sales.kitchenStatus, 'completed'))
-      .orderBy(desc(schema.sales.saleDate))
-      .limit(10);
-    
-    console.log(`=== Found ${allSales.length} sales total`);
-    
-    // Simple response for now
-    const simplifiedOrders = allSales.map(sale => ({
-      id: sale.id,
-      orderType: sale.orderType || 'sale',
-      tableNumber: sale.tableNumber,
-      kitchenStatus: sale.kitchenStatus || 'new',
-      saleDate: sale.saleDate,
-      totalAmount: sale.totalAmount,
-      specialInstructions: sale.specialInstructions,
-      estimatedTime: sale.estimatedTime,
-      customer: { name: 'Test Customer' },
-      items: [{
+    // Return hardcoded test data for now to see if frontend receives it
+    const testOrders = [
+      {
         id: 1,
-        quantity: "1",
-        productVariant: {
-          product: { name: "Test Item" }
-        }
-      }]
-    }));
+        orderType: 'dine-in',
+        tableNumber: '5',
+        kitchenStatus: 'new',
+        saleDate: new Date().toISOString(),
+        totalAmount: '45.99',
+        specialInstructions: 'Test order - debugging',
+        estimatedTime: null,
+        customer: { name: 'Test Customer' },
+        items: [{
+          id: 1,
+          quantity: "2",
+          productVariant: {
+            product: { name: "Debug Test Item" }
+          }
+        }]
+      },
+      {
+        id: 2,
+        orderType: 'takeaway',
+        tableNumber: null,
+        kitchenStatus: 'preparing',
+        saleDate: new Date().toISOString(),
+        totalAmount: '32.50',
+        specialInstructions: 'Extra sauce',
+        estimatedTime: 15,
+        customer: { name: 'John Doe' },
+        items: [{
+          id: 2,
+          quantity: "1",
+          productVariant: {
+            product: { name: "Burger" }
+          }
+        }]
+      }
+    ];
     
-    console.log('=== Returning orders:', simplifiedOrders.length);
-    res.json(simplifiedOrders);
+    console.log('!!!!! RETURNING TEST ORDERS:', testOrders.length);
+    res.json(testOrders);
   } catch (error) {
-    console.error('=== Kitchen orders error:', error);
+    console.error('!!!!! KITCHEN ERROR:', error);
     res.status(500).json({ message: 'Failed to fetch kitchen orders', error: error.message });
   }
 });

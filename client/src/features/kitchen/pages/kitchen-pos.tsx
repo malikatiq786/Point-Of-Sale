@@ -42,11 +42,16 @@ export default function KitchenPOS() {
   const { formatCurrencyValue } = useCurrency();
 
   // Fetch kitchen orders
-  const { data: orders = [], isLoading } = useQuery<KitchenOrder[]>({
-    queryKey: ["/api/kitchen/orders", selectedStatus],
+  const apiUrl = `/api/kitchen/orders/${selectedStatus}`;
+  console.log('!!!! FRONTEND: Fetching from URL:', apiUrl);
+  
+  const { data: orders = [], isLoading, error } = useQuery<KitchenOrder[]>({
+    queryKey: [apiUrl],
     refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
     retry: false,
   });
+  
+  console.log('!!!! FRONTEND: Query result:', { orders: orders?.length, isLoading, error });
 
   // Update order status mutation
   const updateStatusMutation = useMutation({
