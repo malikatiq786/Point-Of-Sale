@@ -38,6 +38,7 @@ export default function KitchenPOS() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedOrderType, setSelectedOrderType] = useState("all");
   const [audioEnabled, setAudioEnabled] = useState(true);
   const { formatCurrencyValue } = useCurrency();
 
@@ -75,10 +76,11 @@ export default function KitchenPOS() {
     },
   });
 
-  // Filter orders based on selected status
+  // Filter orders based on selected status and order type
   const filteredOrders = orders.filter(order => {
-    if (selectedStatus === "all") return true;
-    return order.kitchenStatus === selectedStatus;
+    const statusMatch = selectedStatus === "all" || order.kitchenStatus === selectedStatus;
+    const typeMatch = selectedOrderType === "all" || order.orderType === selectedOrderType;
+    return statusMatch && typeMatch;
   });
 
   // Get order counts by status
@@ -86,6 +88,13 @@ export default function KitchenPOS() {
     new: orders.filter(o => o.kitchenStatus === "new").length,
     preparing: orders.filter(o => o.kitchenStatus === "preparing").length,
     ready: orders.filter(o => o.kitchenStatus === "ready").length,
+  };
+
+  // Get order counts by type
+  const typeCounts = {
+    "dine-in": orders.filter(o => o.orderType === "dine-in").length,
+    "takeaway": orders.filter(o => o.orderType === "takeaway").length,
+    "delivery": orders.filter(o => o.orderType === "delivery").length,
   };
 
   // Play notification sound for new orders
@@ -202,55 +211,109 @@ export default function KitchenPOS() {
         </div>
       </div>
 
-      {/* Compact Status Filter Tabs */}
-      <div className="mb-6">
-        <div className="flex items-center space-x-4 mb-4">
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-slate-600" />
-            <span className="text-slate-700 font-medium text-sm">Filter by Status</span>
+      {/* Filter Tabs */}
+      <div className="mb-6 space-y-6">
+        {/* Status Filters */}
+        <div>
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-slate-600" />
+              <span className="text-slate-700 font-medium text-sm">Filter by Status</span>
+            </div>
+            <div className="text-xs text-slate-500">Updates every 5s</div>
           </div>
-          <div className="text-xs text-slate-500">Updates every 5s</div>
+          
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { key: "all", label: "All Orders", count: orders.length, color: "from-blue-500 to-blue-600", bgColor: "bg-blue-50", textColor: "text-blue-700", icon: ChefHat },
+              { key: "new", label: "New Orders", count: statusCounts.new, color: "from-red-500 to-red-600", bgColor: "bg-red-50", textColor: "text-red-700", icon: AlertCircle },
+              { key: "preparing", label: "Preparing", count: statusCounts.preparing, color: "from-amber-500 to-amber-600", bgColor: "bg-amber-50", textColor: "text-amber-700", icon: Clock },
+              { key: "ready", label: "Ready to Serve", count: statusCounts.ready, color: "from-green-500 to-green-600", bgColor: "bg-green-50", textColor: "text-green-700", icon: CheckCircle },
+            ].map(({ key, label, count, color, bgColor, textColor, icon: Icon }) => (
+              <Card
+                key={key}
+                onClick={() => setSelectedStatus(key)}
+                className={`cursor-pointer transition-all duration-200 border hover:shadow-lg transform hover:-translate-y-0.5 ${
+                  selectedStatus === key 
+                    ? `${bgColor} border-current ${textColor} shadow-md scale-102` 
+                    : "bg-white border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className={`p-1.5 rounded-md ${
+                      selectedStatus === key 
+                        ? `bg-gradient-to-r ${color} text-white` 
+                        : "bg-slate-100 text-slate-600"
+                    }`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                    <div className={`text-lg font-bold ${
+                      selectedStatus === key ? textColor : "text-slate-900"
+                    }`}>
+                      {count}
+                    </div>
+                  </div>
+                  <div className={`font-medium text-xs ${
+                    selectedStatus === key ? textColor : "text-slate-700"
+                  }`}>
+                    {label}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
-        
-        <div className="grid grid-cols-5 gap-2">
-          {[
-            { key: "all", label: "All Orders", count: orders.length, color: "from-blue-500 to-blue-600", bgColor: "bg-blue-50", textColor: "text-blue-700", icon: ChefHat },
-            { key: "new", label: "New Orders", count: statusCounts.new, color: "from-red-500 to-red-600", bgColor: "bg-red-50", textColor: "text-red-700", icon: AlertCircle },
-            { key: "preparing", label: "Preparing", count: statusCounts.preparing, color: "from-amber-500 to-amber-600", bgColor: "bg-amber-50", textColor: "text-amber-700", icon: Clock },
-            { key: "ready", label: "Ready to Serve", count: statusCounts.ready, color: "from-green-500 to-green-600", bgColor: "bg-green-50", textColor: "text-green-700", icon: CheckCircle },
-          ].map(({ key, label, count, color, bgColor, textColor, icon: Icon }) => (
-            <Card
-              key={key}
-              onClick={() => setSelectedStatus(key)}
-              className={`cursor-pointer transition-all duration-200 border hover:shadow-lg transform hover:-translate-y-0.5 ${
-                selectedStatus === key 
-                  ? `${bgColor} border-current ${textColor} shadow-md scale-102` 
-                  : "bg-white border-slate-200 hover:border-slate-300"
-              }`}
-            >
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className={`p-1.5 rounded-md ${
-                    selectedStatus === key 
-                      ? `bg-gradient-to-r ${color} text-white` 
-                      : "bg-slate-100 text-slate-600"
-                  }`}>
-                    <Icon className="h-3.5 w-3.5" />
+
+        {/* Order Type Filters */}
+        <div>
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <Utensils className="h-4 w-4 text-slate-600" />
+              <span className="text-slate-700 font-medium text-sm">Filter by Order Type</span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { key: "all", label: "All Types", count: orders.length, color: "from-slate-500 to-slate-600", bgColor: "bg-slate-50", textColor: "text-slate-700", icon: ChefHat },
+              { key: "dine-in", label: "Dine-In", count: typeCounts["dine-in"], color: "from-blue-500 to-blue-600", bgColor: "bg-blue-50", textColor: "text-blue-700", icon: Home },
+              { key: "takeaway", label: "Takeaway", count: typeCounts["takeaway"], color: "from-green-500 to-green-600", bgColor: "bg-green-50", textColor: "text-green-700", icon: Utensils },
+              { key: "delivery", label: "Delivery", count: typeCounts["delivery"], color: "from-purple-500 to-purple-600", bgColor: "bg-purple-50", textColor: "text-purple-700", icon: Car },
+            ].map(({ key, label, count, color, bgColor, textColor, icon: Icon }) => (
+              <Card
+                key={key}
+                onClick={() => setSelectedOrderType(key)}
+                className={`cursor-pointer transition-all duration-200 border hover:shadow-lg transform hover:-translate-y-0.5 ${
+                  selectedOrderType === key 
+                    ? `${bgColor} border-current ${textColor} shadow-md scale-102` 
+                    : "bg-white border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className={`p-1.5 rounded-md ${
+                      selectedOrderType === key 
+                        ? `bg-gradient-to-r ${color} text-white` 
+                        : "bg-slate-100 text-slate-600"
+                    }`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                    <div className={`text-lg font-bold ${
+                      selectedOrderType === key ? textColor : "text-slate-900"
+                    }`}>
+                      {count}
+                    </div>
                   </div>
-                  <div className={`text-lg font-bold ${
-                    selectedStatus === key ? textColor : "text-slate-900"
+                  <div className={`font-medium text-xs ${
+                    selectedOrderType === key ? textColor : "text-slate-700"
                   }`}>
-                    {count}
+                    {label}
                   </div>
-                </div>
-                <div className={`font-medium text-xs ${
-                  selectedStatus === key ? textColor : "text-slate-700"
-                }`}>
-                  {label}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -426,12 +489,14 @@ export default function KitchenPOS() {
             <ChefHat className="w-8 h-8 text-slate-400" />
           </div>
           <h3 className="text-lg font-bold text-slate-900 mb-2">
-            {selectedStatus === "all" ? "No Active Orders" : `No ${selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)} Orders`}
+            {selectedStatus === "all" && selectedOrderType === "all" 
+              ? "No Active Orders" 
+              : `No ${selectedStatus !== "all" ? selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1) + " " : ""}${selectedOrderType !== "all" ? selectedOrderType.charAt(0).toUpperCase() + selectedOrderType.slice(1).replace("-", "-") : ""} Orders`}
           </h3>
           <p className="text-slate-500 text-sm max-w-sm mx-auto">
-            {selectedStatus === "all" 
+            {selectedStatus === "all" && selectedOrderType === "all"
               ? "New orders will appear here in real-time as they come in from the POS system" 
-              : `${selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)} orders will be displayed here when available`}
+              : `Orders matching your selected filters will be displayed here when available`}
           </p>
         </div>
       )}
