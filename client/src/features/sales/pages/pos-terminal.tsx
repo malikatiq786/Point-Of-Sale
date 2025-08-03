@@ -2139,15 +2139,18 @@ export default function POSTerminal() {
                     </Button>
                   </div>
 
-                  {/* Right Side - Enhanced Totals */}
-                  <div className="bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 text-white px-6 py-4 rounded-lg shadow-lg border border-blue-700">
-                    <div className="space-y-3 min-w-[200px]">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-blue-100">Subtotal</span>
-                        <span className="text-xl font-bold text-white">{formatCurrencyValue(getSubtotal())}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-blue-100">Discount</span>
+                  {/* Horizontal Totals Boxes */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {/* Subtotal Box */}
+                    <div className="bg-gradient-to-br from-green-500 to-green-600 text-white px-3 py-2 rounded-lg shadow-lg text-center">
+                      <div className="text-xs font-medium opacity-90 mb-1">Subtotal</div>
+                      <div className="text-sm font-bold">{formatCurrencyValue(getSubtotal())}</div>
+                    </div>
+
+                    {/* Discount Box */}
+                    <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white px-3 py-2 rounded-lg shadow-lg text-center">
+                      <div className="text-xs font-medium opacity-90 mb-1">Discount</div>
+                      <div className="text-sm font-bold">
                         {editingGlobalDiscount ? (
                           <Input
                             value={editGlobalDiscountValue}
@@ -2170,67 +2173,70 @@ export default function POSTerminal() {
                                 setEditingGlobalDiscount(false);
                               }
                             }}
-                            className="w-20 h-6 text-xs text-right bg-white text-black rounded"
+                            className="w-16 h-5 text-xs text-center bg-white text-black rounded"
                             placeholder="0% or 0.00"
                             autoFocus
                           />
                         ) : (
                           <span 
-                            className="text-lg font-semibold text-green-300 cursor-pointer hover:bg-blue-800 rounded px-1"
+                            className="cursor-pointer hover:bg-orange-700 rounded px-1"
                             onClick={() => {
                               setEditingGlobalDiscount(true);
                               setEditGlobalDiscountValue(discount.value > 0 ? `${discount.value}${discount.type === 'percentage' ? '%' : ''}` : '');
                             }}
                           >
-                            -{formatCurrencyValue(getItemDiscountTotal() + getGlobalDiscountAmount())}
+                            {(getItemDiscountTotal() + getGlobalDiscountAmount()) > 0 
+                              ? `-${formatCurrencyValue(getItemDiscountTotal() + getGlobalDiscountAmount())}`
+                              : formatCurrencyValue(0)
+                            }
                           </span>
                         )}
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-blue-100">Sales Tax</span>
-                        <div className="flex items-center space-x-1">
-                          {editingTaxRate ? (
-                            <Input
-                              value={editTaxRateValue}
-                              onChange={(e) => setEditTaxRateValue(e.target.value)}
-                              onBlur={() => {
+                    </div>
+
+                    {/* Tax Box */}
+                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white px-3 py-2 rounded-lg shadow-lg text-center">
+                      <div className="text-xs font-medium opacity-90 mb-1 flex items-center justify-center">
+                        Tax
+                        {editingTaxRate ? (
+                          <Input
+                            value={editTaxRateValue}
+                            onChange={(e) => setEditTaxRateValue(e.target.value)}
+                            onBlur={() => {
+                              const value = parseFloat(editTaxRateValue) || 10;
+                              updateTaxRate(value);
+                              setEditingTaxRate(false);
+                            }}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
                                 const value = parseFloat(editTaxRateValue) || 10;
                                 updateTaxRate(value);
                                 setEditingTaxRate(false);
-                              }}
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                  const value = parseFloat(editTaxRateValue) || 10;
-                                  updateTaxRate(value);
-                                  setEditingTaxRate(false);
-                                }
-                              }}
-                              className="w-12 h-5 text-xs text-center bg-white text-black rounded"
-                              autoFocus
-                            />
-                          ) : (
-                            <span 
-                              className="text-xs text-blue-200 cursor-pointer hover:bg-blue-800 rounded px-1"
-                              onClick={() => {
-                                setEditingTaxRate(true);
-                                setEditTaxRateValue(taxRate.toString());
-                              }}
-                            >
-                              ({taxRate}%)
-                            </span>
-                          )}
-                          <span className="text-lg font-semibold text-yellow-300">{formatCurrencyValue(getTaxAmount())}</span>
-                        </div>
+                              }
+                            }}
+                            className="w-8 h-4 text-xs text-center bg-white text-black rounded ml-1"
+                            autoFocus
+                          />
+                        ) : (
+                          <span 
+                            className="text-xs opacity-70 cursor-pointer hover:bg-blue-700 rounded px-1 ml-1"
+                            onClick={() => {
+                              setEditingTaxRate(true);
+                              setEditTaxRateValue(taxRate.toString());
+                            }}
+                          >
+                            ({taxRate}%)
+                          </span>
+                        )}
                       </div>
-                      <div className="border-t border-blue-600 pt-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-lg font-bold text-blue-100">TOTAL</span>
-                          <span className="text-3xl font-bold text-white tracking-wider">{formatCurrencyValue(getGrandTotal())}</span>
-                        </div>
-                      </div>
-                      <div className="text-center mt-3">
-                        <div className="text-xs text-blue-200">Items: {cart.reduce((sum, item) => sum + item.quantity, 0)}</div>
-                      </div>
+                      <div className="text-sm font-bold">{formatCurrencyValue(getTaxAmount())}</div>
+                    </div>
+
+                    {/* Total Box */}
+                    <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white px-3 py-2 rounded-lg shadow-lg text-center">
+                      <div className="text-xs font-medium opacity-90 mb-1">TOTAL</div>
+                      <div className="text-lg font-bold">{formatCurrencyValue(getGrandTotal())}</div>
+                      <div className="text-xs opacity-70 mt-1">Items: {cart.reduce((sum, item) => sum + item.quantity, 0)}</div>
                     </div>
                   </div>
                 </div>
