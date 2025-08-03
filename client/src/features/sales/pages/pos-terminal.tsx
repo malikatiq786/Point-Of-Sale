@@ -553,6 +553,32 @@ export default function POSTerminal() {
     };
   }, [scanTimeout]);
 
+  // Handle Enter key in payment dialog to complete sale
+  useEffect(() => {
+    const handlePaymentDialogKeyPress = (e: KeyboardEvent) => {
+      if (showPaymentDialog && e.key === 'Enter') {
+        e.preventDefault();
+        // Check if the complete sale button would be enabled
+        const isDisabled = 
+          processSaleMutation.isPending || 
+          (paymentMethod === 'cash' && amountReceived <= 0) ||
+          (!selectedCustomerId && paymentMethod === 'cash' && amountReceived < getGrandTotal());
+        
+        if (!isDisabled) {
+          processSale();
+        }
+      }
+    };
+
+    if (showPaymentDialog) {
+      document.addEventListener('keydown', handlePaymentDialogKeyPress);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handlePaymentDialogKeyPress);
+    };
+  }, [showPaymentDialog, processSaleMutation.isPending, paymentMethod, amountReceived, selectedCustomerId]);
+
   // Manual search trigger for Find Now button
   const triggerSearch = () => {
     if (searchQuery.trim()) {
@@ -2955,7 +2981,22 @@ export default function POSTerminal() {
 
         {/* Payment Dialog */}
         <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-          <DialogContent className="max-w-md rounded-2xl">
+          <DialogContent 
+            className="max-w-md rounded-2xl" 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                const isDisabled = 
+                  processSaleMutation.isPending || 
+                  (paymentMethod === 'cash' && amountReceived <= 0) ||
+                  (!selectedCustomerId && paymentMethod === 'cash' && amountReceived < getGrandTotal());
+                
+                if (!isDisabled) {
+                  processSale();
+                }
+              }
+            }}
+          >
             <DialogHeader>
               <DialogTitle className="flex items-center">
                 <CreditCard className="w-5 h-5 mr-2" />
