@@ -520,24 +520,31 @@ export default function POSTerminal() {
     }
   };
 
-  // Auto-focus search input for barcode scanners
+  // Auto-focus search input for barcode scanners (only for grid layout)
   useEffect(() => {
     const focusSearchInput = () => {
-      if (searchInputRef.current && !searchInputRef.current.matches(':focus')) {
+      // Only auto-focus if we're in grid layout and the input exists
+      if (posLayout === 'grid' && searchInputRef.current && !searchInputRef.current.matches(':focus')) {
         searchInputRef.current.focus();
       }
     };
     
-    // Focus on mount
-    focusSearchInput();
+    // Focus on mount only for grid layout
+    if (posLayout === 'grid') {
+      focusSearchInput();
+    }
     
-    // Re-focus periodically to catch scanner input
-    const interval = setInterval(focusSearchInput, 1000);
+    // Re-focus periodically to catch scanner input (only for grid layout)
+    const interval = setInterval(() => {
+      if (posLayout === 'grid') {
+        focusSearchInput();
+      }
+    }, 1000);
     
-    // Focus on any key press that's not in an input field
+    // Focus on any key press that's not in an input field (only for grid layout)
     const handleKeyPress = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.matches('input, textarea, select') && searchInputRef.current) {
+      if (posLayout === 'grid' && !target.matches('input, textarea, select') && searchInputRef.current) {
         searchInputRef.current.focus();
       }
     };
@@ -551,7 +558,7 @@ export default function POSTerminal() {
         clearTimeout(scanTimeout);
       }
     };
-  }, [scanTimeout]);
+  }, [scanTimeout, posLayout]);
 
   // Manual search trigger for Find Now button
   const triggerSearch = () => {
@@ -1821,17 +1828,20 @@ export default function POSTerminal() {
                     </select>
                     <div className="relative">
                       <Input
-                        ref={searchInputRef}
                         placeholder="Enter item code or scan barcode..."
                         value={searchQuery}
                         onChange={(e) => handleSearchChange(e.target.value)}
                         onKeyDown={handleSearchKeyDown}
                         onKeyPress={handleSearchKeyPress}
-                        onFocus={() => setShowSuggestions(searchSuggestions.length > 0)}
+                        onFocus={() => {
+                          // Only show suggestions if there are any and user has typed something
+                          if (searchQuery.trim() && searchSuggestions.length > 0) {
+                            setShowSuggestions(true);
+                          }
+                        }}
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                         className={`h-7 text-xs w-64 border-gray-300 ${isScanning ? 'bg-blue-50 border-blue-300' : ''}`}
                         autoComplete="off"
-                        autoFocus
                       />
                       {isScanning && (
                         <div className="absolute right-2 top-1 text-blue-600">
