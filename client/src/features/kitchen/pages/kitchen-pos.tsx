@@ -42,16 +42,11 @@ export default function KitchenPOS() {
   const { formatCurrencyValue } = useCurrency();
 
   // Fetch kitchen orders
-  const apiUrl = `/api/kitchen/orders/${selectedStatus}`;
-  console.log('!!!! FRONTEND: Fetching from URL:', apiUrl);
-  
-  const { data: orders = [], isLoading, error } = useQuery<KitchenOrder[]>({
-    queryKey: [apiUrl],
+  const { data: orders = [], isLoading } = useQuery<KitchenOrder[]>({
+    queryKey: [`/api/kitchen/orders/${selectedStatus}`],
     refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
     retry: false,
   });
-  
-  console.log('!!!! FRONTEND: Query result:', { orders: orders?.length, isLoading, error });
 
   // Update order status mutation
   const updateStatusMutation = useMutation({
@@ -179,27 +174,30 @@ export default function KitchenPOS() {
 
       {/* Status Filter Tabs */}
       <div className="mb-6">
-        <div className="flex flex-wrap gap-2 p-1 bg-gray-100 rounded-lg">
+        <div className="flex flex-wrap gap-2 p-1 bg-slate-800 rounded-xl">
           {[
-            { key: "all", label: "All Orders", count: orders.length },
-            { key: "new", label: "New", count: statusCounts.new },
-            { key: "preparing", label: "Preparing", count: statusCounts.preparing },
-            { key: "ready", label: "Ready", count: statusCounts.ready },
-          ].map(({ key, label, count }) => (
+            { key: "all", label: "All Orders", count: orders.length, color: "bg-blue-600 hover:bg-blue-700" },
+            { key: "new", label: "New", count: statusCounts.new, color: "bg-red-600 hover:bg-red-700" },
+            { key: "preparing", label: "Preparing", count: statusCounts.preparing, color: "bg-amber-600 hover:bg-amber-700" },
+            { key: "ready", label: "Ready", count: statusCounts.ready, color: "bg-green-600 hover:bg-green-700" },
+          ].map(({ key, label, count, color }) => (
             <Button
               key={key}
-              variant={selectedStatus === key ? "default" : "ghost"}
-              size="sm"
               onClick={() => setSelectedStatus(key)}
-              className={`flex items-center space-x-2 text-xs sm:text-sm ${
-                selectedStatus === key ? "bg-white shadow-sm" : ""
+              className={`flex items-center space-x-2 text-xs sm:text-sm font-medium transition-all duration-200 ${
+                selectedStatus === key 
+                  ? `${color} text-white shadow-lg transform scale-105` 
+                  : "bg-slate-700 text-gray-300 hover:bg-slate-600 hover:text-white"
               }`}
             >
               <span>{label}</span>
               {count > 0 && (
                 <Badge 
-                  variant={selectedStatus === key ? "secondary" : "outline"}
-                  className="text-xs px-1.5 py-0.5 min-w-[20px] h-5"
+                  className={`text-xs px-2 py-0.5 min-w-[20px] h-5 font-bold ${
+                    selectedStatus === key 
+                      ? "bg-white/20 text-white" 
+                      : "bg-slate-600 text-gray-200"
+                  }`}
                 >
                   {count}
                 </Badge>
@@ -236,20 +234,20 @@ export default function KitchenPOS() {
             const priorityColor = getPriorityColor(order.saleDate);
             
             return (
-              <Card key={order.id} className={`hover:shadow-md transition-shadow duration-200 border-l-4 ${priorityColor}`}>
+              <Card key={order.id} className={`hover:shadow-xl transition-all duration-300 border-l-4 ${priorityColor} bg-white hover:bg-gray-50 transform hover:-translate-y-1`}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
                       <IconComponent className="mr-2 h-4 w-4" />
                       Order #{order.id}
                     </CardTitle>
-                    <Badge className={`text-xs ${getStatusColor(order.kitchenStatus)}`}>
+                    <Badge className={`text-xs font-semibold px-3 py-1 ${getStatusColor(order.kitchenStatus)}`}>
                       {order.kitchenStatus.charAt(0).toUpperCase() + order.kitchenStatus.slice(1)}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600">
                     <div className="flex items-center space-x-2">
-                      <Badge variant="outline" className={`text-xs ${getOrderColor(order.orderType)}`}>
+                      <Badge className={`text-xs font-medium px-2 py-1 ${getOrderColor(order.orderType)}`}>
                         {order.orderType === 'dine-in' ? 'Dine-In' : 
                          order.orderType === 'takeaway' ? 'Takeaway' : 
                          order.orderType === 'delivery' ? 'Delivery' : 'Sale'}
@@ -311,9 +309,9 @@ export default function KitchenPOS() {
                             estimatedTime: 15 
                           })}
                           disabled={updateStatusMutation.isPending}
-                          className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+                          className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                         >
-                          <Clock className="mr-2 h-3 w-3" />
+                          <Clock className="mr-2 h-4 w-4" />
                           Start Preparing
                         </Button>
                       )}
@@ -326,9 +324,9 @@ export default function KitchenPOS() {
                             status: 'ready' 
                           })}
                           disabled={updateStatusMutation.isPending}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white"
+                          className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                         >
-                          <CheckCircle className="mr-2 h-3 w-3" />
+                          <CheckCircle className="mr-2 h-4 w-4" />
                           Mark Ready
                         </Button>
                       )}
@@ -341,9 +339,9 @@ export default function KitchenPOS() {
                             status: 'served' 
                           })}
                           disabled={updateStatusMutation.isPending}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                         >
-                          <Utensils className="mr-2 h-3 w-3" />
+                          <Utensils className="mr-2 h-4 w-4" />
                           Mark Served
                         </Button>
                       )}

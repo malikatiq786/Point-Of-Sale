@@ -58,7 +58,9 @@ export interface IStorage {
     user: User | null,
     items: (SaleItem & { productVariant: ProductVariant | null })[]
   })[]>;
+  getAllSales(): Promise<any[]>;
   createSale(sale: any): Promise<Sale>;
+  updateSaleKitchenStatus(saleId: number, kitchenStatus: string, estimatedTime?: number): Promise<Sale>;
   
   // Dashboard operations
   getDashboardStats(): Promise<{
@@ -211,12 +213,55 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
+  async getAllSales(): Promise<any[]> {
+    return await db
+      .select({
+        id: sales.id,
+        totalAmount: sales.totalAmount,
+        paidAmount: sales.paidAmount,
+        saleDate: sales.saleDate,
+        status: sales.status,
+        orderType: sales.orderType,
+        tableNumber: sales.tableNumber,
+        kitchenStatus: sales.kitchenStatus,
+        specialInstructions: sales.specialInstructions,
+        estimatedTime: sales.estimatedTime,
+        customer: {
+          id: customers.id,
+          name: customers.name,
+        },
+        user: {
+          id: users.id,
+          name: users.name,
+        },
+      })
+      .from(sales)
+      .leftJoin(customers, eq(sales.customerId, customers.id))
+      .leftJoin(users, eq(sales.userId, users.id))
+      .orderBy(desc(sales.saleDate));
+  }
+
   async createSale(saleData: any): Promise<Sale> {
     const [sale] = await db
       .insert(sales)
       .values(saleData)
       .returning();
     return sale;
+  }
+
+  async updateSaleKitchenStatus(saleId: number, kitchenStatus: string, estimatedTime?: number): Promise<Sale> {
+    const updateData: any = { kitchenStatus };
+    if (estimatedTime !== undefined) {
+      updateData.estimatedTime = estimatedTime;
+    }
+    
+    const [updatedSale] = await db
+      .update(sales)
+      .set(updateData)
+      .where(eq(sales.id, saleId))
+      .returning();
+    
+    return updatedSale;
   }
 
   async getDashboardStats(): Promise<{

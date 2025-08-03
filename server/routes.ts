@@ -1874,56 +1874,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Kitchen POS routes - Added directly here since apiRoutes is disabled
   app.get('/api/kitchen/orders/:status?', isAuthenticated, async (req: any, res: any) => {
-    console.log('!!!!! KITCHEN ORDERS ENDPOINT HIT !!!!');
-    console.log('Request params:', req.params);
-    console.log('Request URL:', req.url);
-    
     try {
-      // Return hardcoded test data for now to see if frontend receives it
-      const testOrders = [
-        {
-          id: 1,
-          orderType: 'dine-in',
-          tableNumber: '5',
-          kitchenStatus: 'new',
-          saleDate: new Date().toISOString(),
-          totalAmount: '45.99',
-          specialInstructions: 'Test order - debugging',
-          estimatedTime: null,
-          customer: { name: 'Test Customer' },
-          items: [{
-            id: 1,
-            quantity: "2",
-            productVariant: {
-              product: { name: "Debug Test Item" }
-            }
-          }]
-        },
-        {
-          id: 2,
-          orderType: 'takeaway',
-          tableNumber: null,
-          kitchenStatus: 'preparing',
-          saleDate: new Date().toISOString(),
-          totalAmount: '32.50',
-          specialInstructions: 'Extra sauce',
-          estimatedTime: 15,
-          customer: { name: 'John Doe' },
-          items: [{
-            id: 2,
-            quantity: "1",
-            productVariant: {
-              product: { name: "Burger" }
-            }
-          }]
-        }
-      ];
+      const status = req.params.status;
       
-      console.log('!!!!! RETURNING TEST ORDERS:', testOrders.length);
-      res.json(testOrders);
+      // Get all sales with kitchen data from database
+      const allSales = await storage.getAllSales();
+      
+      // Filter for kitchen orders (non-sale types and non-completed status)
+      let kitchenOrders = allSales.filter((sale: any) => {
+        // Include orders that have kitchen-specific order types or non-completed kitchen status
+        return sale.orderType && sale.orderType !== 'sale' && sale.kitchenStatus && sale.kitchenStatus !== 'completed';
+      });
+      
+      // Apply status filter
+      if (status && status !== 'all') {
+        kitchenOrders = kitchenOrders.filter((order: any) => order.kitchenStatus === status);
+      }
+      
+      // Format orders for frontend
+      const formattedOrders = kitchenOrders.map((order: any) => ({
+        id: order.id,
+        orderType: order.orderType || 'sale',
+        tableNumber: order.tableNumber,
+        kitchenStatus: order.kitchenStatus || 'new',
+        saleDate: order.saleDate,
+        totalAmount: order.totalAmount || '0.00',
+        specialInstructions: order.specialInstructions,
+        estimatedTime: order.estimatedTime,
+        customer: { name: order.customer?.name || 'Walk-in Customer' },
+        items: order.items?.map((item: any) => ({
+          id: item.id,
+          quantity: item.quantity?.toString() || '1',
+          productVariant: {
+            product: { name: item.product?.name || 'Unknown Item' }
+          }
+        })) || []
+      }));
+      
+      res.json(formattedOrders);
     } catch (error) {
-      console.error('!!!!! KITCHEN ERROR:', error);
-      res.status(500).json({ message: 'Failed to fetch kitchen orders', error: error.message });
+      console.error('Kitchen orders error:', error);
+      res.status(500).json({ message: 'Failed to fetch kitchen orders' });
+    }
+  });
+
+  // Kitchen order status update route
+  app.patch('/api/kitchen/orders/:id/status', isAuthenticated, async (req: any, res: any) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const { kitchenStatus, estimatedTime } = req.body;
+      
+      const updatedOrder = await storage.updateSaleKitchenStatus(orderId, kitchenStatus, estimatedTime);
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error('Update kitchen order status error:', error);
+      res.status(500).json({ message: 'Failed to update order status' });
     }
   });
 
