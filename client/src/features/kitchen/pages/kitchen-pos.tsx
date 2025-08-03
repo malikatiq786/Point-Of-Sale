@@ -165,54 +165,54 @@ export default function KitchenPOS() {
 
   return (
     <AppLayout>
-      {/* Modern Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 -mx-6 -mt-6 px-6 pt-6 pb-8 mb-8">
+      {/* Compact Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 -mx-6 -mt-6 px-6 pt-4 pb-5 mb-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="bg-orange-500 p-3 rounded-2xl shadow-lg">
-              <ChefHat className="h-8 w-8 text-white" />
+          <div className="flex items-center space-x-3">
+            <div className="bg-orange-500 p-2 rounded-xl shadow-lg">
+              <ChefHat className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white mb-1">
-                Kitchen Command Center
+              <h1 className="text-xl font-bold text-white mb-0.5">
+                Kitchen Dashboard
               </h1>
-              <p className="text-slate-300 text-lg">Real-time order management & kitchen operations</p>
+              <p className="text-slate-300 text-sm">Real-time order management</p>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setAudioEnabled(!audioEnabled)}
-              className={`text-white hover:bg-white/20 backdrop-blur-sm border border-white/20 ${
+              className={`text-white hover:bg-white/20 backdrop-blur-sm border border-white/20 text-xs px-2 py-1 h-7 ${
                 audioEnabled ? 'bg-white/20' : 'bg-transparent'
               }`}
             >
-              <Bell className="h-4 w-4 mr-2" />
-              {audioEnabled ? 'Sound On' : 'Sound Off'}
+              <Bell className="h-3 w-3 mr-1" />
+              {audioEnabled ? 'On' : 'Off'}
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="text-white hover:bg-white/20 backdrop-blur-sm border border-white/20"
+              className="text-white hover:bg-white/20 backdrop-blur-sm border border-white/20 px-2 py-1 h-7"
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="h-3 w-3" />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Modern Status Filter Tabs */}
-      <div className="mb-8">
-        <div className="flex items-center space-x-6 mb-6">
+      {/* Compact Status Filter Tabs */}
+      <div className="mb-6">
+        <div className="flex items-center space-x-4 mb-4">
           <div className="flex items-center space-x-2">
-            <Filter className="h-5 w-5 text-slate-600" />
-            <span className="text-slate-700 font-medium">Filter by Status</span>
+            <Filter className="h-4 w-4 text-slate-600" />
+            <span className="text-slate-700 font-medium text-sm">Filter by Status</span>
           </div>
-          <div className="text-sm text-slate-500">Real-time updates every 5 seconds</div>
+          <div className="text-xs text-slate-500">Updates every 5s</div>
         </div>
         
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-3">
           {[
             { key: "all", label: "All Orders", count: orders.length, color: "from-blue-500 to-blue-600", bgColor: "bg-blue-50", textColor: "text-blue-700", icon: ChefHat },
             { key: "new", label: "New Orders", count: statusCounts.new, color: "from-red-500 to-red-600", bgColor: "bg-red-50", textColor: "text-red-700", icon: AlertCircle },
@@ -222,28 +222,28 @@ export default function KitchenPOS() {
             <Card
               key={key}
               onClick={() => setSelectedStatus(key)}
-              className={`cursor-pointer transition-all duration-300 border-2 hover:shadow-xl transform hover:-translate-y-1 ${
+              className={`cursor-pointer transition-all duration-200 border hover:shadow-lg transform hover:-translate-y-0.5 ${
                 selectedStatus === key 
-                  ? `${bgColor} border-current ${textColor} shadow-lg scale-105` 
+                  ? `${bgColor} border-current ${textColor} shadow-md scale-102` 
                   : "bg-white border-slate-200 hover:border-slate-300"
               }`}
             >
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-xl ${
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className={`p-2 rounded-lg ${
                     selectedStatus === key 
                       ? `bg-gradient-to-r ${color} text-white` 
                       : "bg-slate-100 text-slate-600"
                   }`}>
-                    <Icon className="h-6 w-6" />
+                    <Icon className="h-4 w-4" />
                   </div>
-                  <div className={`text-3xl font-bold ${
+                  <div className={`text-xl font-bold ${
                     selectedStatus === key ? textColor : "text-slate-900"
                   }`}>
                     {count}
                   </div>
                 </div>
-                <div className={`font-semibold text-base ${
+                <div className={`font-medium text-sm ${
                   selectedStatus === key ? textColor : "text-slate-700"
                 }`}>
                   {label}
@@ -254,84 +254,84 @@ export default function KitchenPOS() {
         </div>
       </div>
 
-      {/* Modern Orders Grid */}
+      {/* Compact Orders Grid */}
       {isLoading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
           {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse h-72">
-              <CardHeader className="pb-4">
+            <Card key={i} className="animate-pulse h-56">
+              <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <div className="h-5 bg-slate-200 rounded w-1/2"></div>
-                  <div className="h-6 bg-slate-200 rounded-full w-16"></div>
+                  <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+                  <div className="h-5 bg-slate-200 rounded-full w-12"></div>
                 </div>
-                <div className="h-4 bg-slate-200 rounded w-3/4 mt-2"></div>
+                <div className="h-3 bg-slate-200 rounded w-3/4 mt-2"></div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
                 <div className="h-3 bg-slate-200 rounded"></div>
                 <div className="h-3 bg-slate-200 rounded w-4/5"></div>
-                <div className="h-10 bg-slate-200 rounded mt-6"></div>
+                <div className="h-8 bg-slate-200 rounded mt-4"></div>
               </CardContent>
             </Card>
           ))}
         </div>
       ) : filteredOrders.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
           {filteredOrders.map((order) => {
             const IconComponent = getOrderIcon(order.orderType);
             const timeSince = getTimeSinceOrder(order.saleDate);
             const priorityColor = getPriorityColor(order.saleDate);
             
             return (
-              <Card key={order.id} className={`relative overflow-hidden hover:shadow-2xl transition-all duration-500 border-0 bg-white hover:bg-slate-50 transform hover:-translate-y-2 ${priorityColor} shadow-lg`}>
+              <Card key={order.id} className={`relative overflow-hidden hover:shadow-lg transition-all duration-300 border bg-white hover:bg-slate-50 transform hover:-translate-y-1 ${priorityColor} shadow-sm`}>
                 {/* Priority indicator */}
-                <div className={`absolute top-0 left-0 w-2 h-full ${priorityColor.replace('border-l-', 'bg-')}`}></div>
+                <div className={`absolute top-0 left-0 w-1.5 h-full ${priorityColor.replace('border-l-', 'bg-')}`}></div>
                 
-                <CardHeader className="pb-4 pl-6">
+                <CardHeader className="pb-3 pl-4">
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-xl ${getOrderColor(order.orderType).replace('text-', 'bg-').replace('-600', '-100')}`}>
-                        <IconComponent className={`h-5 w-5 ${getOrderColor(order.orderType)}`} />
+                    <div className="flex items-center space-x-2">
+                      <div className={`p-1.5 rounded-lg ${getOrderColor(order.orderType).replace('text-', 'bg-').replace('-600', '-100')}`}>
+                        <IconComponent className={`h-3.5 w-3.5 ${getOrderColor(order.orderType)}`} />
                       </div>
                       <div>
-                        <CardTitle className="text-xl font-bold text-slate-900 mb-1">
+                        <CardTitle className="text-base font-bold text-slate-900 mb-0.5">
                           Order #{order.id}
                         </CardTitle>
-                        <div className="flex items-center space-x-2">
-                          <Badge className={`text-xs font-medium px-3 py-1 border-0 ${getOrderColor(order.orderType)}`}>
+                        <div className="flex items-center space-x-1">
+                          <Badge className={`text-xs font-medium px-2 py-0.5 border-0 ${getOrderColor(order.orderType)}`}>
                             {order.orderType === 'dine-in' ? 'Dine-In' : 
                              order.orderType === 'takeaway' ? 'Takeaway' : 
                              order.orderType === 'delivery' ? 'Delivery' : 'Sale'}
-                            {order.tableNumber && ` - Table ${order.tableNumber}`}
+                            {order.tableNumber && ` - T${order.tableNumber}`}
                           </Badge>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <Badge className={`text-sm font-bold px-4 py-2 border-0 ${getStatusColor(order.kitchenStatus)}`}>
+                      <Badge className={`text-xs font-semibold px-2 py-1 border-0 ${getStatusColor(order.kitchenStatus)}`}>
                         {order.kitchenStatus.charAt(0).toUpperCase() + order.kitchenStatus.slice(1)}
                       </Badge>
-                      <div className="flex items-center text-xs text-slate-500 mt-2">
+                      <div className="flex items-center text-xs text-slate-500 mt-1">
                         <Timer className="mr-1 h-3 w-3" />
                         {timeSince}
                       </div>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pl-6 space-y-4">
+                <CardContent className="pl-4 space-y-3">
                     {/* Order Items */}
-                    <div className="bg-slate-50 rounded-xl p-4">
-                      <h4 className="font-semibold text-slate-700 mb-3 flex items-center">
-                        <Utensils className="h-4 w-4 mr-2" />
-                        Order Items
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <h4 className="font-medium text-slate-700 mb-2 flex items-center text-sm">
+                        <Utensils className="h-3 w-3 mr-1" />
+                        Items
                       </h4>
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         {order.items.map((item) => (
-                          <div key={item.id} className="flex items-center justify-between bg-white rounded-lg p-3 shadow-sm">
-                            <span className="font-medium text-slate-800">
+                          <div key={item.id} className="flex items-center justify-between bg-white rounded p-2 shadow-sm">
+                            <span className="font-medium text-slate-800 text-sm">
                               {item.productVariant.product.name}
                             </span>
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              Qty: {item.quantity}
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                              {item.quantity}
                             </Badge>
                           </div>
                         ))}
@@ -340,12 +340,12 @@ export default function KitchenPOS() {
 
                     {/* Special Instructions */}
                     {order.specialInstructions && (
-                      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
+                      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-3">
                         <div className="flex items-start">
-                          <AlertCircle className="h-5 w-5 text-amber-600 mr-3 mt-0.5 flex-shrink-0" />
+                          <AlertCircle className="h-4 w-4 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
                           <div>
-                            <p className="font-semibold text-amber-800 mb-1">Special Instructions</p>
-                            <p className="text-sm text-amber-700">
+                            <p className="font-medium text-amber-800 mb-1 text-sm">Special Instructions</p>
+                            <p className="text-xs text-amber-700">
                               {order.specialInstructions}
                             </p>
                           </div>
@@ -354,21 +354,21 @@ export default function KitchenPOS() {
                     )}
 
                     {/* Customer & Total */}
-                    <div className="flex items-center justify-between bg-slate-50 rounded-xl p-4">
+                    <div className="flex items-center justify-between bg-slate-50 rounded-lg p-3">
                       <div>
                         {order.customer && (
-                          <div className="text-sm text-slate-600 mb-1">
+                          <div className="text-xs text-slate-600 mb-1">
                             <span className="font-medium text-slate-700">Customer:</span> {order.customer.name}
                           </div>
                         )}
-                        <div className="text-2xl font-bold text-slate-900">
+                        <div className="text-lg font-bold text-slate-900">
                           {formatCurrencyValue(parseFloat(order.totalAmount || '0'))}
                         </div>
                       </div>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-col space-y-2 pt-2">
+                    <div className="flex flex-col space-y-1.5 pt-1">
                       {order.kitchenStatus === 'new' && (
                         <Button
                           size="sm"
@@ -378,9 +378,9 @@ export default function KitchenPOS() {
                             estimatedTime: 15 
                           })}
                           disabled={updateStatusMutation.isPending}
-                          className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                          className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium shadow-md hover:shadow-lg transform hover:scale-102 transition-all duration-200 h-8 text-sm"
                         >
-                          <Clock className="mr-2 h-4 w-4" />
+                          <Clock className="mr-1 h-3 w-3" />
                           Start Preparing
                         </Button>
                       )}
@@ -393,9 +393,9 @@ export default function KitchenPOS() {
                             status: 'ready' 
                           })}
                           disabled={updateStatusMutation.isPending}
-                          className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                          className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium shadow-md hover:shadow-lg transform hover:scale-102 transition-all duration-200 h-8 text-sm"
                         >
-                          <CheckCircle className="mr-2 h-4 w-4" />
+                          <CheckCircle className="mr-1 h-3 w-3" />
                           Mark Ready
                         </Button>
                       )}
@@ -408,9 +408,9 @@ export default function KitchenPOS() {
                             status: 'served' 
                           })}
                           disabled={updateStatusMutation.isPending}
-                          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transform hover:scale-102 transition-all duration-200 h-8 text-sm"
                         >
-                          <Utensils className="mr-2 h-4 w-4" />
+                          <Utensils className="mr-1 h-3 w-3" />
                           Mark Served
                         </Button>
                       )}
@@ -421,14 +421,14 @@ export default function KitchenPOS() {
           })}
         </div>
       ) : (
-        <div className="text-center py-16">
-          <div className="bg-slate-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ChefHat className="w-12 h-12 text-slate-400" />
+        <div className="text-center py-12">
+          <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ChefHat className="w-8 h-8 text-slate-400" />
           </div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-2">
+          <h3 className="text-lg font-bold text-slate-900 mb-2">
             {selectedStatus === "all" ? "No Active Orders" : `No ${selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)} Orders`}
           </h3>
-          <p className="text-slate-500 text-lg max-w-md mx-auto">
+          <p className="text-slate-500 text-sm max-w-sm mx-auto">
             {selectedStatus === "all" 
               ? "New orders will appear here in real-time as they come in from the POS system" 
               : `${selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)} orders will be displayed here when available`}
