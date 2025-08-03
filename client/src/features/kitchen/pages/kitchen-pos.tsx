@@ -40,6 +40,7 @@ export default function KitchenPOS() {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedOrderType, setSelectedOrderType] = useState("all");
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [previousNewOrderCount, setPreviousNewOrderCount] = useState(0);
   const { formatCurrencyValue } = useCurrency();
 
   // Fetch kitchen orders
@@ -97,30 +98,77 @@ export default function KitchenPOS() {
     "delivery": orders.filter(o => o.orderType === "delivery").length,
   };
 
-  // Play notification sound for new orders
+  // Enhanced notification system for new orders with ring sound and vibration
   useEffect(() => {
-    if (audioEnabled && statusCounts.new > 0) {
-      // Simple beep sound using Web Audio API
+    // Check if there are actually new orders (increased count)
+    if (audioEnabled && statusCounts.new > previousNewOrderCount && statusCounts.new > 0) {
+      console.log(`🔔 New kitchen order detected! Count increased from ${previousNewOrderCount} to ${statusCounts.new}`);
+      
+      // Play ring sound
       try {
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
         
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        // Create a proper ring sound with multiple tones
+        const playRingTone = (frequency: number, startTime: number, duration: number) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.frequency.value = frequency;
+          oscillator.type = 'sine';
+          
+          // Fade in and out for smoother sound
+          gainNode.gain.setValueAtTime(0, startTime);
+          gainNode.gain.linearRampToValueAtTime(0.15, startTime + 0.05);
+          gainNode.gain.linearRampToValueAtTime(0.15, startTime + duration - 0.05);
+          gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+          
+          oscillator.start(startTime);
+          oscillator.stop(startTime + duration);
+        };
         
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-        gainNode.gain.value = 0.1;
+        // Play a series of ring tones (like a phone ring)
+        const now = audioContext.currentTime;
+        // First ring: high-low pattern
+        playRingTone(1000, now, 0.3);
+        playRingTone(800, now + 0.3, 0.3);
+        // Short pause
+        // Second ring: high-low pattern
+        playRingTone(1000, now + 0.8, 0.3);
+        playRingTone(800, now + 1.1, 0.3);
+        // Third ring for emphasis
+        playRingTone(1200, now + 1.6, 0.4);
         
-        oscillator.start();
-        oscillator.stop(audioContext.currentTime + 0.2);
       } catch (error) {
-        // Fallback - silent notification if audio fails
-        console.log('New kitchen order notification');
+        console.log('Audio notification failed, using fallback notification');
       }
+      
+      // Add vibration if supported
+      try {
+        if ('vibrate' in navigator) {
+          // Vibration pattern: short-pause-short-pause-long
+          navigator.vibrate([200, 100, 200, 100, 500]);
+          console.log('📳 Vibration triggered for new kitchen order');
+        } else {
+          console.log('Vibration not supported on this device');
+        }
+      } catch (error) {
+        console.log('Vibration failed:', error);
+      }
+      
+      // Show enhanced toast notification
+      toast({
+        title: "🔔 New Kitchen Order!",
+        description: `${statusCounts.new} new order${statusCounts.new > 1 ? 's' : ''} waiting to be prepared`,
+        duration: 5000,
+      });
     }
-  }, [statusCounts.new, audioEnabled]);
+    
+    // Update the previous count for next comparison
+    setPreviousNewOrderCount(statusCounts.new);
+  }, [statusCounts.new, audioEnabled, previousNewOrderCount, toast]);
 
   const getOrderIcon = (orderType: string) => {
     switch (orderType) {
@@ -196,9 +244,10 @@ export default function KitchenPOS() {
               className={`text-white hover:bg-white/20 backdrop-blur-sm border border-white/20 text-xs px-2 py-1 h-7 ${
                 audioEnabled ? 'bg-white/20' : 'bg-transparent'
               }`}
+              title={audioEnabled ? 'Ring & vibration enabled' : 'Ring & vibration disabled'}
             >
               <Bell className="h-3 w-3 mr-1" />
-              {audioEnabled ? 'On' : 'Off'}
+              {audioEnabled ? 'Ring On' : 'Ring Off'}
             </Button>
             <Button
               variant="ghost"
