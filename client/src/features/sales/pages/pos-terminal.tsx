@@ -1029,6 +1029,8 @@ export default function POSTerminal() {
       orderType: orderType,
       tableNumber: orderType === 'dine-in' ? tableNumber : null,
       specialInstructions: (orderType === 'dine-in' || orderType === 'takeaway' || orderType === 'delivery') ? specialInstructions : null,
+      // Set kitchen status for kitchen orders (dine-in, takeaway, delivery)
+      kitchenStatus: (orderType === 'dine-in' || orderType === 'takeaway' || orderType === 'delivery') ? 'new' : null,
       items: cart.map(item => ({
         productId: item.id,
         quantity: item.quantity,
