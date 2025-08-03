@@ -137,6 +137,11 @@ export default function POSTerminal() {
 
   // Layout management state
   const [posLayout, setPosLayout] = useState<'grid' | 'search'>('grid');
+  
+  // Kitchen order state
+  const [orderType, setOrderType] = useState<'sale' | 'dine-in' | 'takeaway' | 'delivery'>('sale');
+  const [tableNumber, setTableNumber] = useState<string>("");
+  const [specialInstructions, setSpecialInstructions] = useState<string>("");
 
   // Customer search functionality with autocomplete
   const handleCustomerSearchChange = (value: string) => {
@@ -707,6 +712,10 @@ export default function POSTerminal() {
       setCart([]);
       setSelectedCustomerId(null);
       setAmountReceived(0);
+      // Reset kitchen order fields
+      setOrderType('sale');
+      setTableNumber('');
+      setSpecialInstructions('');
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
     },
     onError: (error) => {
@@ -1016,6 +1025,10 @@ export default function POSTerminal() {
       paymentMethod,
       customerId: selectedCustomerId,
       customer: selectedCustomer || { name: 'Walk-in Customer' },
+      // Kitchen order fields
+      orderType: orderType,
+      tableNumber: orderType === 'dine-in' ? tableNumber : null,
+      specialInstructions: (orderType === 'dine-in' || orderType === 'takeaway' || orderType === 'delivery') ? specialInstructions : null,
       items: cart.map(item => ({
         productId: item.id,
         quantity: item.quantity,
@@ -1814,6 +1827,70 @@ export default function POSTerminal() {
                     }
                   </span>
                 </div>
+              </div>
+
+              {/* Kitchen Order Details Section */}
+              <div className="bg-slate-50 border-b border-gray-400 p-3">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-3">
+                      <label className="text-xs font-bold text-gray-700">Order Type:</label>
+                      <Select value={orderType} onValueChange={(value: 'sale' | 'dine-in' | 'takeaway' | 'delivery') => setOrderType(value)}>
+                        <SelectTrigger className="text-xs border border-gray-300 px-2 py-1 rounded bg-white shadow-sm w-28 focus:ring-2 focus:ring-blue-500">
+                          <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sale">Regular Sale</SelectItem>
+                          <SelectItem value="dine-in">Dine-In</SelectItem>
+                          <SelectItem value="takeaway">Takeaway</SelectItem>
+                          <SelectItem value="delivery">Delivery</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Table Number - only show for dine-in */}
+                    {orderType === 'dine-in' && (
+                      <div className="flex items-center space-x-2">
+                        <label className="text-xs font-bold text-gray-700">Table:</label>
+                        <Input
+                          placeholder="5"
+                          value={tableNumber}
+                          onChange={(e) => setTableNumber(e.target.value)}
+                          className="text-xs border border-gray-300 px-2 py-1 rounded bg-white shadow-sm w-16 focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Order Status Badge */}
+                  <Badge 
+                    className={`px-2 py-1 text-xs font-medium ${
+                      orderType === 'dine-in' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                      orderType === 'takeaway' ? 'bg-green-100 text-green-700 border border-green-200' :
+                      orderType === 'delivery' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                      'bg-gray-100 text-gray-700 border border-gray-200'
+                    }`}
+                  >
+                    {orderType === 'dine-in' ? 'Dine-In' :
+                     orderType === 'takeaway' ? 'Takeaway' :
+                     orderType === 'delivery' ? 'Delivery' : 'Regular Sale'}
+                    {orderType === 'dine-in' && tableNumber && ` - Table ${tableNumber}`}
+                  </Badge>
+                </div>
+                
+                {/* Special Instructions - only show for kitchen orders */}
+                {(orderType === 'dine-in' || orderType === 'takeaway' || orderType === 'delivery') && (
+                  <div>
+                    <label className="text-xs font-bold text-gray-700 block mb-1">Special Instructions for Kitchen:</label>
+                    <textarea
+                      placeholder="e.g. No onions, extra spicy, well done..."
+                      value={specialInstructions}
+                      onChange={(e) => setSpecialInstructions(e.target.value)}
+                      className="text-xs border border-gray-300 px-2 py-1 rounded bg-white shadow-sm w-full h-12 focus:ring-2 focus:ring-blue-500 resize-none"
+                      rows={2}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Search Bar */}
