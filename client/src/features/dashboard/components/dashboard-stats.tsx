@@ -72,13 +72,11 @@ export default function DashboardStats() {
             <div className="flex items-center">
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {isLoading ? (
-                    <div className="h-9 bg-gray-200 rounded animate-pulse"></div>
-                  ) : (
-                    stat.value
-                  )}
-                </p>
+                {isLoading ? (
+                  <div className="h-9 bg-gray-200 rounded animate-pulse mt-2"></div>
+                ) : (
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
+                )}
                 <div className="mt-2 flex items-center text-sm">
                   <span className={`px-2 py-1 rounded-full flex items-center ${
                     stat.changeType === "increase" 
