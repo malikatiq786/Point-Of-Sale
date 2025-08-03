@@ -1325,12 +1325,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/sales', (req, res) => {
+  app.post('/api/sales', async (req, res) => {
     try {
       console.log('SIMPLE SALES API: Received request body:', JSON.stringify(req.body, null, 2));
-      const { totalAmount, paidAmount, status, paymentMethod, customerId, customer, items } = req.body;
+      const { totalAmount, paidAmount, status, paymentMethod, customerId, customer, items, orderType, tableNumber, specialInstructions, kitchenStatus } = req.body;
       
-      console.log('SIMPLE SALES API: Processing sale:', { totalAmount, paidAmount, status, paymentMethod, customerId, items: items?.length });
+      console.log('SIMPLE SALES API: Processing sale:', { totalAmount, paidAmount, status, paymentMethod, customerId, items: items?.length, orderType, tableNumber });
       
       // Validate required fields
       if (!totalAmount || !paidAmount || !items || items.length === 0) {
@@ -1344,14 +1344,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Create sale in database for kitchen integration
+      const dbSaleData = {
+        customerId: customerId || null,
+        userId: (req.session as any)?.user?.id || null,
+        totalAmount: totalAmount.toString(),
+        paidAmount: paidAmount.toString(),
+        status: status || 'completed',
+        orderType: orderType || 'sale',
+        tableNumber: tableNumber || null,
+        kitchenStatus: kitchenStatus || (orderType && orderType !== 'sale' ? 'new' : null),
+        specialInstructions: specialInstructions || null,
+      };
+      
+      console.log('SIMPLE SALES API: Creating sale in database:', dbSaleData);
+      const dbSale = await storage.createSale(dbSaleData);
+      
       const saleData: any = {
-        id: Date.now(),
+        id: dbSale.id,
         customerId: customerId || null,
         customerName: customer?.name || customersStorage.find((c: any) => c.id == customerId)?.name || 'Walk-in Customer',
         totalAmount: totalAmount,
         paidAmount: paidAmount,
         status: status || 'completed',
         paymentMethod: paymentMethod || 'cash',
+        orderType: orderType || 'sale',
+        tableNumber: tableNumber || null,
+        kitchenStatus: kitchenStatus || (orderType && orderType !== 'sale' ? 'new' : null),
+        specialInstructions: specialInstructions || null,
         saleDate: new Date().toISOString(),
         items: items.map((item: any) => ({
           productId: item.productId,
@@ -1411,6 +1431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log('SIMPLE SALES API: Sale created successfully:', saleData);
+      console.log('SIMPLE SALES API: Database sale ID:', dbSale.id);
       res.status(201).json(saleData);
     } catch (error) {
       console.error('SIMPLE SALES API: Create sale error:', error);
