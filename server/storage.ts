@@ -33,7 +33,7 @@ export interface IStorage {
   // Role operations
   getRoles(): Promise<Role[]>;
   getUserWithRole(id: string): Promise<(User & { role: Role | null }) | undefined>;
-  getUserByEmail(email: string): Promise<(User & { role: string }) | undefined>;
+  getUserByEmail(email: string): Promise<(User & { role: string | null }) | undefined>;
   
   // Product operations
   getProducts(limit?: number): Promise<(Product & { 
@@ -118,12 +118,13 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getUserByEmail(email: string): Promise<(User & { role: string }) | undefined> {
+  async getUserByEmail(email: string): Promise<(User & { role: string | null }) | undefined> {
     const result = await db
       .select({
         id: users.id,
         name: users.name,
         email: users.email,
+        password: users.password,
         firstName: users.firstName,
         lastName: users.lastName,
         profileImageUrl: users.profileImageUrl,
