@@ -70,8 +70,11 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-primary-500 mx-auto mb-2"></div>
+          <p className="text-sm text-gray-600">Loading dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -82,29 +85,29 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Welcome back, {user?.name || 'User'}! Here's your business overview.</p>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-sm sm:text-base text-gray-600">Welcome back, {user?.name || 'User'}! Here's your business overview.</p>
       </div>
 
       <DashboardStats />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mt-4 sm:mt-6">
+        <div className="lg:col-span-2 order-2 lg:order-1">
           <RecentActivities />
         </div>
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 order-1 lg:order-2">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Plus className="mr-2 h-5 w-5" />
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="flex items-center text-base sm:text-lg">
+                <Plus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 Quick Actions
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2 sm:space-y-3">
               <Button 
                 onClick={() => setShowQuickSale(true)}
-                className="w-full justify-start"
+                className="w-full justify-start h-10 sm:h-auto text-sm sm:text-base"
                 variant="outline"
               >
                 <Package className="mr-2 h-4 w-4" />
@@ -135,10 +138,11 @@ export default function Dashboard() {
                     });
                   }
                 }}
-                className="w-full justify-start bg-green-600 hover:bg-green-700 text-white"
+                className="w-full justify-start bg-green-600 hover:bg-green-700 text-white h-10 sm:h-auto text-sm sm:text-base"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Add Sample Data
+                <span className="hidden sm:inline">Add Sample Data</span>
+                <span className="sm:hidden">Sample Data</span>
               </Button>
             </CardContent>
           </Card>
