@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { AppLayout } from "@/layouts";
+import { KitchenLayout } from "@/layouts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -221,7 +221,7 @@ export default function KitchenPOS() {
   };
 
   return (
-    <AppLayout>
+    <KitchenLayout>
       {/* Compact Header */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 -mx-6 -mt-6 px-6 pt-4 pb-5 mb-6">
         <div className="flex items-center justify-between">
@@ -549,6 +549,6 @@ export default function KitchenPOS() {
           </p>
         </div>
       )}
-    </AppLayout>
+    </KitchenLayout>
   );
 }

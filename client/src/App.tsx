@@ -33,7 +33,10 @@ import SupplierLedgers from "@/features/suppliers/pages/supplier-ledgers";
 import KitchenPOS from "@/features/kitchen/pages/kitchen-pos";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  // Check if user is kitchen staff
+  const isKitchenUser = user?.role === 'Kitchen Staff';
 
   return (
     <Switch>
@@ -46,7 +49,21 @@ function Router() {
           <Route path="/login" component={Login} />
           <Route path="*" component={Login} />
         </>
+      ) : isKitchenUser ? (
+        // Kitchen users only have access to kitchen screen
+        <>
+          <Route path="/login" component={Login} />
+          <Route path="/kitchen-pos" component={KitchenPOS} />
+          {/* Redirect all other paths to kitchen for kitchen users */}
+          <Route path="*">
+            {() => {
+              window.location.href = '/kitchen-pos';
+              return null;
+            }}
+          </Route>
+        </>
       ) : (
+        // Regular users have access to all features
         <>
           {/* Allow access to login page even when authenticated for testing */}
           <Route path="/login" component={Login} />
