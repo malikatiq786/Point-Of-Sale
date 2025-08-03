@@ -278,82 +278,60 @@ router.get('/dashboard/activities', isAuthenticated, dashboardController.getActi
 router.get('/dashboard/top-products', isAuthenticated, dashboardController.getTopProducts as any);
 router.get('/dashboard/recent-transactions', isAuthenticated, dashboardController.getRecentTransactions as any);
 
-// Kitchen POS routes
+// Kitchen POS debug route
+router.get('/kitchen/test', async (req: any, res: any) => {
+  try {
+    const testQuery = await db.select().from(schema.sales).limit(3);
+    res.json({
+      message: 'Kitchen API test',
+      count: testQuery.length,
+      sample: testQuery
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Kitchen POS routes - Simplified for debugging
 router.get('/kitchen/orders/:status?', isAuthenticated, async (req: any, res: any) => {
   try {
-    const status = req.params.status;
-    console.log('Kitchen orders requested for status:', status);
+    console.log('=== Kitchen API called ===');
     
-    // Get orders with kitchen-related statuses
-    let whereCondition;
-    if (status && status !== 'all') {
-      whereCondition = eq(schema.sales.kitchenStatus, status);
-    } else {
-      // Only show orders that are not regular sales (have orderType or kitchenStatus)
-      whereCondition = ne(schema.sales.kitchenStatus, 'completed');
-    }
-    
-    const orders = await db
-      .select({
-        id: schema.sales.id,
-        orderType: schema.sales.orderType,
-        tableNumber: schema.sales.tableNumber,
-        kitchenStatus: schema.sales.kitchenStatus,
-        saleDate: schema.sales.saleDate,
-        totalAmount: schema.sales.totalAmount,
-        specialInstructions: schema.sales.specialInstructions,
-        estimatedTime: schema.sales.estimatedTime,
-        customer: {
-          id: schema.customers.id,
-          name: schema.customers.name,
-        },
-      })
+    // Simple query first - get all sales with kitchen statuses
+    const allSales = await db
+      .select()
       .from(schema.sales)
-      .leftJoin(schema.customers, eq(schema.sales.customerId, schema.customers.id))
-      .where(whereCondition)
+      .where(ne(schema.sales.kitchenStatus, 'completed'))
       .orderBy(desc(schema.sales.saleDate))
-      .limit(50);
-
-    // Get sale items for each order
-    const ordersWithItems = await Promise.all(
-      orders.map(async (order: any) => {
-        const items = await db
-          .select({
-            id: schema.saleItems.id,
-            quantity: schema.saleItems.quantity,
-            productVariant: {
-              product: {
-                name: schema.products.name,
-              },
-            },
-          })
-          .from(schema.saleItems)
-          .leftJoin(schema.productVariants, eq(schema.saleItems.productVariantId, schema.productVariants.id))
-          .leftJoin(schema.products, eq(schema.productVariants.productId, schema.products.id))
-          .where(eq(schema.saleItems.saleId, order.id));
-
-        return {
-          ...order,
-          items: items.length > 0 ? items : [
-            {
-              id: 1,
-              quantity: "1",
-              productVariant: {
-                product: {
-                  name: "Sample Item"
-                }
-              }
-            }
-          ]
-        };
-      })
-    );
-
-    console.log(`Found ${ordersWithItems.length} kitchen orders`);
-    res.json(ordersWithItems);
+      .limit(10);
+    
+    console.log(`=== Found ${allSales.length} sales total`);
+    
+    // Simple response for now
+    const simplifiedOrders = allSales.map(sale => ({
+      id: sale.id,
+      orderType: sale.orderType || 'sale',
+      tableNumber: sale.tableNumber,
+      kitchenStatus: sale.kitchenStatus || 'new',
+      saleDate: sale.saleDate,
+      totalAmount: sale.totalAmount,
+      specialInstructions: sale.specialInstructions,
+      estimatedTime: sale.estimatedTime,
+      customer: { name: 'Test Customer' },
+      items: [{
+        id: 1,
+        quantity: "1",
+        productVariant: {
+          product: { name: "Test Item" }
+        }
+      }]
+    }));
+    
+    console.log('=== Returning orders:', simplifiedOrders.length);
+    res.json(simplifiedOrders);
   } catch (error) {
-    console.error('Get kitchen orders error:', error);
-    res.status(500).json({ message: 'Failed to fetch kitchen orders' });
+    console.error('=== Kitchen orders error:', error);
+    res.status(500).json({ message: 'Failed to fetch kitchen orders', error: error.message });
   }
 });
 
