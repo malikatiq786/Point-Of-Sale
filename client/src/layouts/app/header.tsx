@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Bell, User, Settings, LogOut } from "lucide-react";
+import { Bell, User, Settings, LogOut, Menu } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import LogoutButton from "@/components/logout-button";
 
-function AppHeader() {
+interface AppHeaderProps {
+  onMenuClick?: () => void;
+}
+
+function AppHeader({ onMenuClick }: AppHeaderProps) {
   const { user } = useAuth();
 
   const handleLogout = async () => {
@@ -33,20 +37,31 @@ function AppHeader() {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-semibold text-gray-900">
-            Universal POS System
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          {/* Mobile menu button */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="lg:hidden p-2"
+            onClick={onMenuClick}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          
+          <h1 className="text-lg sm:text-xl font-semibold text-gray-900">
+            <span className="hidden sm:inline">Universal POS System</span>
+            <span className="sm:hidden">Universal POS</span>
           </h1>
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
             v1.0
           </Badge>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4">
           {/* Notifications */}
-          <Button variant="ghost" size="sm" className="relative">
+          <Button variant="ghost" size="sm" className="relative hidden sm:flex">
             <Bell className="h-5 w-5" />
             <Badge 
               variant="destructive" 
@@ -57,13 +72,16 @@ function AppHeader() {
           </Button>
 
           {/* Quick Logout Button */}
-          <LogoutButton />
+          <div className="hidden sm:block">
+            <LogoutButton />
+          </div>
           
           {/* Test Login Page Button */}
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => window.open('/login', '_blank')}
+            className="hidden md:flex"
           >
             Test Login
           </Button>
@@ -73,15 +91,15 @@ function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="flex items-center space-x-2">
                 <User className="h-5 w-5" />
-                <span className="text-sm font-medium">{user?.name || 'User'}</span>
+                <span className="text-sm font-medium hidden sm:inline">{user?.name || 'User'}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <div className="flex items-center justify-start gap-2 p-2">
                 <div className="flex flex-col space-y-1 leading-none">
-                  <p className="font-medium">{user?.name}</p>
+                  <p className="font-medium">{user?.name || 'User'}</p>
                   <p className="w-[200px] truncate text-sm text-muted-foreground">
-                    {user?.email}
+                    {user?.email || 'No email'}
                   </p>
                 </div>
               </div>

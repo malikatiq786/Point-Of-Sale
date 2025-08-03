@@ -170,7 +170,7 @@ export default function Settings() {
 
         <main className="flex-1 overflow-y-auto p-6">
           <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 text-xs sm:text-sm">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="business">Business</TabsTrigger>
               <TabsTrigger value="currencies">Currencies</TabsTrigger>

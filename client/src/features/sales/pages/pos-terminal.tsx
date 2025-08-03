@@ -2362,7 +2362,7 @@ export default function POSTerminal() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4 max-h-96 overflow-y-auto">
                     {isLoading ? (
                       Array.from({ length: 8 }).map((_, index) => (
                         <div key={index} className="bg-gray-100 rounded-xl h-24 animate-pulse" />

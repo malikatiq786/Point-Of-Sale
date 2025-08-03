@@ -99,8 +99,8 @@ export default function Products() {
       </div>
 
       {/* Search and Add Product */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="relative w-96">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <div className="relative w-full sm:w-96">
           <Input 
             type="text" 
             placeholder="Search products..." 
@@ -112,7 +112,7 @@ export default function Products() {
         </div>
         
         <Link href="/products/add">
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Add Product
           </Button>
@@ -141,7 +141,7 @@ export default function Products() {
           </div>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Category Filter */}
             <div>
               <label className="text-xs font-medium text-gray-600 mb-1 block">Category</label>
@@ -285,7 +285,8 @@ export default function Products() {
               </div>
             </div>
           ) : filteredProducts.length > 0 ? (
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">#</TableHead>
@@ -381,7 +382,8 @@ export default function Products() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           ) : (
             <div className="text-center py-12">
               <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />

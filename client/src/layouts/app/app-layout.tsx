@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import AppHeader from "./header";
 import AppFooter from "./footer";
 import Sidebar from "@/components/sidebar";
@@ -10,16 +10,25 @@ interface AppLayoutProps {
 
 function AppLayout({ children }: AppLayoutProps) {
   const { user } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <AppHeader />
+      <AppHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       
-      <div className="flex flex-1">
-        <Sidebar user={user} />
+      <div className="flex flex-1 relative">
+        {/* Mobile sidebar backdrop */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden" 
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
         
-        <main className="flex-1 overflow-auto">
-          <div className="p-6">
+        <Sidebar user={user} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        
+        <main className="flex-1 overflow-auto lg:ml-0">
+          <div className="p-4 sm:p-6">
             {children}
           </div>
         </main>
