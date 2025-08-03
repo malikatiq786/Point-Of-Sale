@@ -553,32 +553,6 @@ export default function POSTerminal() {
     };
   }, [scanTimeout]);
 
-  // Handle Enter key in payment dialog to complete sale
-  useEffect(() => {
-    const handlePaymentDialogKeyPress = (e: KeyboardEvent) => {
-      if (showPaymentDialog && e.key === 'Enter') {
-        e.preventDefault();
-        // Check if the complete sale button would be enabled
-        const isDisabled = 
-          processSaleMutation.isPending || 
-          (paymentMethod === 'cash' && amountReceived <= 0) ||
-          (!selectedCustomerId && paymentMethod === 'cash' && amountReceived < getGrandTotal());
-        
-        if (!isDisabled) {
-          processSale();
-        }
-      }
-    };
-
-    if (showPaymentDialog) {
-      document.addEventListener('keydown', handlePaymentDialogKeyPress);
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handlePaymentDialogKeyPress);
-    };
-  }, [showPaymentDialog, processSaleMutation.isPending, paymentMethod, amountReceived, selectedCustomerId]);
-
   // Manual search trigger for Find Now button
   const triggerSearch = () => {
     if (searchQuery.trim()) {
@@ -736,6 +710,32 @@ export default function POSTerminal() {
       });
     },
   });
+
+  // Handle Enter key in payment dialog to complete sale
+  useEffect(() => {
+    const handlePaymentDialogKeyPress = (e: KeyboardEvent) => {
+      if (showPaymentDialog && e.key === 'Enter') {
+        e.preventDefault();
+        // Check if the complete sale button would be enabled
+        const isDisabled = 
+          processSaleMutation.isPending || 
+          (paymentMethod === 'cash' && amountReceived <= 0) ||
+          (!selectedCustomerId && paymentMethod === 'cash' && amountReceived < getGrandTotal());
+        
+        if (!isDisabled) {
+          processSale();
+        }
+      }
+    };
+
+    if (showPaymentDialog) {
+      document.addEventListener('keydown', handlePaymentDialogKeyPress);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handlePaymentDialogKeyPress);
+    };
+  }, [showPaymentDialog, processSaleMutation.isPending, paymentMethod, amountReceived, selectedCustomerId]);
 
   // Create customer ledger entry mutation
   const createLedgerMutation = useMutation({
