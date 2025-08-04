@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +18,13 @@ export default function Customers() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: ""
+  });
 
   // Fetch customers
   const { data: customers = [], isLoading } = useQuery({
@@ -27,6 +37,39 @@ export default function Customers() {
     customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     customer.phone?.includes(searchQuery)
   );
+
+  const createCustomerMutation = useMutation({
+    mutationFn: (customerData: any) => apiRequest("POST", "/api/customers", customerData),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Customer created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      setShowAddDialog(false);
+      setNewCustomer({ name: "", email: "", phone: "", address: "" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create customer",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateCustomer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCustomer.name) {
+      toast({
+        title: "Error",
+        description: "Customer name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    createCustomerMutation.mutate(newCustomer);
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -53,10 +96,68 @@ export default function Customers() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               </div>
               
-              <Button className="bg-primary-500 text-white hover:bg-primary-600">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Customer
-              </Button>
+              <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                <DialogTrigger asChild>
+                  <Button className="bg-primary-500 text-white hover:bg-primary-600">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Customer
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Customer</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateCustomer} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Name *</Label>
+                      <Input
+                        id="name"
+                        value={newCustomer.name}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                        placeholder="Enter customer name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newCustomer.email}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                        placeholder="Enter email address"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        value={newCustomer.phone}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Textarea
+                        id="address"
+                        value={newCustomer.address}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                        placeholder="Enter customer address"
+                        rows={3}
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-3">
+                      <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={createCustomerMutation.isPending}>
+                        {createCustomerMutation.isPending ? "Creating..." : "Create Customer"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </header>
@@ -87,7 +188,10 @@ export default function Customers() {
                 <p className="text-gray-500 text-center mb-6">
                   {searchQuery ? "Try adjusting your search terms" : "Get started by adding your first customer"}
                 </p>
-                <Button className="bg-primary-500 text-white hover:bg-primary-600">
+                <Button 
+                  className="bg-primary-500 text-white hover:bg-primary-600"
+                  onClick={() => setShowAddDialog(true)}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Customer
                 </Button>
