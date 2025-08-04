@@ -1695,6 +1695,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product management routes
   app.post("/api/products", isAuthenticated, async (req: any, res) => {
     try {
+      const { name, brandId } = req.body;
+      
+      // Validate required fields
+      if (!name) {
+        return res.status(400).json({ message: "Product name is required" });
+      }
+      
+      if (!brandId) {
+        return res.status(400).json({ message: "Brand is required" });
+      }
+
+      // Check if product with this name and brand already exists
+      const exists = await storage.checkProductExists(name, brandId);
+      if (exists) {
+        return res.status(400).json({ 
+          message: "A product with this name already exists for the selected brand. Please choose a different name or brand." 
+        });
+      }
+
       const product = await storage.createProduct(req.body);
       
       // Log activity - handle both user formats

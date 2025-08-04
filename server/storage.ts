@@ -62,6 +62,7 @@ export interface IStorage {
   searchProducts(query: string): Promise<Product[]>;
   createProduct(product: any): Promise<Product>;
   deleteProduct(id: number): Promise<void>;
+  checkProductExists(name: string, brandId: number): Promise<boolean>;
   createCategory(category: any): Promise<any>;
   createBrand(brand: any): Promise<any>;
   updateBrand(id: number, brand: any): Promise<any>;
@@ -262,6 +263,19 @@ export class DatabaseStorage implements IStorage {
       console.error(`STORAGE: Error deleting product ${id}:`, error);
       throw error;
     }
+  }
+
+  async checkProductExists(name: string, brandId: number): Promise<boolean> {
+    const [existingProduct] = await db
+      .select({ id: products.id })
+      .from(products)
+      .where(and(
+        eq(products.name, name.trim()),
+        eq(products.brandId, brandId)
+      ))
+      .limit(1);
+    
+    return !!existingProduct;
   }
 
   async getCustomers(limit = 50): Promise<Customer[]> {
