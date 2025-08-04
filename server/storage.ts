@@ -599,8 +599,8 @@ export class DatabaseStorage implements IStorage {
     await db.delete(cartItems).where(eq(cartItems.onlineCustomerId, onlineCustomerId));
   }
   
-  // Menu operations
-  async getMenuProducts(): Promise<(Pick<Product, 'id' | 'name' | 'description' | 'price' | 'image' | 'categoryId'> & { category: { id: number; name: string } | null })[]> {
+  // Menu operations - Use same products as POS system
+  async getMenuProducts(): Promise<(Pick<Product, 'id' | 'name' | 'description' | 'price' | 'image' | 'categoryId' | 'stock'> & { category: { id: number; name: string } | null })[]> {
     return await db
       .select({
         id: products.id,
@@ -609,6 +609,7 @@ export class DatabaseStorage implements IStorage {
         price: products.price,
         image: products.image,
         categoryId: products.categoryId,
+        stock: products.stock,
         category: {
           id: categories.id,
           name: categories.name,
@@ -619,8 +620,9 @@ export class DatabaseStorage implements IStorage {
       .where(sql`${products.price} > 0`); // Only show products with price > 0
   }
   
-  async getMenuCategories(): Promise<MenuCategory[]> {
-    return await db.select().from(menuCategories).where(eq(menuCategories.isActive, true));
+  // Use same categories as POS system
+  async getMenuCategories(): Promise<any[]> {
+    return await db.select().from(categories);
   }
   
   // Settings operations
