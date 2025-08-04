@@ -820,9 +820,7 @@ export default function POSTerminal() {
       updateQuantity(product.id, 1);
     } else {
       // Set default price based on product category
-      const defaultPrice = product.category?.name === 'Electronics' ? 599.99 : 
-                           product.category?.name === 'Food & Beverages' ? 2.99 :
-                           product.category?.name === 'Clothing' ? 79.99 : 19.99;
+      const defaultPrice = parseFloat(product.price) || 0;
       
       const newItem: CartItem = {
         id: product.id,
@@ -1061,12 +1059,12 @@ export default function POSTerminal() {
       if (unpaidAmount > 0 && selectedCustomerId) {
         toast({
           title: "Partial Payment Processed",
-          description: `$${unpaidAmount.toFixed(2)} added to customer ledger`,
+          description: `${formatCurrencyValue(unpaidAmount)} added to customer ledger`,
         });
       } else if (overpaidAmount > 0 && selectedCustomerId) {
         toast({
           title: "Overpayment Credit Added",
-          description: `$${overpaidAmount.toFixed(2)} credit added to customer ledger`,
+          description: `${formatCurrencyValue(overpaidAmount)} credit added to customer ledger`,
         });
       }
       
@@ -1598,7 +1596,7 @@ export default function POSTerminal() {
                   {registerStatus === 'open' && selectedRegister ? (
                     <Badge variant="default" className="bg-gradient-to-r from-emerald-500 to-green-500 text-white px-4 py-2 rounded-xl font-semibold shadow-md">
                       <CheckCircle className="w-5 h-5 mr-2" />
-                      {selectedRegister.name} - ${cashDrawerBalance.toFixed(2)}
+                      {selectedRegister.name} - {formatCurrencyValue(cashDrawerBalance)}
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="bg-gradient-to-r from-red-50 to-rose-50 text-red-700 border-red-300 px-4 py-2 rounded-xl font-semibold">
@@ -1963,9 +1961,7 @@ export default function POSTerminal() {
                                   </div>
                                 </div>
                                 <div className="text-blue-600 font-medium">
-                                  {product.category?.name === 'Electronics' ? '$599.99' : 
-                                   product.category?.name === 'Food & Beverages' ? '$2.99' :
-                                   product.category?.name === 'Clothing' ? '$79.99' : '$19.99'}
+                                  {formatCurrencyValue(parseFloat(product.price) || 0)}
                                 </div>
                               </div>
                             </div>
@@ -2143,9 +2139,7 @@ export default function POSTerminal() {
                       ))
                     ) : searchResults.length > 0 ? (
                       searchResults.map((product: any, index: number) => {
-                        const price = product.category?.name === 'Electronics' ? 599.99 : 
-                                     product.category?.name === 'Food & Beverages' ? 2.99 :
-                                     product.category?.name === 'Clothing' ? 79.99 : 19.99;
+                        const price = parseFloat(product.price) || 0;
                         return (
                           <tr key={product.id} className="border-b border-gray-200 hover:bg-blue-50">
                             <td className="py-1 px-2 text-center border-r border-gray-200">{index + 1}</td>
@@ -2474,9 +2468,7 @@ export default function POSTerminal() {
                           </div>
                           <div className="text-sm font-bold text-blue-600">
                             {formatCurrencyValue(
-                              product.category?.name === 'Electronics' ? 599.99 : 
-                              product.category?.name === 'Food & Beverages' ? 2.99 :
-                              product.category?.name === 'Clothing' ? 79.99 : 19.99
+                              parseFloat(product.price) || 0
                             )}
                           </div>
                         </Button>

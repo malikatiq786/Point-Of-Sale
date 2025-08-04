@@ -24,7 +24,7 @@ export default function DashboardStats() {
   const statCards = [
     {
       title: "Today's Sales",
-      value: stats?.todaySales ? formatCurrencyValue(stats.todaySales.replace(/[^\d.-]/g, '')) : formatCurrencyValue(0),
+      value: stats?.todaySales ? formatCurrencyValue(parseFloat(stats.todaySales) || 0) : formatCurrencyValue(0),
       change: "+12.5%",
       changeType: "increase" as const,
       icon: DollarSign,

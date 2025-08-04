@@ -447,7 +447,7 @@ export class DatabaseStorage implements IStorage {
       .where(sql`EXTRACT(MONTH FROM ${sales.saleDate}) = EXTRACT(MONTH FROM CURRENT_DATE)`);
 
     return {
-      todaySales: `$${todaySalesResult.total || '0'}`,
+      todaySales: todaySalesResult.total || '0',
       totalProducts: totalProductsResult.count || 0,
       lowStock: lowStockResult.count || 0,
       activeCustomers: activeCustomersResult.count || 0,

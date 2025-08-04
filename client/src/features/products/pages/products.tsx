@@ -275,10 +275,10 @@ export default function Products() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Prices</SelectItem>
-                  <SelectItem value="under-10">Under $10</SelectItem>
-                  <SelectItem value="10-50">$10 - $50</SelectItem>
-                  <SelectItem value="50-100">$50 - $100</SelectItem>
-                  <SelectItem value="over-100">Over $100</SelectItem>
+                  <SelectItem value="under-10">Under Rs 10</SelectItem>
+                  <SelectItem value="10-50">Rs 10 - Rs 50</SelectItem>
+                  <SelectItem value="50-100">Rs 50 - Rs 100</SelectItem>
+                  <SelectItem value="over-100">Over Rs 100</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -412,7 +412,7 @@ export default function Products() {
                     </TableCell>
                     <TableCell>
                       <span className="font-semibold text-green-600">
-                        ${parseFloat(product.price || '0').toFixed(2)}
+                        {formatCurrencyValue(parseFloat(product.price || '0'))}
                       </span>
                     </TableCell>
                     <TableCell>

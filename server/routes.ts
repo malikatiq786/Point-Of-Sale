@@ -2476,7 +2476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log activity
       await storage.logActivity(
         `online-${customer.id}`,
-        `Online order placed: $${totalAmount} (${orderType})`,
+        `Online order placed: Rs ${totalAmount} (${orderType})`,
         req.ip
       );
       
@@ -3037,7 +3037,7 @@ async function initializeSampleData(userId: string) {
       // Log activity
       await storage.logActivity(
         `online-${customer.id}`,
-        `Online order placed: $${totalAmount} (${orderType})`,
+        `Online order placed: Rs ${totalAmount} (${orderType})`,
         req.ip
       );
       
