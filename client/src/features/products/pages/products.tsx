@@ -28,9 +28,17 @@ export default function Products() {
   const { formatCurrencyValue } = useCurrency();
 
   // Fetch products with pagination
-  const { data: productsResponse, isLoading } = useQuery({
-    queryKey: ["/api/products", currentPage, itemsPerPage],
+  const { data: productsResponse, isLoading, error } = useQuery({
+    queryKey: [`/api/products/${currentPage}/${itemsPerPage}`],
     retry: false,
+  });
+
+  console.log('Products Query:', {
+    queryKey: `/api/products/${currentPage}/${itemsPerPage}`,
+    loading: isLoading,
+    error: error,
+    response: productsResponse,
+    productsCount: productsResponse?.products?.length || 0
   });
 
   const products = productsResponse?.products || [];
