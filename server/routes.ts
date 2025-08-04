@@ -2127,7 +2127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         onlineCustomerId: customer.id,
         productId: parseInt(productId),
         quantity: parseInt(quantity),
-        price: product.price
+        price: product.price || "0"
       });
       
       res.status(201).json(cartItem);
@@ -2143,10 +2143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { quantity, specialInstructions } = req.body;
       
-      const updatedItem = await storage.updateCartItem(parseInt(id), {
-        quantity: parseInt(quantity),
-        specialInstructions
-      });
+      const updatedItem = await storage.updateCartItem(parseInt(id), parseInt(quantity), specialInstructions);
       
       res.json(updatedItem);
     } catch (error) {
