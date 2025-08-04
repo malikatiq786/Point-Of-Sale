@@ -75,6 +75,7 @@ export default function Products() {
           warehouseId: 1, // Default to main warehouse
           reason: adjustmentData.reason,
           items: [{
+            productId: selectedProduct?.id,
             productName: selectedProduct?.name,
             quantity: adjustmentData.quantityChange,
             previousQuantity: Math.round(parseFloat(selectedProduct?.stock || '0')),

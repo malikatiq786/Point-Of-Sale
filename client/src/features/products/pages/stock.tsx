@@ -52,6 +52,7 @@ export default function Stock() {
           warehouseId: adjustmentData.warehouseId,
           reason: adjustmentData.reason,
           items: [{
+            productId: selectedStock?.productVariantId || selectedStock?.id,
             productName: selectedStock?.productName,
             quantity: adjustmentData.quantityChange,
             previousQuantity: Math.round(parseFloat(selectedStock?.quantity || '0')),
@@ -114,20 +115,35 @@ export default function Stock() {
       ? parseInt(adjustment.quantity) 
       : -parseInt(adjustment.quantity);
 
-    const productName = isAddMode ? adjustment.productName : selectedStock?.productName;
-    const currentQuantity = isAddMode ? 0 : Math.round(parseFloat(selectedStock?.quantity || '0'));
-    
-    adjustStockMutation.mutate({
-      warehouseId: isAddMode ? 1 : selectedStock.warehouseId,
-      quantityChange,
-      reason: adjustment.reason,
-      items: [{
-        productName: productName,
-        quantity: quantityChange,
-        previousQuantity: currentQuantity,
-        newQuantity: currentQuantity + quantityChange
-      }]
-    });
+    if (isAddMode) {
+      // For add mode, we only have product name, so backend will look up by name
+      adjustStockMutation.mutate({
+        warehouseId: 1,
+        quantityChange,
+        reason: adjustment.reason,
+        items: [{
+          productName: adjustment.productName,
+          quantity: quantityChange,
+          previousQuantity: 0,
+          newQuantity: quantityChange
+        }]
+      });
+    } else {
+      // For edit mode, we have the selected stock with product ID
+      const currentQuantity = Math.round(parseFloat(selectedStock?.quantity || '0'));
+      adjustStockMutation.mutate({
+        warehouseId: selectedStock.warehouseId,
+        quantityChange,
+        reason: adjustment.reason,
+        items: [{
+          productId: selectedStock?.productVariantId || selectedStock?.id,
+          productName: selectedStock?.productName,
+          quantity: quantityChange,
+          previousQuantity: currentQuantity,
+          newQuantity: currentQuantity + quantityChange
+        }]
+      });
+    }
   };
 
   return (

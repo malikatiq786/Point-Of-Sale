@@ -48,6 +48,7 @@ export default function StockManagement() {
           warehouseId: adjustmentData.warehouseId,
           reason: adjustmentData.reason,
           items: [{
+            productId: selectedStock?.productVariantId || selectedStock?.id,
             productName: selectedStock?.productName,
             quantity: adjustmentData.quantityChange,
             previousQuantity: Math.round(parseFloat(selectedStock?.quantity || '0')),
@@ -81,7 +82,7 @@ export default function StockManagement() {
     },
   });
 
-  const filteredStock = stockData.filter((stock: any) =>
+  const filteredStock = (stockData as any[]).filter((stock: any) =>
     stock.productName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     stock.variantName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     stock.warehouseName?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -148,7 +149,7 @@ export default function StockManagement() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Warehouses</SelectItem>
-            {warehouses.map((warehouse: any) => (
+            {(warehouses as any[]).map((warehouse: any) => (
               <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
                 {warehouse.name}
               </SelectItem>
@@ -174,7 +175,7 @@ export default function StockManagement() {
               <Package className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Products</p>
-                <p className="text-2xl font-bold text-gray-900">{stockData.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{(stockData as any[]).length}</p>
               </div>
             </div>
           </CardContent>
@@ -187,7 +188,7 @@ export default function StockManagement() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Low Stock</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {stockData.filter((s: any) => parseFloat(s.quantity) <= 10).length}
+                  {(stockData as any[]).filter((s: any) => parseFloat(s.quantity) <= 10).length}
                 </p>
               </div>
             </div>
@@ -203,7 +204,7 @@ export default function StockManagement() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Out of Stock</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {stockData.filter((s: any) => parseFloat(s.quantity) <= 0).length}
+                  {(stockData as any[]).filter((s: any) => parseFloat(s.quantity) <= 0).length}
                 </p>
               </div>
             </div>
@@ -217,7 +218,7 @@ export default function StockManagement() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Items</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {Math.round(stockData.reduce((total: number, s: any) => total + parseFloat(s.quantity || '0'), 0))}
+                  {Math.round((stockData as any[]).reduce((total: number, s: any) => total + parseFloat(s.quantity || '0'), 0))}
                 </p>
               </div>
             </div>

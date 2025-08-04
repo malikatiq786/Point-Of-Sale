@@ -824,21 +824,32 @@ export class DatabaseStorage implements IStorage {
     if (adjustmentData.items && adjustmentData.items.length > 0) {
       const item = adjustmentData.items[0];
       
-      // Find the product by name and update its stock
-      const [product] = await db
-        .select()
-        .from(products)
-        .where(eq(products.name, item.productName))
-        .limit(1);
-
-      if (product) {
+      // Update product stock by ID if provided, otherwise by name (fallback)
+      if (item.productId) {
         await db
           .update(products)
           .set({ 
             stock: item.newQuantity,
             updatedAt: new Date()
           })
-          .where(eq(products.id, product.id));
+          .where(eq(products.id, item.productId));
+      } else if (item.productName) {
+        // Fallback to name-based lookup (less reliable)
+        const [product] = await db
+          .select()
+          .from(products)
+          .where(eq(products.name, item.productName))
+          .limit(1);
+
+        if (product) {
+          await db
+            .update(products)
+            .set({ 
+              stock: item.newQuantity,
+              updatedAt: new Date()
+            })
+            .where(eq(products.id, product.id));
+        }
       }
     }
 
