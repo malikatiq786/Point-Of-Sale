@@ -437,10 +437,12 @@ export default function Products() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end space-x-2">
-                        <Button variant="outline" size="sm">
-                          <Eye className="w-3 h-3 mr-1" />
-                          View
-                        </Button>
+                        <Link href={`/products/view/${product.id}`}>
+                          <Button variant="outline" size="sm">
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
+                          </Button>
+                        </Link>
                         <Link href={`/products/edit/${product.id}`}>
                           <Button variant="outline" size="sm">
                             <Edit className="w-3 h-3 mr-1" />
