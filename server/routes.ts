@@ -2127,8 +2127,101 @@ async function initializeSampleData(userId: string) {
   // ✅ ONLINE RESTAURANT ENDPOINTS PROPERLY INTEGRATED
   // =========================================
 
-  // Note: Online restaurant endpoints are now properly integrated in the main registerRoutes function above
-  // This prevents duplicate endpoint definitions that cause compilation errors
+  // Online customer registration
+  app.post('/api/online/register', async (req, res) => {
+    try {
+      const { name, email, phone, password, address } = req.body;
+      
+      // Check if customer already exists
+      const existingCustomer = await storage.getOnlineCustomerByEmail(email);
+      if (existingCustomer) {
+        return res.status(400).json({ message: 'Email already registered' });
+      }
+      
+      const customer = await storage.createOnlineCustomer({
+        name,
+        email,
+        phone,
+        password,
+        address
+      });
+      
+      // Store customer in session
+      (req.session as any).onlineCustomer = customer;
+      
+      res.status(201).json({
+        message: 'Registration successful',
+        customer: { id: customer.id, name: customer.name, email: customer.email }
+      });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ message: 'Registration failed' });
+    }
+  });
+
+  // Online customer login
+  app.post('/api/online/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      const customer = await storage.authenticateOnlineCustomer(email, password);
+      if (!customer) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      
+      // Store customer in session
+      (req.session as any).onlineCustomer = customer;
+      
+      res.json({
+        message: 'Login successful',
+        customer: { id: customer.id, name: customer.name, email: customer.email }
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Login failed' });
+    }
+  });
+
+  // Online customer logout
+  app.post('/api/online/logout', (req: any, res) => {
+    delete req.session.onlineCustomer;
+    res.json({ message: 'Logout successful' });
+  });
+
+  // Get current online customer
+  app.get('/api/online/me', isOnlineAuthenticated, (req: any, res) => {
+    const customer = req.session.onlineCustomer;
+    res.json({ id: customer.id, name: customer.name, email: customer.email });
+  });
+
+  // Get menu (public - no auth required)
+  app.get('/api/online/menu', async (req, res) => {
+    try {
+      // Check if online ordering is enabled
+      const onlineOrderingSetting = await storage.getSetting('online_ordering_enabled');
+      if (onlineOrderingSetting?.value !== 'true') {
+        return res.status(503).json({ message: 'Online ordering is currently disabled' });
+      }
+      
+      const products = await storage.getMenuProducts();
+      console.log('Fetching menu products, found:', products.length);
+      res.json(products);
+    } catch (error) {
+      console.error('Get menu error:', error);
+      res.status(500).json({ message: 'Failed to get menu' });
+    }
+  });
+
+  // Get menu categories (public)
+  app.get('/api/online/categories', async (req, res) => {
+    try {
+      const categories = await storage.getMenuCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error('Get categories error:', error);
+      res.status(500).json({ message: 'Failed to get categories' });
+    }
+  });
 
   // Cart operations
   app.get('/api/online/cart', isOnlineAuthenticated, async (req: any, res) => {
@@ -2267,27 +2360,6 @@ async function initializeSampleData(userId: string) {
     }
   });
 
-  // Admin: Get online customers
-  app.get('/api/online/customers', isAuthenticated, async (req, res) => {
-    try {
-      const customers = await storage.getAllOnlineCustomers();
-      res.json(customers);
-    } catch (error) {
-      console.error('Error fetching online customers:', error);
-      res.status(500).json({ message: 'Failed to fetch online customers' });
-    }
-  });
-
-  // Admin: Get online orders
-  app.get('/api/online/orders', isAuthenticated, async (req, res) => {
-    try {
-      const orders = await storage.getAllOnlineOrders();
-      res.json(orders);
-    } catch (error) {
-      console.error('Error fetching online orders:', error);
-      res.status(500).json({ message: 'Failed to fetch online orders' });
-    }
-  });
 
   // Log the initialization
   await storage.logActivity(
