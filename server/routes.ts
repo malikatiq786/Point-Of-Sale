@@ -1514,8 +1514,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`Fetching products - Page: ${pageNum}, Limit: ${limitNum}, Offset: ${offset}, Total: ${totalCount}`);
         console.log(`Products returned: ${products.length}`);
+        if (products.length > 0) {
+          console.log(`First product sample:`, {
+            id: products[0].id,
+            name: products[0].name,
+            category: products[0].category,
+            brand: products[0].brand
+          });
+        }
         
-        res.json({
+        const response = {
           products,
           pagination: {
             page: pageNum,
@@ -1523,7 +1531,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             total: totalCount,
             totalPages: Math.ceil(totalCount / limitNum)
           }
+        };
+        
+        console.log(`API Response structure:`, {
+          productsCount: response.products.length,
+          pagination: response.pagination
         });
+        
+        res.json(response);
       }
     } catch (error) {
       console.error("Error fetching products:", error);

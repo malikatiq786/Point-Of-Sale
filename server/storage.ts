@@ -40,7 +40,7 @@ import {
   type InsertRiderAssignment,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, like, and } from "drizzle-orm";
+import { eq, desc, sql, like, and, count } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -216,6 +216,9 @@ export class DatabaseStorage implements IStorage {
         id: products.id,
         name: products.name,
         description: products.description,
+        price: products.price,
+        stock: products.stock,
+        lowStockAlert: products.lowStockAlert,
         category: {
           id: categories.id,
           name: categories.name,
