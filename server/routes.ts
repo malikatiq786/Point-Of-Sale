@@ -1802,6 +1802,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/categories", isAuthenticated, async (req: any, res) => {
     try {
+      const { name } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Category name is required" });
+      }
+
+      // Check if category with this name already exists
+      const existingCategories = await storage.getCategories();
+      const existingCategory = existingCategories.find(category => 
+        category.name.toLowerCase() === name.toLowerCase()
+      );
+      
+      if (existingCategory) {
+        return res.status(400).json({ message: "Category already added" });
+      }
+
       const category = await storage.createCategory(req.body);
       
       // Log activity - handle both user formats
@@ -1816,6 +1832,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating category:", error);
       res.status(500).json({ message: "Failed to create category" });
+    }
+  });
+
+  app.put("/api/categories/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      const { name } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Category name is required" });
+      }
+
+      // Check if another category with this name already exists (excluding current category)
+      const existingCategories = await storage.getCategories();
+      const existingCategory = existingCategories.find(category => 
+        category.id !== categoryId && category.name.toLowerCase() === name.toLowerCase()
+      );
+      
+      if (existingCategory) {
+        return res.status(400).json({ message: "Category already added" });
+      }
+
+      const category = await storage.updateCategory(categoryId, req.body);
+      
+      // Log activity - handle both user formats
+      const userId = req.user?.claims?.sub || req.user?.id || "system";
+      await storage.logActivity(
+        userId,
+        `Updated category: ${category.name}`,
+        req.ip
+      );
+      
+      res.json(category);
+    } catch (error) {
+      console.error("Error updating category:", error);
+      res.status(500).json({ message: "Failed to update category" });
+    }
+  });
+
+  app.delete("/api/categories/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      
+      // Check if category is being used by any products
+      const products = await storage.getProducts(1000, 0); // Get many products to check
+      const productsUsingCategory = products.filter((product: any) => product.category?.id === categoryId);
+      
+      if (productsUsingCategory.length > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete category. It is being used by ${productsUsingCategory.length} product(s)` 
+        });
+      }
+      
+      await storage.deleteCategory(categoryId);
+      
+      // Log activity - handle both user formats
+      const userId = req.user?.claims?.sub || req.user?.id || "system";
+      await storage.logActivity(
+        userId,
+        `Deleted category with ID: ${categoryId}`,
+        req.ip
+      );
+      
+      res.json({ message: "Category deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      res.status(500).json({ message: "Failed to delete category" });
     }
   });
 

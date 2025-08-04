@@ -66,6 +66,8 @@ export interface IStorage {
   checkProductExists(name: string, brandId: number): Promise<boolean>;
   checkProductExistsExcluding(name: string, brandId: number, excludeId: number): Promise<boolean>;
   createCategory(category: any): Promise<any>;
+  updateCategory(id: number, category: any): Promise<any>;
+  deleteCategory(id: number): Promise<void>;
   createBrand(brand: any): Promise<any>;
   updateBrand(id: number, brand: any): Promise<any>;
   deleteBrand(id: number): Promise<void>;
@@ -515,6 +517,19 @@ export class DatabaseStorage implements IStorage {
       .values(categoryData)
       .returning();
     return category;
+  }
+
+  async updateCategory(id: number, categoryData: any): Promise<any> {
+    const [category] = await db
+      .update(categories)
+      .set(categoryData)
+      .where(eq(categories.id, id))
+      .returning();
+    return category;
+  }
+
+  async deleteCategory(id: number): Promise<void> {
+    await db.delete(categories).where(eq(categories.id, id));
   }
 
   async createBrand(brandData: any): Promise<any> {
