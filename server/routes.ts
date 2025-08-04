@@ -2110,10 +2110,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get product details to get the price
-      const product = await storage.getProduct(parseInt(productId));
+      const products = await storage.getMenuProducts();
+      const product = products.find(p => p.id === parseInt(productId));
       if (!product) {
         return res.status(404).json({ message: 'Product not found' });
       }
+      
+      console.log('🛒 Adding to cart:', {
+        onlineCustomerId: customer.id,
+        productId: parseInt(productId),
+        quantity: parseInt(quantity),
+        price: product.price
+      });
       
       const cartItem = await storage.addToCart({
         onlineCustomerId: customer.id,
