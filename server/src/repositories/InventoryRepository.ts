@@ -1,4 +1,4 @@
-import { storage } from '../../storage';
+import { db } from '../../db';
 import * as schema from '../../../shared/schema';
 import { eq, and, sql, desc } from 'drizzle-orm';
 
@@ -7,7 +7,7 @@ export class InventoryRepository {
   // Warehouse methods
   async findAllWarehouses() {
     try {
-      return await storage.db.select().from(schema.warehouses).orderBy(schema.warehouses.name);
+      return await db.select().from(schema.warehouses).orderBy(schema.warehouses.name);
     } catch (error) {
       console.error('Error finding warehouses:', error);
       throw error;
@@ -16,7 +16,7 @@ export class InventoryRepository {
 
   async createWarehouse(warehouseData: { name: string; location?: string }) {
     try {
-      const results = await storage.db.insert(schema.warehouses)
+      const results = await db.insert(schema.warehouses)
         .values(warehouseData)
         .returning();
       return results[0];
@@ -28,7 +28,7 @@ export class InventoryRepository {
 
   async updateWarehouse(id: number, warehouseData: { name?: string; location?: string }) {
     try {
-      const results = await storage.db.update(schema.warehouses)
+      const results = await db.update(schema.warehouses)
         .set(warehouseData)
         .where(eq(schema.warehouses.id, id))
         .returning();
@@ -41,7 +41,7 @@ export class InventoryRepository {
 
   async deleteWarehouse(id: number) {
     try {
-      await storage.db.delete(schema.warehouses)
+      await db.delete(schema.warehouses)
         .where(eq(schema.warehouses.id, id));
     } catch (error) {
       console.error('Error deleting warehouse:', error);
@@ -51,7 +51,7 @@ export class InventoryRepository {
 
   async getWarehouseStockCount(warehouseId: number) {
     try {
-      const result = await storage.db.select({ count: sql`count(*)` })
+      const result = await db.select({ count: sql`count(*)` })
         .from(schema.stock)
         .where(eq(schema.stock.warehouseId, warehouseId));
       return parseInt(result[0].count as string);
@@ -64,7 +64,7 @@ export class InventoryRepository {
   // Stock methods
   async findStock(warehouseId?: number, lowStockOnly?: boolean) {
     try {
-      let query = storage.db.select({
+      let query = db.select({
         id: schema.stock.id,
         productVariantId: schema.stock.productVariantId,
         warehouseId: schema.stock.warehouseId,
@@ -116,7 +116,7 @@ export class InventoryRepository {
         ));
 
       // Then, record the adjustment
-      const adjustmentResults = await storage.db.insert(schema.stockAdjustments)
+      const adjustmentResults = await db.insert(schema.stockAdjustments)
         .values({
           warehouseId: adjustmentData.warehouseId,
           userId: adjustmentData.userId,
@@ -166,7 +166,7 @@ export class InventoryRepository {
   // Stock adjustment methods
   async findStockAdjustments() {
     try {
-      return await storage.db.select({
+      return await db.select({
         id: schema.stockAdjustments.id,
         warehouseId: schema.stockAdjustments.warehouseId,
         userId: schema.stockAdjustments.userId,
