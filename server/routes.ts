@@ -1900,6 +1900,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get categories that can be safely deleted (no products associated)
+  app.get("/api/categories/deletable", isAuthenticated, async (req, res) => {
+    try {
+      // Get all categories
+      const allCategories = await storage.getCategories();
+      
+      // Get all products to check which categories are in use
+      const allProducts = await storage.getProducts();
+      const usedCategoryIds = new Set(
+        allProducts
+          .filter(product => product.categoryId !== null)
+          .map(product => product.categoryId)
+      );
+      
+      // Filter categories that are not being used by any products
+      const deletableCategories = allCategories.filter(category => 
+        !usedCategoryIds.has(category.id)
+      );
+      
+      res.json({
+        deletableCategories,
+        totalCategories: allCategories.length,
+        categoriesInUse: usedCategoryIds.size,
+        deletableCount: deletableCategories.length
+      });
+    } catch (error) {
+      console.error("Error fetching deletable categories:", error);
+      res.status(500).json({ message: "Failed to fetch deletable categories" });
+    }
+  });
+
   // Brand routes
   app.get("/api/brands", isAuthenticated, async (req, res) => {
     try {
