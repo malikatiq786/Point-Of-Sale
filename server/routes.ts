@@ -1637,10 +1637,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Brand name is required" });
       }
 
+      // Check if brand with this name already exists
+      const existingBrands = await storage.getBrands();
+      const existingBrand = existingBrands.find(brand => 
+        brand.name.toLowerCase() === name.toLowerCase()
+      );
+      
+      if (existingBrand) {
+        return res.status(400).json({ message: "Brand name already exists" });
+      }
+
       const brand = await storage.createBrand({ name, description });
       res.json(brand);
     } catch (error) {
       console.error("Error creating brand:", error);
+      // Handle unique constraint violation from database
+      if (error.message && error.message.includes('unique')) {
+        return res.status(400).json({ message: "Brand name already exists" });
+      }
       res.status(500).json({ message: "Failed to create brand" });
     }
   });
@@ -1654,10 +1668,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Brand name is required" });
       }
 
+      // Check if another brand with this name already exists (excluding current brand)
+      const existingBrands = await storage.getBrands();
+      const existingBrand = existingBrands.find(brand => 
+        brand.name.toLowerCase() === name.toLowerCase() && 
+        brand.id !== parseInt(id)
+      );
+      
+      if (existingBrand) {
+        return res.status(400).json({ message: "Brand name already exists" });
+      }
+
       const brand = await storage.updateBrand(parseInt(id), { name, description });
       res.json(brand);
     } catch (error) {
       console.error("Error updating brand:", error);
+      // Handle unique constraint violation from database
+      if (error.message && error.message.includes('unique')) {
+        return res.status(400).json({ message: "Brand name already exists" });
+      }
       res.status(500).json({ message: "Failed to update brand" });
     }
   });

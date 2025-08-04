@@ -114,7 +114,7 @@ export const categories = pgTable("categories", {
 
 export const brands = pgTable("brands", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }),
+  name: varchar("name", { length: 100 }).unique(),
 });
 
 export const units = pgTable("units", {
