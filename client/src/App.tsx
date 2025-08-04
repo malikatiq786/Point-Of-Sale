@@ -41,6 +41,9 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public restaurant website - accessible to everyone */}
+      <Route path="/restaurant*" component={RestaurantApp} />
+      
       {isLoading ? (
         <div className="min-h-screen flex items-center justify-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-500"></div>
@@ -105,8 +108,6 @@ function Router() {
           <Route path="/branches" component={Branches} />
           <Route path="/registers" component={Registers} />
           <Route path="/settings" component={Settings} />
-          {/* Public restaurant website */}
-          <Route path="/restaurant*" component={RestaurantApp} />
         </>
       )}
       <Route component={NotFound} />

@@ -282,19 +282,14 @@ export default function RestaurantApp() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Debug: log the current location
-  console.log('Restaurant App - Current location:', location);
-
   // Get the sub-path after /restaurant
   const getSubPath = (fullPath: string) => {
-    console.log('Processing path:', fullPath);
     if (fullPath === "/restaurant") return "/restaurant";
     if (fullPath.startsWith("/restaurant/")) return fullPath;
     return "/restaurant";
   };
 
   const currentPath = getSubPath(location);
-  console.log('Current path resolved to:', currentPath);
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -347,15 +342,6 @@ export default function RestaurantApp() {
         {currentPath === "/restaurant/cart" && <CartPage customer={customer} />}
         {currentPath === "/restaurant/about" && <AboutPage />}
         {currentPath === "/restaurant/contact" && <ContactPage />}
-        {/* Fallback content for debugging */}
-        {currentPath !== "/restaurant" && currentPath !== "/restaurant/cart" && currentPath !== "/restaurant/about" && currentPath !== "/restaurant/contact" && (
-          <div className="max-w-4xl mx-auto px-4 py-8 text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Debug Info</h1>
-            <p className="text-lg text-gray-600">Current location: {location}</p>
-            <p className="text-lg text-gray-600">Current path: {currentPath}</p>
-            <p className="text-lg text-gray-600">Available routes: /restaurant, /restaurant/cart, /restaurant/about, /restaurant/contact</p>
-          </div>
-        )}
       </main>
     </div>
   );
