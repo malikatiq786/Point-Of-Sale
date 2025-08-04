@@ -29,12 +29,23 @@ export default function Products() {
 
   // Fetch products with pagination
   const { data: productsResponse, isLoading, error } = useQuery({
-    queryKey: [`/api/products/${currentPage}/${itemsPerPage}`],
+    queryKey: [`products-${currentPage}-${itemsPerPage}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/products/${currentPage}/${itemsPerPage}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch products: ${response.status}`);
+      }
+      
+      return response.json();
+    },
     retry: false,
   });
 
   console.log('Products Query:', {
-    queryKey: `/api/products/${currentPage}/${itemsPerPage}`,
+    queryKey: `products-${currentPage}-${itemsPerPage}`,
     loading: isLoading,
     error: error,
     response: productsResponse,
