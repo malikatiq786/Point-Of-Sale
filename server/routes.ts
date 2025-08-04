@@ -2153,23 +2153,37 @@ async function initializeSampleData(userId: string) {
 
   // Online customer login
   app.post('/api/online/login', async (req, res) => {
+    console.log('🔐 Online login request received:', { email: req.body?.email });
     try {
       const { email, password } = req.body;
       
+      if (!email || !password) {
+        console.log('❌ Missing email or password');
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+      
+      console.log('🔍 Authenticating customer:', email);
       const customer = await storage.authenticateOnlineCustomer(email, password);
+      
       if (!customer) {
+        console.log('❌ Authentication failed for:', email);
         return res.status(401).json({ message: 'Invalid credentials' });
       }
+      
+      console.log('✅ Customer authenticated:', { id: customer.id, name: customer.name });
       
       // Store customer in session
       (req.session as any).onlineCustomer = customer;
       
-      res.json({
+      const response = {
         message: 'Login successful',
         customer: { id: customer.id, name: customer.name, email: customer.email }
-      });
+      };
+      
+      console.log('📤 Sending login response:', response);
+      res.json(response);
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('💥 Login error:', error);
       res.status(500).json({ message: 'Login failed' });
     }
   });
