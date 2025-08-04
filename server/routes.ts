@@ -2109,11 +2109,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Product ID and quantity are required' });
       }
       
+      // Get product details to get the price
+      const product = await storage.getProduct(parseInt(productId));
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+      
       const cartItem = await storage.addToCart({
-        customerId: customer.id,
+        onlineCustomerId: customer.id,
         productId: parseInt(productId),
         quantity: parseInt(quantity),
-        specialInstructions: specialInstructions || ''
+        price: product.price
       });
       
       res.status(201).json(cartItem);
