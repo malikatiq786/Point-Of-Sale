@@ -1875,16 +1875,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const categoryId = parseInt(req.params.id);
       
-      // Check if category is being used by any products
-      const products = await storage.getProducts(1000, 0); // Get many products to check
-      const productsUsingCategory = products.filter((product: any) => product.category?.id === categoryId);
-      
-      if (productsUsingCategory.length > 0) {
-        return res.status(400).json({ 
-          message: `Cannot delete category. It is being used by ${productsUsingCategory.length} product(s)` 
-        });
-      }
-      
       await storage.deleteCategory(categoryId);
       
       // Log activity - handle both user formats
@@ -1898,6 +1888,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Category deleted successfully" });
     } catch (error) {
       console.error("Error deleting category:", error);
+      
+      // Check if it's a foreign key constraint error
+      if (error.code === '23503') {
+        return res.status(400).json({ 
+          message: "Cannot delete category. It is being used by one or more products. Please remove or change the category of those products first." 
+        });
+      }
+      
       res.status(500).json({ message: "Failed to delete category" });
     }
   });
