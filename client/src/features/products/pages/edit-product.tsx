@@ -36,22 +36,25 @@ export default function EditProduct() {
   });
 
   // Fetch categories
-  const { data: categories = [] } = useQuery<any[]>({
+  const { data: categories = [], isLoading: isLoadingCategories } = useQuery<any[]>({
     queryKey: ["/api/categories"],
     retry: false,
   });
 
   // Fetch brands
-  const { data: brands = [] } = useQuery<any[]>({
+  const { data: brands = [], isLoading: isLoadingBrands } = useQuery<any[]>({
     queryKey: ["/api/brands"],
     retry: false,
   });
 
   // Fetch units
-  const { data: units = [] } = useQuery<any[]>({
+  const { data: units = [], isLoading: isLoadingUnits } = useQuery<any[]>({
     queryKey: ["/api/units"],
     retry: false,
   });
+
+  // Check if all dropdown data is loaded
+  const isDropdownDataLoading = isLoadingCategories || isLoadingBrands || isLoadingUnits;
 
   // Fetch existing product data
   const { data: existingProduct, isLoading: isLoadingProduct } = useQuery<any>({
@@ -60,9 +63,15 @@ export default function EditProduct() {
     retry: false,
   });
 
-  // Update form data when product is loaded
+  // Update form data when product and dropdown data are loaded
   useEffect(() => {
-    if (existingProduct) {
+    if (existingProduct && !isDropdownDataLoading) {
+      console.log('Setting form data:', {
+        categoryId: existingProduct.categoryId,
+        brandId: existingProduct.brandId,
+        unitId: existingProduct.unitId
+      });
+      
       setFormData({
         name: existingProduct.name || "",
         description: existingProduct.description || "",
@@ -76,7 +85,7 @@ export default function EditProduct() {
         image: existingProduct.image || ""
       });
     }
-  }, [existingProduct]);
+  }, [existingProduct, isDropdownDataLoading]);
 
   // Update product mutation
   const updateProductMutation = useMutation({
@@ -142,13 +151,15 @@ export default function EditProduct() {
     updateProductMutation.mutate(productData);
   };
 
-  if (isLoadingProduct) {
+  if (isLoadingProduct || isDropdownDataLoading) {
     return (
       <AppLayout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading product...</p>
+            <p className="text-gray-600">
+              {isLoadingProduct ? 'Loading product...' : 'Loading form data...'}
+            </p>
           </div>
         </div>
       </AppLayout>
@@ -244,7 +255,7 @@ export default function EditProduct() {
               <div className="space-y-2">
                 <Label htmlFor="categoryId">Category</Label>
                 <Select 
-                  value={formData.categoryId} 
+                  value={formData.categoryId || "none"} 
                   onValueChange={(value) => handleInputChange('categoryId', value)}
                 >
                   <SelectTrigger>
@@ -265,7 +276,7 @@ export default function EditProduct() {
               <div className="space-y-2">
                 <Label htmlFor="brandId">Brand *</Label>
                 <Select 
-                  value={formData.brandId} 
+                  value={formData.brandId || "none"} 
                   onValueChange={(value) => handleInputChange('brandId', value)}
                 >
                   <SelectTrigger>
@@ -285,7 +296,7 @@ export default function EditProduct() {
               <div className="space-y-2">
                 <Label htmlFor="unitId">Unit</Label>
                 <Select 
-                  value={formData.unitId} 
+                  value={formData.unitId || "none"} 
                   onValueChange={(value) => handleInputChange('unitId', value)}
                 >
                   <SelectTrigger>
