@@ -13,13 +13,15 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Globe, ShoppingCart, Plus, Edit, Trash2, Star, UserCheck, Package, Car, Bike, Truck } from "lucide-react";
+import { Store, Globe, ShoppingCart, Plus, Edit, Trash2, Star, UserCheck, Package, Car, Bike, Truck, Menu, Eye } from "lucide-react";
 
 export default function RestaurantManagement() {
   const { user } = useAuth();
   const [onlineOrderingEnabled, setOnlineOrderingEnabled] = useState(false);
   const [isAddRiderDialogOpen, setIsAddRiderDialogOpen] = useState(false);
   const [editingRider, setEditingRider] = useState<any>(null);
+  const [isMenuManagementOpen, setIsMenuManagementOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -58,6 +60,16 @@ export default function RestaurantManagement() {
   // Fetch delivery riders
   const { data: deliveryRiders = [] } = useQuery<any[]>({
     queryKey: ["/api/delivery-riders"],
+  });
+
+  // Fetch menu products for management
+  const { data: menuProducts = [] } = useQuery<any[]>({
+    queryKey: ["/api/products"],
+  });
+
+  // Fetch categories
+  const { data: categories = [] } = useQuery<any[]>({
+    queryKey: ["/api/categories"],
   });
 
   // Toggle online ordering mutation
@@ -246,10 +258,14 @@ export default function RestaurantManagement() {
         {/* Main Content */}
         <main className="flex-1 overflow-auto p-6">
           <Tabs defaultValue="online" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="online" className="flex items-center gap-2">
                 <Globe className="h-4 w-4" />
                 Online Orders
+              </TabsTrigger>
+              <TabsTrigger value="menu" className="flex items-center gap-2">
+                <Menu className="h-4 w-4" />
+                Menu Management
               </TabsTrigger>
               <TabsTrigger value="delivery" className="flex items-center gap-2">
                 <Car className="h-4 w-4" />
@@ -343,6 +359,176 @@ export default function RestaurantManagement() {
                     </div>
                   ) : (
                     <p className="text-gray-500 text-center py-8">No online orders yet</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Menu Management Tab */}
+            <TabsContent value="menu" className="space-y-6">
+              {/* Menu Management Toggle */}
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold">Menu Management</h3>
+                  <p className="text-gray-600">Manage your online menu categories and products</p>
+                </div>
+                <Dialog open={isMenuManagementOpen} onOpenChange={setIsMenuManagementOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Menu
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Menu Management</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      {/* Category Filter */}
+                      <div className="flex items-center gap-4">
+                        <Label htmlFor="categoryFilter">Filter by Category:</Label>
+                        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                          <SelectTrigger className="w-48">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            {categories.map((category: any) => (
+                              <SelectItem key={category.id} value={category.id.toString()}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {/* Products Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {menuProducts
+                          .filter((product: any) => 
+                            selectedCategory === "all" || 
+                            product.categoryId?.toString() === selectedCategory
+                          )
+                          .map((product: any) => (
+                            <Card key={product.id} className="overflow-hidden">
+                              <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                                {product.image ? (
+                                  <img 
+                                    src={product.image} 
+                                    alt={product.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Package className="h-12 w-12 text-gray-400" />
+                                )}
+                              </div>
+                              <CardContent className="p-4">
+                                <h4 className="font-semibold text-sm mb-1">{product.name}</h4>
+                                <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                                  {product.description || "No description available"}
+                                </p>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-bold text-primary-600">
+                                    ${product.price}
+                                  </span>
+                                  <Badge variant={product.stock > 0 ? "default" : "secondary"}>
+                                    {product.stock > 0 ? "Available" : "Out of Stock"}
+                                  </Badge>
+                                </div>
+                                <div className="mt-2 text-xs text-gray-500">
+                                  Category: {product.category?.name || "Uncategorized"}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))
+                        }
+                      </div>
+                      
+                      {menuProducts.length === 0 && (
+                        <div className="text-center py-8">
+                          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+                          <p className="text-gray-600">Add products to your inventory to manage your menu.</p>
+                        </div>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Menu Statistics */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      Total Products
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-primary-600">{menuProducts.length}</div>
+                    <p className="text-gray-600">Products in menu</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Menu className="h-5 w-5" />
+                      Categories
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-primary-600">{categories.length}</div>
+                    <p className="text-gray-600">Menu categories</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Star className="h-5 w-5" />
+                      Available
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-primary-600">
+                      {menuProducts.filter((p: any) => p.stock > 0).length}
+                    </div>
+                    <p className="text-gray-600">In stock products</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Categories Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Menu Categories</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {categories.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {categories.map((category: any) => {
+                        const categoryProducts = menuProducts.filter((p: any) => p.categoryId === category.id);
+                        return (
+                          <Card key={category.id} className="bg-gray-50">
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium">{category.name}</h4>
+                                <Badge variant="outline">
+                                  {categoryProducts.length} items
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-gray-600">
+                                Available: {categoryProducts.filter((p: any) => p.stock > 0).length}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-8">No categories found</p>
                   )}
                 </CardContent>
               </Card>
