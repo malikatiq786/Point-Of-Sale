@@ -58,8 +58,11 @@ export abstract class BaseRepository<T> {
   // Generic create
   async create(data: Partial<T>): Promise<T> {
     try {
+      // Remove id field to let PostgreSQL auto-generate it for serial columns
+      const { id, ...insertData } = data as any;
+      
       const results = await db.insert(this.table)
-        .values(data)
+        .values(insertData)
         .returning();
       
       return results[0];
