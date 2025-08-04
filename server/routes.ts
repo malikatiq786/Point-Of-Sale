@@ -1629,6 +1629,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/brands", isAuthenticated, async (req, res) => {
+    try {
+      const { name, description } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Brand name is required" });
+      }
+
+      const brand = await storage.createBrand({ name, description });
+      res.json(brand);
+    } catch (error) {
+      console.error("Error creating brand:", error);
+      res.status(500).json({ message: "Failed to create brand" });
+    }
+  });
+
+  app.put("/api/brands/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, description } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Brand name is required" });
+      }
+
+      const brand = await storage.updateBrand(parseInt(id), { name, description });
+      res.json(brand);
+    } catch (error) {
+      console.error("Error updating brand:", error);
+      res.status(500).json({ message: "Failed to update brand" });
+    }
+  });
+
+  app.delete("/api/brands/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteBrand(parseInt(id));
+      res.json({ message: "Brand deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting brand:", error);
+      res.status(500).json({ message: "Failed to delete brand" });
+    }
+  });
+
   // Units routes  
   app.get("/api/units", isAuthenticated, async (req, res) => {
     try {

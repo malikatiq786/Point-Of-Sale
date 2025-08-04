@@ -36,7 +36,7 @@ export default function Brands() {
   });
 
   // Fetch brands
-  const { data: brands = [], isLoading } = useQuery({
+  const { data: brands = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/brands'],
   });
 

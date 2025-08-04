@@ -62,6 +62,8 @@ export interface IStorage {
   createProduct(product: any): Promise<Product>;
   createCategory(category: any): Promise<any>;
   createBrand(brand: any): Promise<any>;
+  updateBrand(id: number, brand: any): Promise<any>;
+  deleteBrand(id: number): Promise<void>;
   getCategories(): Promise<any[]>;
   getBrands(): Promise<any[]>;
   
@@ -450,6 +452,19 @@ export class DatabaseStorage implements IStorage {
 
   async getBrands(): Promise<any[]> {
     return await db.select().from(brands);
+  }
+
+  async updateBrand(id: number, brandData: any): Promise<any> {
+    const [brand] = await db
+      .update(brands)
+      .set(brandData)
+      .where(eq(brands.id, id))
+      .returning();
+    return brand;
+  }
+
+  async deleteBrand(id: number): Promise<void> {
+    await db.delete(brands).where(eq(brands.id, id));
   }
 
   async logActivity(userId: string, action: string, ipAddress?: string): Promise<void> {
