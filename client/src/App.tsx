@@ -42,7 +42,10 @@ function Router() {
   return (
     <Switch>
       {/* Public restaurant website - accessible to everyone */}
-      <Route path="/restaurant*" component={RestaurantApp} />
+      <Route path="/restaurant" component={RestaurantApp} />
+      <Route path="/restaurant/cart" component={RestaurantApp} />
+      <Route path="/restaurant/about" component={RestaurantApp} />
+      <Route path="/restaurant/contact" component={RestaurantApp} />
       
       {isLoading ? (
         <div className="min-h-screen flex items-center justify-center">
