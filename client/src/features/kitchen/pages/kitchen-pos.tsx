@@ -437,9 +437,9 @@ export default function KitchenPOS() {
 
       {/* Compact Orders Grid - Smaller Cards */}
       {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-1">
+        <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-6 gap-2">
           {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse h-20">
+            <Card key={i} className="animate-pulse h-36">
               <CardHeader className="pb-1">
                 <div className="flex items-center justify-between">
                   <div className="h-2 bg-slate-200 rounded w-1/2"></div>
@@ -456,81 +456,78 @@ export default function KitchenPOS() {
           ))}
         </div>
       ) : filteredOrders.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-1">
+        <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-6 gap-2">
           {filteredOrders.map((order) => {
             const IconComponent = getOrderIcon(order.orderType);
             const timeSince = getTimeSinceOrder(order.saleDate);
             const priorityColor = getPriorityColor(order.saleDate);
             
             return (
-              <Card key={order.id} className={`relative overflow-hidden hover:shadow-sm transition-all duration-200 border bg-white hover:bg-slate-50 ${priorityColor} shadow-xs`}>
+              <Card key={order.id} className={`relative overflow-hidden hover:shadow-md transition-all duration-200 border bg-white hover:bg-slate-50 transform hover:-translate-y-0.5 ${priorityColor} shadow-sm`}>
                 {/* Priority indicator */}
                 <div className={`absolute top-0 left-0 w-1 h-full ${priorityColor.replace('border-l-', 'bg-')}`}></div>
                 
                 {/* Online order indicator */}
                 {isOnlineOrder(order) && (
-                  <div className="absolute top-0.5 right-0.5">
-                    <Badge className="text-xs px-0.5 py-0 bg-orange-100 text-orange-700 border border-orange-200 text-xs">
-                      <Globe className="h-1.5 w-1.5" />
+                  <div className="absolute top-1 right-1">
+                    <Badge className="text-xs px-1 py-0 bg-orange-100 text-orange-700 border border-orange-200">
+                      <Globe className="h-2 w-2 mr-0.5" />Online
                     </Badge>
                   </div>
                 )}
                 
-                <CardHeader className="pb-0.5 pl-1.5 pt-1.5">
+                <CardHeader className="pb-1 pl-2 pt-2">
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-0.5">
+                    <div className="flex items-center space-x-1">
                       <div className={`p-0.5 rounded-sm ${getOrderColor(order.orderType).replace('text-', 'bg-').replace('-600', '-100')}`}>
-                        <IconComponent className={`h-2 w-2 ${getOrderColor(order.orderType)}`} />
+                        <IconComponent className={`h-2.5 w-2.5 ${getOrderColor(order.orderType)}`} />
                       </div>
                       <div>
-                        <CardTitle className="text-xs font-bold text-slate-900 mb-0 leading-none">
+                        <CardTitle className="text-xs font-bold text-slate-900 mb-0">
                           #{order.id}
                         </CardTitle>
-                        <div className="flex items-center mt-0.5">
-                          <Badge className={`text-xs font-medium px-0.5 py-0 border-0 ${getOrderColor(order.orderType)} leading-none`}>
-                            {order.orderType === 'dine-in' ? 'D' : 
-                             order.orderType === 'takeaway' ? 'T' : 
-                             order.orderType === 'delivery' ? 'Del' : 'S'}
+                        <div className="flex items-center">
+                          <Badge className={`text-xs font-medium px-1 py-0 border-0 ${getOrderColor(order.orderType)}`}>
+                            {order.orderType === 'dine-in' ? 'Dine' : 
+                             order.orderType === 'takeaway' ? 'Take' : 
+                             order.orderType === 'delivery' ? 'Delivery' : 'Sale'}
                             {order.tableNumber && ` ${order.tableNumber}`}
                           </Badge>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right ml-0.5">
-                      <Badge className={`text-xs font-semibold px-0.5 py-0 border-0 ${getStatusColor(order.kitchenStatus)} leading-none`}>
-                        {order.kitchenStatus === 'new' ? 'NEW' : 
-                         order.kitchenStatus === 'preparing' ? 'PREP' :
-                         order.kitchenStatus === 'ready' ? 'RDY' : 
-                         order.kitchenStatus.toUpperCase()}
+                    <div className="text-right ml-1">
+                      <Badge className={`text-xs font-semibold px-1 py-0 border-0 ${getStatusColor(order.kitchenStatus)}`}>
+                        {order.kitchenStatus.charAt(0).toUpperCase() + order.kitchenStatus.slice(1)}
                       </Badge>
                       <div className="flex items-center text-xs text-slate-500 mt-0.5">
-                        <Timer className="mr-0.5 h-1.5 w-1.5" />
-                        <span className="text-xs leading-none">{timeSince}</span>
+                        <Timer className="mr-0.5 h-2 w-2" />
+                        <span className="text-xs">{timeSince}</span>
                       </div>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pl-1.5 space-y-0.5 pb-1">
+                <CardContent className="pl-2 space-y-1 pb-2">
                     {/* Order Items */}
-                    <div className="bg-slate-50 rounded-sm p-1">
-                      <h4 className="font-medium text-slate-700 mb-0.5 flex items-center text-xs leading-none">
-                        <Utensils className="h-1.5 w-1.5 mr-0.5" />
+                    <div className="bg-slate-50 rounded-sm p-1.5">
+                      <h4 className="font-medium text-slate-700 mb-1 flex items-center text-xs">
+                        <Utensils className="h-2 w-2 mr-0.5" />
                         Items
                       </h4>
                       <div className="space-y-0.5">
-                        {order.items.slice(0, 2).map((item) => (
-                          <div key={item.id} className="flex items-center justify-between bg-white rounded-sm p-0.5 shadow-sm">
-                            <span className="font-medium text-slate-800 text-xs truncate leading-tight">
-                              {item.productVariant.product.name.length > 10 ? item.productVariant.product.name.substring(0, 10) + '...' : item.productVariant.product.name}
+                        {order.items.slice(0, 3).map((item) => (
+                          <div key={item.id} className="flex items-center justify-between bg-white rounded-sm p-1 shadow-sm">
+                            <span className="font-medium text-slate-800 text-xs truncate">
+                              {item.productVariant.product.name}
                             </span>
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-0.5 py-0 leading-none">
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-0.5 py-0">
                               {item.quantity}
                             </Badge>
                           </div>
                         ))}
-                        {order.items.length > 2 && (
+                        {order.items.length > 3 && (
                           <div className="text-xs text-slate-500 text-center py-0.5">
-                            +{order.items.length - 2} more
+                            +{order.items.length - 3} more items
                           </div>
                         )}
                       </div>
@@ -538,23 +535,30 @@ export default function KitchenPOS() {
 
                     {/* Special Instructions */}
                     {order.specialInstructions && (
-                      <div className="bg-amber-50 border border-amber-200 rounded-sm p-1">
+                      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-sm p-1.5">
                         <div className="flex items-start">
-                          <AlertCircle className="h-2 w-2 text-amber-600 mr-0.5 mt-0.5 flex-shrink-0" />
+                          <AlertCircle className="h-2.5 w-2.5 text-amber-600 mr-1 mt-0.5 flex-shrink-0" />
                           <div>
-                            <p className="font-medium text-amber-800 mb-0.5 text-xs leading-none">Note:</p>
-                            <p className="text-xs text-amber-700 leading-tight">
-                              {order.specialInstructions.length > 15 ? order.specialInstructions.substring(0, 15) + '...' : order.specialInstructions}
+                            <p className="font-medium text-amber-800 mb-0.5 text-xs">Instructions</p>
+                            <p className="text-xs text-amber-700 truncate">
+                              {order.specialInstructions}
                             </p>
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {/* Price */}
-                    <div className="flex items-center justify-between pt-0.5">
-                      <div className="font-bold text-xs text-green-600 leading-none">
-                        {formatCurrencyValue(parseFloat(order.totalAmount || '0'))}
+                    {/* Customer & Total */}
+                    <div className="flex items-center justify-between bg-slate-50 rounded-sm p-1.5">
+                      <div>
+                        {order.customer && (
+                          <div className="text-xs text-slate-600 mb-0.5 truncate">
+                            <span className="font-medium text-slate-700">Customer:</span> {order.customer.name}
+                          </div>
+                        )}
+                        <div className="text-sm font-bold text-slate-900">
+                          {formatCurrencyValue(parseFloat(order.totalAmount || '0'))}
+                        </div>
                       </div>
                     </div>
 
