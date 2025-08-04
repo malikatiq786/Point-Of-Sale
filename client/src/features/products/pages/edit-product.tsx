@@ -66,7 +66,10 @@ export default function EditProduct() {
   // Update form data when product and dropdown data are loaded
   useEffect(() => {
     if (existingProduct && !isDropdownDataLoading) {
+      console.log('Full product data:', existingProduct);
       console.log('Setting form data:', {
+        name: existingProduct.name,
+        barcode: existingProduct.barcode,
         category: existingProduct.category,
         brand: existingProduct.brand,
         unit: existingProduct.unit,

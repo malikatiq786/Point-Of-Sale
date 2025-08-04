@@ -222,9 +222,13 @@ export class DatabaseStorage implements IStorage {
         id: products.id,
         name: products.name,
         description: products.description,
+        barcode: products.barcode,
         price: products.price,
         stock: products.stock,
         lowStockAlert: products.lowStockAlert,
+        image: products.image,
+        createdAt: products.createdAt,
+        updatedAt: products.updatedAt,
         category: {
           id: categories.id,
           name: categories.name,
