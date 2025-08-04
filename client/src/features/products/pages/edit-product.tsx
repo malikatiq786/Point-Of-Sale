@@ -67,18 +67,21 @@ export default function EditProduct() {
   useEffect(() => {
     if (existingProduct && !isDropdownDataLoading) {
       console.log('Setting form data:', {
-        categoryId: existingProduct.categoryId,
-        brandId: existingProduct.brandId,
-        unitId: existingProduct.unitId
+        category: existingProduct.category,
+        brand: existingProduct.brand,
+        unit: existingProduct.unit,
+        categoryId: existingProduct.category?.id,
+        brandId: existingProduct.brand?.id,
+        unitId: existingProduct.unit?.id
       });
       
       setFormData({
         name: existingProduct.name || "",
         description: existingProduct.description || "",
         barcode: existingProduct.barcode || "",
-        categoryId: existingProduct.categoryId ? existingProduct.categoryId.toString() : "none",
-        brandId: existingProduct.brandId ? existingProduct.brandId.toString() : "none",
-        unitId: existingProduct.unitId ? existingProduct.unitId.toString() : "none",
+        categoryId: existingProduct.category?.id ? existingProduct.category.id.toString() : "none",
+        brandId: existingProduct.brand?.id ? existingProduct.brand.id.toString() : "none",
+        unitId: existingProduct.unit?.id ? existingProduct.unit.id.toString() : "none",
         price: existingProduct.price?.toString() || "",
         stock: existingProduct.stock?.toString() || "",
         lowStockAlert: existingProduct.lowStockAlert?.toString() || "",
