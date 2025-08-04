@@ -38,8 +38,14 @@ export default function Products() {
         title: "Product deleted",
         description: "Product has been deleted successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: [`products-${currentPage}-${itemsPerPage}`] });
+      // Force immediate refetch of current page data
+      queryClient.refetchQueries({ queryKey: [`products-${currentPage}-${itemsPerPage}`] });
+      // Invalidate all product-related queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["pos-products"] });
+      // Invalidate any cached product queries with different pagination
+      queryClient.invalidateQueries({ predicate: (query) => 
+        query.queryKey[0]?.toString().startsWith('products-') 
+      });
     },
     onError: (error) => {
       toast({
@@ -61,8 +67,11 @@ export default function Products() {
   const { data: productsResponse, isLoading, error } = useQuery({
     queryKey: [`products-${currentPage}-${itemsPerPage}`],
     queryFn: async () => {
-      const response = await fetch(`/api/products/${currentPage}/${itemsPerPage}`, {
-        credentials: 'include'
+      // Add cache-busting timestamp to ensure fresh data
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/products/${currentPage}/${itemsPerPage}?_t=${timestamp}`, {
+        credentials: 'include',
+        cache: 'no-cache' // Disable browser caching
       });
       
       if (!response.ok) {
@@ -72,6 +81,8 @@ export default function Products() {
       return response.json();
     },
     retry: false,
+    staleTime: 0, // Always consider data stale
+    cacheTime: 0, // Don't cache the data
   });
 
   console.log('Products Query:', {

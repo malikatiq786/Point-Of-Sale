@@ -1588,9 +1588,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid product ID" });
       }
 
+      console.log(`Attempting to delete product: ${productId}`);
+      
+      // Check if product exists before deletion
+      const productsBeforeDelete = await storage.getProductsCount();
+      console.log(`Total products before delete: ${productsBeforeDelete}`);
+      
       await storage.deleteProduct(productId);
       
-      console.log(`Product deleted: ${productId}`);
+      // Check count after deletion to verify it worked
+      const productsAfterDelete = await storage.getProductsCount();
+      console.log(`Total products after delete: ${productsAfterDelete}`);
+      
+      if (productsAfterDelete < productsBeforeDelete) {
+        console.log(`Product ${productId} successfully deleted from database`);
+      } else {
+        console.log(`WARNING: Product ${productId} may not have been deleted - counts are the same`);
+      }
+      
       res.json({ message: "Product deleted successfully" });
     } catch (error) {
       console.error("Error deleting product:", error);
