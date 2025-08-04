@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star, Globe, ShoppingCart, Menu, Eye, UserCheck, Package } from "lucide-react";
+import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star } from "lucide-react";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -20,11 +20,6 @@ export default function Settings() {
   const [autoBackup, setAutoBackup] = useState(false);
   const [isAddCurrencyDialogOpen, setIsAddCurrencyDialogOpen] = useState(false);
   const [editingCurrency, setEditingCurrency] = useState<any>(null);
-  const [onlineOrderingEnabled, setOnlineOrderingEnabled] = useState(false);
-  const [isMenuManagementOpen, setIsMenuManagementOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [isAddRiderDialogOpen, setIsAddRiderDialogOpen] = useState(false);
-  const [editingRider, setEditingRider] = useState<any>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -38,61 +33,22 @@ export default function Settings() {
     isDefault: false
   });
 
-  // Rider form state
-  const [riderForm, setRiderForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    licenseNumber: "",
-    vehicleType: "bike",
-    vehicleNumber: "",
-    isActive: true
-  });
-
   // Fetch currencies
-  const { data: currencies = [], isLoading } = useQuery({
+  const { data: currencies = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/currencies"],
-  });
-
-  // Fetch online ordering status
-  const { data: onlineOrderingStatus } = useQuery({
-    queryKey: ["/api/admin/online-ordering-status"],
-    onSuccess: (data: any) => {
-      setOnlineOrderingEnabled(data.enabled || false);
-    },
-  });
-
-  // Fetch online customers
-  const { data: onlineCustomers = [] } = useQuery({
-    queryKey: ["/api/online/customers"],
-  });
-
-  // Fetch online orders
-  const { data: onlineOrders = [] } = useQuery({
-    queryKey: ["/api/online/orders"],
-  });
-
-  // Fetch menu products for management
-  const { data: menuProducts = [] } = useQuery({
-    queryKey: ["/api/products"],
-  });
-
-  // Fetch categories
-  const { data: categories = [] } = useQuery({
-    queryKey: ["/api/categories"],
-  });
-
-  // Fetch delivery riders
-  const { data: deliveryRiders = [] } = useQuery({
-    queryKey: ["/api/delivery-riders"],
   });
 
   // Create currency mutation
   const createCurrencyMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/currencies", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/currencies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create currency');
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/currencies"] });
       setIsAddCurrencyDialogOpen(false);
@@ -113,11 +69,15 @@ export default function Settings() {
 
   // Update currency mutation
   const updateCurrencyMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
-      apiRequest(`/api/currencies/${id}`, {
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await fetch(`/api/currencies/${id}`, {
         method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      }),
+      });
+      if (!response.ok) throw new Error('Failed to update currency');
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/currencies"] });
       setEditingCurrency(null);
@@ -138,10 +98,13 @@ export default function Settings() {
 
   // Delete currency mutation
   const deleteCurrencyMutation = useMutation({
-    mutationFn: (id: number) =>
-      apiRequest(`/api/currencies/${id}`, {
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/currencies/${id}`, {
         method: "DELETE",
-      }),
+      });
+      if (!response.ok) throw new Error('Failed to delete currency');
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/currencies"] });
       toast({
@@ -158,100 +121,6 @@ export default function Settings() {
     },
   });
 
-  // Toggle online ordering mutation
-  const toggleOnlineOrderingMutation = useMutation({
-    mutationFn: (enabled: boolean) => apiRequest("/api/admin/toggle-online-ordering", {
-      method: "POST",
-      body: JSON.stringify({ enabled }),
-    }),
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/online-ordering-status"] });
-      setOnlineOrderingEnabled(data.enabled);
-      toast({
-        title: "Success",
-        description: data.message,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to toggle online ordering",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Create rider mutation
-  const createRiderMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/delivery-riders", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery-riders"] });
-      setIsAddRiderDialogOpen(false);
-      resetRiderForm();
-      toast({
-        title: "Success",
-        description: "Delivery rider created successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create delivery rider",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Update rider mutation
-  const updateRiderMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
-      apiRequest(`/api/delivery-riders/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery-riders"] });
-      setEditingRider(null);
-      resetRiderForm();
-      toast({
-        title: "Success",
-        description: "Delivery rider updated successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update delivery rider",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Delete rider mutation
-  const deleteRiderMutation = useMutation({
-    mutationFn: (id: number) =>
-      apiRequest(`/api/delivery-riders/${id}`, {
-        method: "DELETE",
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery-riders"] });
-      toast({
-        title: "Success",
-        description: "Delivery rider deleted successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete delivery rider",
-        variant: "destructive",
-      });
-    },
-  });
-
   const resetCurrencyForm = () => {
     setCurrencyForm({
       code: "",
@@ -260,18 +129,6 @@ export default function Settings() {
       exchangeRate: "1.000000",
       isActive: true,
       isDefault: false
-    });
-  };
-
-  const resetRiderForm = () => {
-    setRiderForm({
-      name: "",
-      phone: "",
-      email: "",
-      licenseNumber: "",
-      vehicleType: "bike",
-      vehicleNumber: "",
-      isActive: true
     });
   };
 
@@ -285,20 +142,6 @@ export default function Settings() {
       isActive: currency.isActive,
       isDefault: currency.isDefault
     });
-  };
-
-  const handleEditRider = (rider: any) => {
-    setEditingRider(rider);
-    setRiderForm({
-      name: rider.name,
-      phone: rider.phone,
-      email: rider.email || "",
-      licenseNumber: rider.licenseNumber || "",
-      vehicleType: rider.vehicleType || "bike",
-      vehicleNumber: rider.vehicleNumber || "",
-      isActive: rider.isActive
-    });
-    setIsAddRiderDialogOpen(true);
   };
 
   const handleSubmitCurrency = (e: React.FormEvent) => {
@@ -323,56 +166,48 @@ export default function Settings() {
     }
   };
 
-  const handleSubmitRider = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!riderForm.name || !riderForm.phone) {
-      toast({
-        title: "Error",
-        description: "Please fill in name and phone number",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (editingRider) {
-      updateRiderMutation.mutate({
-        id: editingRider.id,
-        data: riderForm
-      });
-    } else {
-      createRiderMutation.mutate(riderForm);
-    }
-  };
-
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-              <p className="text-sm text-gray-500">Configure your system preferences</p>
+              <p className="text-gray-600">Manage your system preferences and configurations</p>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto p-6">
           <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 text-xs sm:text-sm">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="business">Business</TabsTrigger>
-              <TabsTrigger value="online">Online</TabsTrigger>
-              <TabsTrigger value="currencies">Currencies</TabsTrigger>
-              <TabsTrigger value="riders">Delivery</TabsTrigger>
-              <TabsTrigger value="users">Users</TabsTrigger>
-              <TabsTrigger value="notifications">Notifications</TabsTrigger>
-              <TabsTrigger value="security">Security</TabsTrigger>
-              <TabsTrigger value="system">System</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="general" className="flex items-center gap-2">
+                <SettingsIcon className="h-4 w-4" />
+                General
+              </TabsTrigger>
+              <TabsTrigger value="business" className="flex items-center gap-2">
+                <Store className="h-4 w-4" />
+                Business
+              </TabsTrigger>
+              <TabsTrigger value="currencies" className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Currencies
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Notifications
+              </TabsTrigger>
+              <TabsTrigger value="security" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Security
+              </TabsTrigger>
             </TabsList>
 
+            {/* General Settings Tab */}
             <TabsContent value="general" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -438,726 +273,209 @@ export default function Settings() {
                     <Input id="businessAddress" placeholder="Business Address" />
                   </div>
 
-                  <Button>Update Business Info</Button>
+                  <Button>Save Business Info</Button>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="online" className="space-y-6">
-              {/* Website Status Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Globe className="w-5 h-5" />
-                    <span>Online Restaurant</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label className="text-base font-medium">Enable Online Ordering</Label>
-                      <p className="text-sm text-gray-500">
-                        Allow customers to place orders through the restaurant website
-                      </p>
-                    </div>
-                    <Switch
-                      checked={onlineOrderingEnabled}
-                      onCheckedChange={(checked) => {
-                        toggleOnlineOrderingMutation.mutate(checked);
-                      }}
-                      disabled={toggleOnlineOrderingMutation.isPending}
-                    />
-                  </div>
-                  
-                  {onlineOrderingEnabled && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-sm font-medium text-green-800">Online Ordering Active</span>
-                      </div>
-                      <p className="text-sm text-green-700">
-                        Your restaurant website is live! Customers can browse the menu and place orders at:{" "}
-                        <a 
-                          href="/restaurant" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="font-medium underline hover:no-underline"
-                        >
-                          {window.location.origin}/restaurant
-                        </a>
-                      </p>
-                    </div>
-                  )}
-                  
-                  {!onlineOrderingEnabled && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                        <span className="text-sm font-medium text-gray-700">Online Ordering Disabled</span>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Enable online ordering to allow customers to place orders through your restaurant website.
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Website Statistics */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <ShoppingCart className="h-8 w-8 text-blue-500" />
-                      <div>
-                        <p className="text-2xl font-bold">{onlineOrders.length}</p>
-                        <p className="text-sm text-gray-500">Online Orders</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <UserCheck className="h-8 w-8 text-green-500" />
-                      <div>
-                        <p className="text-2xl font-bold">{onlineCustomers.length}</p>
-                        <p className="text-sm text-gray-500">Registered Customers</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <Package className="h-8 w-8 text-purple-500" />
-                      <div>
-                        <p className="text-2xl font-bold">{menuProducts.length}</p>
-                        <p className="text-sm text-gray-500">Menu Items</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <Menu className="h-8 w-8 text-orange-500" />
-                      <div>
-                        <p className="text-2xl font-bold">{categories.length}</p>
-                        <p className="text-sm text-gray-500">Categories</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Menu Management */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Menu className="h-5 w-5" />
-                      Website Menu Management
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Category
-                      </Button>
-                      <Button size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Menu Item
-                      </Button>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex gap-2 mb-4">
-                      <Button 
-                        variant={selectedCategory === "all" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setSelectedCategory("all")}
-                      >
-                        All Items ({menuProducts.length})
-                      </Button>
-                      {categories.map((category: any) => (
-                        <Button 
-                          key={category.id}
-                          variant={selectedCategory === category.id.toString() ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setSelectedCategory(category.id.toString())}
-                        >
-                          {category.name} ({menuProducts.filter((p: any) => p.categoryId === category.id).length})
-                        </Button>
-                      ))}
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {menuProducts
-                        .filter((product: any) => selectedCategory === "all" || product.categoryId.toString() === selectedCategory)
-                        .map((product: any) => (
-                          <div key={product.id} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-start mb-2">
-                              <h4 className="font-medium">{product.name}</h4>
-                              <div className="flex gap-1">
-                                <Button size="sm" variant="outline">
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                                <Button size="sm" variant="outline">
-                                  <Eye className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                            <p className="text-sm text-gray-500 mb-2">{product.description}</p>
-                            <div className="flex justify-between items-center">
-                              <span className="font-bold text-green-600">Rs {product.price}</span>
-                              <Badge variant={product.stock > 0 ? "default" : "secondary"}>
-                                Stock: {product.stock}
-                              </Badge>
-                            </div>
-                          </div>
-                        ))
-                      }
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Online Customers */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <UserCheck className="h-5 w-5" />
-                    Online Customers
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {onlineCustomers.length === 0 ? (
-                      <p className="text-gray-500 text-center py-8">No online customers yet</p>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {onlineCustomers.slice(0, 6).map((customer: any) => (
-                          <div key={customer.id} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h4 className="font-medium">{customer.name}</h4>
-                                <p className="text-sm text-gray-500">{customer.email}</p>
-                                {customer.phone && (
-                                  <p className="text-sm text-gray-500">{customer.phone}</p>
-                                )}
-                              </div>
-                              <Badge>Active</Badge>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {onlineCustomers.length > 6 && (
-                      <div className="text-center">
-                        <Button variant="outline">View All Customers</Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Recent Online Orders */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5" />
-                    Recent Online Orders
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {onlineOrders.length === 0 ? (
-                      <p className="text-gray-500 text-center py-8">No online orders yet</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {onlineOrders.slice(0, 5).map((order: any) => (
-                          <div key={order.id} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h4 className="font-medium">Order #{order.id}</h4>
-                                <p className="text-sm text-gray-500">
-                                  {order.customerName} • {order.orderType}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  {new Date(order.createdAt).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold">Rs {order.total}</p>
-                                <Badge variant={order.status === 'completed' ? 'default' : 'secondary'}>
-                                  {order.status}
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {onlineOrders.length > 5 && (
-                      <div className="text-center">
-                        <Button variant="outline">View All Online Orders</Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="riders" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <SettingsIcon className="w-5 h-5" />
-                      <span>Delivery Riders</span>
-                    </div>
-                    <Button 
-                      onClick={() => {
-                        resetRiderForm();
-                        setEditingRider(null);
-                        setIsAddRiderDialogOpen(true);
-                      }}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Rider
+            {/* Currencies Tab */}
+            <TabsContent value="currencies" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold">Currency Management</h3>
+                  <p className="text-gray-600">Manage currencies and exchange rates</p>
+                </div>
+                <Dialog open={isAddCurrencyDialogOpen} onOpenChange={setIsAddCurrencyDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => {
+                      setEditingCurrency(null);
+                      resetCurrencyForm();
+                    }}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Currency
                     </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {deliveryRiders.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-gray-500">No delivery riders found</p>
-                        <p className="text-sm text-gray-400">Add riders to manage delivery assignments</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {deliveryRiders.map((rider: any) => (
-                          <div key={rider.id} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-start mb-3">
-                              <div>
-                                <h4 className="font-medium">{rider.name}</h4>
-                                <p className="text-sm text-gray-500">{rider.phone}</p>
-                                {rider.email && (
-                                  <p className="text-sm text-gray-500">{rider.email}</p>
-                                )}
-                              </div>
-                              <div className="flex gap-1">
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => handleEditRider(rider)}
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => deleteRiderMutation.mutate(rider.id)}
-                                  disabled={deleteRiderMutation.isPending}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              {rider.vehicleType && (
-                                <div className="flex items-center text-xs text-gray-600">
-                                  <span className="font-medium">Vehicle:</span>
-                                  <span className="ml-1 capitalize">{rider.vehicleType}</span>
-                                  {rider.vehicleNumber && (
-                                    <span className="ml-1">({rider.vehicleNumber})</span>
-                                  )}
-                                </div>
-                              )}
-                              
-                              {rider.licenseNumber && (
-                                <div className="flex items-center text-xs text-gray-600">
-                                  <span className="font-medium">License:</span>
-                                  <span className="ml-1">{rider.licenseNumber}</span>
-                                </div>
-                              )}
-                              
-                              <div className="flex justify-between items-center">
-                                <Badge variant={rider.isActive ? "default" : "secondary"}>
-                                  {rider.isActive ? "Active" : "Inactive"}
-                                </Badge>
-                                <span className="text-xs text-gray-400">
-                                  Added {new Date(rider.createdAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Add/Edit Rider Dialog */}
-              <Dialog open={isAddRiderDialogOpen} onOpenChange={setIsAddRiderDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingRider ? "Edit Delivery Rider" : "Add New Delivery Rider"}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmitRider} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="riderName">Name *</Label>
-                      <Input
-                        id="riderName"
-                        value={riderForm.name}
-                        onChange={(e) => setRiderForm({ ...riderForm, name: e.target.value })}
-                        placeholder="Enter rider name"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="riderPhone">Phone *</Label>
-                      <Input
-                        id="riderPhone"
-                        value={riderForm.phone}
-                        onChange={(e) => setRiderForm({ ...riderForm, phone: e.target.value })}
-                        placeholder="Enter phone number"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="riderEmail">Email</Label>
-                      <Input
-                        id="riderEmail"
-                        type="email"
-                        value={riderForm.email}
-                        onChange={(e) => setRiderForm({ ...riderForm, email: e.target.value })}
-                        placeholder="Enter email address"
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="vehicleType">Vehicle Type</Label>
-                        <select
-                          id="vehicleType"
-                          value={riderForm.vehicleType}
-                          onChange={(e) => setRiderForm({ ...riderForm, vehicleType: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="bike">Bike</option>
-                          <option value="scooter">Scooter</option>
-                          <option value="car">Car</option>
-                          <option value="bicycle">Bicycle</option>
-                        </select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="vehicleNumber">Vehicle Number</Label>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingCurrency ? "Edit Currency" : "Add New Currency"}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmitCurrency} className="space-y-4">
+                      <div>
+                        <Label htmlFor="code">Currency Code *</Label>
                         <Input
-                          id="vehicleNumber"
-                          value={riderForm.vehicleNumber}
-                          onChange={(e) => setRiderForm({ ...riderForm, vehicleNumber: e.target.value })}
-                          placeholder="ABC-123"
+                          id="code"
+                          value={currencyForm.code}
+                          onChange={(e) => setCurrencyForm({ ...currencyForm, code: e.target.value.toUpperCase() })}
+                          placeholder="USD"
+                          maxLength={10}
+                          required
                         />
                       </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="licenseNumber">License Number</Label>
-                      <Input
-                        id="licenseNumber"
-                        value={riderForm.licenseNumber}
-                        onChange={(e) => setRiderForm({ ...riderForm, licenseNumber: e.target.value })}
-                        placeholder="Enter license number"
-                      />
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="riderActive"
-                        checked={riderForm.isActive}
-                        onCheckedChange={(checked) => setRiderForm({ ...riderForm, isActive: checked })}
-                      />
-                      <Label htmlFor="riderActive">Active</Label>
-                    </div>
-                    
-                    <div className="flex justify-end space-x-2">
-                      <Button type="button" variant="outline" onClick={() => setIsAddRiderDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button 
-                        type="submit" 
-                        disabled={createRiderMutation.isPending || updateRiderMutation.isPending}
-                      >
-                        {editingRider ? "Update" : "Create"} Rider
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </TabsContent>
-
-            <TabsContent value="currencies" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-5 w-5" />
-                      Currency Management
-                    </div>
-                    <Dialog open={isAddCurrencyDialogOpen} onOpenChange={setIsAddCurrencyDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button onClick={() => {
-                          resetCurrencyForm();
-                          setEditingCurrency(null);
-                        }}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Currency
+                      <div>
+                        <Label htmlFor="name">Currency Name *</Label>
+                        <Input
+                          id="name"
+                          value={currencyForm.name}
+                          onChange={(e) => setCurrencyForm({ ...currencyForm, name: e.target.value })}
+                          placeholder="US Dollar"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="symbol">Symbol *</Label>
+                        <Input
+                          id="symbol"
+                          value={currencyForm.symbol}
+                          onChange={(e) => setCurrencyForm({ ...currencyForm, symbol: e.target.value })}
+                          placeholder="$"
+                          maxLength={10}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="exchangeRate">Exchange Rate</Label>
+                        <Input
+                          id="exchangeRate"
+                          type="number"
+                          step="0.000001"
+                          value={currencyForm.exchangeRate}
+                          onChange={(e) => setCurrencyForm({ ...currencyForm, exchangeRate: e.target.value })}
+                          placeholder="1.000000"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="isActive"
+                          checked={currencyForm.isActive}
+                          onCheckedChange={(checked) => setCurrencyForm({ ...currencyForm, isActive: checked })}
+                        />
+                        <Label htmlFor="isActive">Active</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="isDefault"
+                          checked={currencyForm.isDefault}
+                          onCheckedChange={(checked) => setCurrencyForm({ ...currencyForm, isDefault: checked })}
+                        />
+                        <Label htmlFor="isDefault">Default Currency</Label>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="submit" disabled={createCurrencyMutation.isPending || updateCurrencyMutation.isPending}>
+                          {editingCurrency ? "Update Currency" : "Add Currency"}
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>
-                            {editingCurrency ? "Edit Currency" : "Add New Currency"}
-                          </DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={handleSubmitCurrency} className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="currency-code">Code *</Label>
-                              <Input
-                                id="currency-code"
-                                placeholder="USD, EUR, PKR"
-                                value={currencyForm.code}
-                                onChange={(e) => setCurrencyForm(prev => ({ 
-                                  ...prev, 
-                                  code: e.target.value.toUpperCase() 
-                                }))}
-                                maxLength={3}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="currency-symbol">Symbol *</Label>
-                              <Input
-                                id="currency-symbol"
-                                placeholder="$, €, Rs"
-                                value={currencyForm.symbol}
-                                onChange={(e) => setCurrencyForm(prev => ({ 
-                                  ...prev, 
-                                  symbol: e.target.value 
-                                }))}
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="currency-name">Name *</Label>
-                            <Input
-                              id="currency-name"
-                              placeholder="US Dollar, Euro, Pakistani Rupee"
-                              value={currencyForm.name}
-                              onChange={(e) => setCurrencyForm(prev => ({ 
-                                ...prev, 
-                                name: e.target.value 
-                              }))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="exchange-rate">Exchange Rate</Label>
-                            <Input
-                              id="exchange-rate"
-                              type="number"
-                              step="0.000001"
-                              placeholder="1.000000"
-                              value={currencyForm.exchangeRate}
-                              onChange={(e) => setCurrencyForm(prev => ({ 
-                                ...prev, 
-                                exchangeRate: e.target.value 
-                              }))}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                id="currency-active"
-                                checked={currencyForm.isActive}
-                                onCheckedChange={(checked) => setCurrencyForm(prev => ({ 
-                                  ...prev, 
-                                  isActive: checked 
-                                }))}
-                              />
-                              <Label htmlFor="currency-active">Active</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                id="currency-default"
-                                checked={currencyForm.isDefault}
-                                onCheckedChange={(checked) => setCurrencyForm(prev => ({ 
-                                  ...prev, 
-                                  isDefault: checked 
-                                }))}
-                              />
-                              <Label htmlFor="currency-default">Default</Label>
-                            </div>
-                          </div>
-                          <div className="flex justify-end space-x-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                setIsAddCurrencyDialogOpen(false);
-                                setEditingCurrency(null);
-                                resetCurrencyForm();
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                            <Button 
-                              type="submit" 
-                              disabled={createCurrencyMutation.isPending || updateCurrencyMutation.isPending}
-                            >
-                              {editingCurrency ? "Update" : "Create"}
-                            </Button>
-                          </div>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="text-center py-8">Loading currencies...</div>
-                  ) : currencies.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      No currencies configured yet
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {currencies.map((currency: any) => (
-                        <div
-                          key={currency.id}
-                          className="flex items-center justify-between p-4 border rounded-lg"
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setIsAddCurrencyDialogOpen(false);
+                            setEditingCurrency(null);
+                            resetCurrencyForm();
+                          }}
                         >
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <Card>
+                <CardContent className="p-0">
+                  {currencies.length > 0 ? (
+                    <div className="divide-y">
+                      {currencies.map((currency: any) => (
+                        <div key={currency.id} className="flex items-center justify-between p-6">
                           <div className="flex items-center space-x-4">
-                            <div className="text-2xl font-mono">{currency.symbol}</div>
+                            <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                              <DollarSign className="h-5 w-5 text-primary-600" />
+                            </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="font-semibold">
-                                  {currency.code} - {currency.name}
-                                </span>
+                                <h4 className="font-medium">{currency.code}</h4>
+                                <Badge variant={currency.isActive ? "default" : "secondary"}>
+                                  {currency.isActive ? "Active" : "Inactive"}
+                                </Badge>
                                 {currency.isDefault && (
-                                  <Badge variant="default" className="flex items-center gap-1">
-                                    <Star className="h-3 w-3" />
+                                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                    <Star className="h-3 w-3 mr-1" />
                                     Default
                                   </Badge>
                                 )}
-                                {!currency.isActive && (
-                                  <Badge variant="secondary">Inactive</Badge>
-                                )}
                               </div>
-                              <div className="text-sm text-gray-500">
-                                Exchange Rate: {currency.exchangeRate}
+                              <p className="text-sm text-gray-600">{currency.name}</p>
+                              <div className="flex items-center gap-4 mt-1">
+                                <span className="text-sm text-gray-500">Symbol: {currency.symbol}</span>
+                                <span className="text-sm text-gray-500">Rate: {currency.exchangeRate}</span>
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Button
+                              variant="ghost"
                               size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                handleEditCurrency(currency);
-                                setIsAddCurrencyDialogOpen(true);
-                              }}
+                              onClick={() => handleEditCurrency(currency)}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            {!currency.isDefault && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => deleteCurrencyMutation.mutate(currency.id)}
-                                disabled={deleteCurrencyMutation.isPending}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm("Are you sure you want to delete this currency?")) {
+                                  deleteCurrencyMutation.mutate(currency.id);
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No currencies found</h3>
+                      <p className="text-gray-600 mb-4">Get started by adding your first currency.</p>
+                      <Button onClick={() => setIsAddCurrencyDialogOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add First Currency
+                      </Button>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="users" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Users className="w-5 h-5" />
-                    <span>User Management</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">Default User Role</h3>
-                      <p className="text-sm text-gray-500">Role assigned to new users</p>
-                    </div>
-                    <Input className="w-32" defaultValue="Cashier" />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">Auto-approve Users</h3>
-                      <p className="text-sm text-gray-500">Automatically approve new user registrations</p>
-                    </div>
-                    <Switch />
-                  </div>
-
-                  <Button>Save User Settings</Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
+            {/* Notifications Tab */}
             <TabsContent value="notifications" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Bell className="w-5 h-5" />
-                    <span>Notification Settings</span>
+                    <span>Notification Preferences</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium">Enable Notifications</h3>
-                      <p className="text-sm text-gray-500">Receive system notifications</p>
+                      <h4 className="font-medium">Push Notifications</h4>
+                      <p className="text-sm text-gray-600">Receive notifications for important events</p>
                     </div>
-                    <Switch checked={notifications} onCheckedChange={setNotifications} />
+                    <Switch
+                      checked={notifications}
+                      onCheckedChange={setNotifications}
+                    />
                   </div>
-
+                  
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium">Low Stock Alerts</h3>
-                      <p className="text-sm text-gray-500">Alert when products are running low</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">Daily Sales Report</h3>
-                      <p className="text-sm text-gray-500">Email daily sales summary</p>
+                      <h4 className="font-medium">Email Notifications</h4>
+                      <p className="text-sm text-gray-600">Get email alerts for sales, inventory, etc.</p>
                     </div>
                     <Switch />
                   </div>
@@ -1167,61 +485,33 @@ export default function Settings() {
               </Card>
             </TabsContent>
 
+            {/* Security Tab */}
             <TabsContent value="security" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Shield className="w-5 h-5" />
-                    <span>Security Settings</span>
+                    <span>Security & Backup</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium">Two-Factor Authentication</h3>
-                      <p className="text-sm text-gray-500">Add extra security to your account</p>
+                      <h4 className="font-medium">Automatic Backup</h4>
+                      <p className="text-sm text-gray-600">Automatically backup data daily</p>
                     </div>
-                    <Switch />
+                    <Switch
+                      checked={autoBackup}
+                      onCheckedChange={setAutoBackup}
+                    />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
-                    <Input id="sessionTimeout" type="number" defaultValue="30" className="w-32" />
-                  </div>
-
-                  <Button>Update Security Settings</Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="system" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Database className="w-5 h-5" />
-                    <span>System Settings</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">Auto Backup</h3>
-                      <p className="text-sm text-gray-500">Automatically backup data daily</p>
-                    </div>
-                    <Switch checked={autoBackup} onCheckedChange={setAutoBackup} />
-                  </div>
-
+                  
                   <div className="space-y-2">
                     <Label htmlFor="backupTime">Backup Time</Label>
-                    <Input id="backupTime" type="time" defaultValue="02:00" className="w-32" />
+                    <Input id="backupTime" type="time" defaultValue="02:00" />
                   </div>
 
-                  <div className="flex space-x-4">
-                    <Button>Backup Now</Button>
-                    <Button variant="outline">View Backup History</Button>
-                  </div>
-
-                  <Button>Save System Settings</Button>
+                  <Button>Save Security Settings</Button>
                 </CardContent>
               </Card>
             </TabsContent>

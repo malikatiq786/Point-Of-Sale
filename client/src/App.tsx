@@ -21,6 +21,7 @@ import Roles from "@/features/users/pages/roles";
 import ActivityLogs from "@/features/users/pages/activity-logs";
 import Notifications from "@/features/users/pages/notifications";
 import Settings from "@/features/settings";
+import RestaurantManagement from "@/features/restaurant-management/pages/restaurant-management";
 import Categories, { Brands, Units } from "@/features/categories";
 import Purchases from "@/features/purchases";
 import AddPurchase from "@/features/purchases/pages/add-purchase";
@@ -110,6 +111,7 @@ function Router() {
           <Route path="/business-profile" component={BusinessProfile} />
           <Route path="/branches" component={Branches} />
           <Route path="/registers" component={Registers} />
+          <Route path="/restaurant-management" component={RestaurantManagement} />
           <Route path="/settings" component={Settings} />
         </>
       )}

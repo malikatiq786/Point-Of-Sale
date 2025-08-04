@@ -25,7 +25,9 @@ import {
   ChevronDown,
   ChevronRight,
   X,
-  ChefHat
+  ChefHat,
+  Globe,
+  Car
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
@@ -94,6 +96,12 @@ export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) 
         { name: "Purchases", href: "/purchases", icon: ShoppingBag, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
         { name: "Customer Ledgers", href: "/customer-ledgers", icon: CreditCard, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
         { name: "Supplier Ledgers", href: "/supplier-ledgers", icon: CreditCard, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
+      ]
+    },
+    {
+      title: "RESTAURANT MANAGEMENT",
+      items: [
+        { name: "Restaurant Management", href: "/restaurant-management", icon: Globe, roles: ["Super Admin", "Admin/Owner", "Manager"] },
       ]
     },
     {
