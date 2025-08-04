@@ -1441,7 +1441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Use new MVC routes (after auth routes to avoid conflicts) - COMPLETELY DISABLED to use simple endpoints
-  // app.use('/api', apiRoutes);
+  app.use('/api', apiRoutes);
 
   // Legacy routes for compatibility (will be gradually migrated)
   app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
