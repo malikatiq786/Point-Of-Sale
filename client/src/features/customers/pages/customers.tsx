@@ -19,7 +19,17 @@ export default function Customers() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [newCustomer, setNewCustomer] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: ""
+  });
+  const [editCustomer, setEditCustomer] = useState({
+    id: 0,
     name: "",
     email: "",
     phone: "",
@@ -58,6 +68,44 @@ export default function Customers() {
     },
   });
 
+  const updateCustomerMutation = useMutation({
+    mutationFn: (customerData: any) => apiRequest("PUT", `/api/customers/${customerData.id}`, customerData),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Customer updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      setShowEditDialog(false);
+      setEditCustomer({ id: 0, name: "", email: "", phone: "", address: "" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update customer",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCustomerMutation = useMutation({
+    mutationFn: (customerId: number) => apiRequest("DELETE", `/api/customers/${customerId}`),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Customer deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete customer",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateCustomer = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCustomer.name) {
@@ -69,6 +117,41 @@ export default function Customers() {
       return;
     }
     createCustomerMutation.mutate(newCustomer);
+  };
+
+  const handleEditCustomer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editCustomer.name) {
+      toast({
+        title: "Error",
+        description: "Customer name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateCustomerMutation.mutate(editCustomer);
+  };
+
+  const handleViewCustomer = (customer: any) => {
+    setSelectedCustomer(customer);
+    setShowViewDialog(true);
+  };
+
+  const handleEditClick = (customer: any) => {
+    setEditCustomer({
+      id: customer.id,
+      name: customer.name || "",
+      email: customer.email || "",
+      phone: customer.phone || "",
+      address: customer.address || ""
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleDeleteCustomer = (customer: any) => {
+    if (confirm(`Are you sure you want to delete ${customer.name}?`)) {
+      deleteCustomerMutation.mutate(customer.id);
+    }
   };
 
   return (
@@ -158,6 +241,132 @@ export default function Customers() {
                   </form>
                 </DialogContent>
               </Dialog>
+              
+              {/* Edit Customer Dialog */}
+              <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit Customer</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleEditCustomer} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Name *</Label>
+                      <Input
+                        id="edit-name"
+                        value={editCustomer.name}
+                        onChange={(e) => setEditCustomer({ ...editCustomer, name: e.target.value })}
+                        placeholder="Enter customer name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email">Email</Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={editCustomer.email}
+                        onChange={(e) => setEditCustomer({ ...editCustomer, email: e.target.value })}
+                        placeholder="Enter email address"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-phone">Phone</Label>
+                      <Input
+                        id="edit-phone"
+                        value={editCustomer.phone}
+                        onChange={(e) => setEditCustomer({ ...editCustomer, phone: e.target.value })}
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-address">Address</Label>
+                      <Textarea
+                        id="edit-address"
+                        value={editCustomer.address}
+                        onChange={(e) => setEditCustomer({ ...editCustomer, address: e.target.value })}
+                        placeholder="Enter customer address"
+                        rows={3}
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-3">
+                      <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={updateCustomerMutation.isPending}>
+                        {updateCustomerMutation.isPending ? "Updating..." : "Update Customer"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              {/* View Customer Dialog */}
+              <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Customer Details</DialogTitle>
+                  </DialogHeader>
+                  {selectedCustomer && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Customer ID</Label>
+                          <p className="text-sm">{selectedCustomer.id}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Name</Label>
+                          <p className="text-sm font-semibold">{selectedCustomer.name}</p>
+                        </div>
+                      </div>
+                      
+                      {selectedCustomer.email && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Email</Label>
+                          <p className="text-sm">{selectedCustomer.email}</p>
+                        </div>
+                      )}
+                      
+                      {selectedCustomer.phone && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Phone</Label>
+                          <p className="text-sm">{selectedCustomer.phone}</p>
+                        </div>
+                      )}
+                      
+                      {selectedCustomer.address && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Address</Label>
+                          <p className="text-sm">{selectedCustomer.address}</p>
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Total Orders</Label>
+                          <p className="text-sm">0</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Registration Date</Label>
+                          <p className="text-sm">{selectedCustomer.createdAt ? new Date(selectedCustomer.createdAt).toLocaleDateString() : 'N/A'}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-end space-x-3 pt-4">
+                        <Button variant="outline" onClick={() => setShowViewDialog(false)}>
+                          Close
+                        </Button>
+                        <Button onClick={() => {
+                          setShowViewDialog(false);
+                          handleEditClick(selectedCustomer);
+                        }}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit Customer
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </header>
@@ -233,13 +442,13 @@ export default function Customers() {
                           Total Orders: 0
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => handleViewCustomer(customer)}>
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => handleEditClick(customer)}>
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteCustomer(customer)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
