@@ -4,10 +4,12 @@ import { KitchenLayout } from "@/layouts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, ChefHat, CheckCircle, AlertCircle, Utensils, Car, Home, Timer, Bell, Settings, Filter, Globe, UserCheck } from "lucide-react";
+import { Clock, ChefHat, CheckCircle, AlertCircle, Utensils, Car, Home, Timer, Bell, Settings, Filter, Globe, UserCheck, Bike, Truck } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 
 interface KitchenOrder {
@@ -55,7 +57,7 @@ export default function KitchenPOS() {
   });
 
   // Fetch delivery riders for assignment
-  const { data: deliveryRiders = [] } = useQuery({
+  const { data: deliveryRiders = [] } = useQuery<any[]>({
     queryKey: ["/api/delivery-riders/active"],
     retry: false,
   });
@@ -702,6 +704,68 @@ export default function KitchenPOS() {
           </p>
         </div>
       )}
+
+      {/* Rider Assignment Modal */}
+      <Dialog open={assigningRider !== null} onOpenChange={() => {
+        setAssigningRider(null);
+        setSelectedRider("");
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Delivery Rider</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Select Rider:</label>
+              <Select value={selectedRider} onValueChange={setSelectedRider}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a delivery rider" />
+                </SelectTrigger>
+                <SelectContent>
+                  {deliveryRiders.map((rider: any) => {
+                    const VehicleIcon = rider.vehicleType === 'car' ? Car : rider.vehicleType === 'truck' ? Truck : Bike;
+                    return (
+                      <SelectItem key={rider.id} value={rider.id.toString()}>
+                        <div className="flex items-center gap-2">
+                          <VehicleIcon className="h-4 w-4" />
+                          <span>{rider.name}</span>
+                          <span className="text-sm text-gray-500">({rider.vehicleType})</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {deliveryRiders.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-4">
+                No active delivery riders available. Please add riders in Restaurant Management.
+              </p>
+            )}
+            
+            <div className="flex gap-2 pt-4">
+              <Button 
+                onClick={handleAssignRider} 
+                disabled={!selectedRider || assignRiderMutation.isPending}
+                className="flex-1"
+              >
+                {assignRiderMutation.isPending ? "Assigning..." : "Assign Rider"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setAssigningRider(null);
+                  setSelectedRider("");
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </KitchenLayout>
   );
 }
