@@ -1582,34 +1582,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Product DELETE endpoint
   app.delete("/api/products/:id", isAuthenticated, async (req, res) => {
+    console.log("=== DELETE PRODUCT ENDPOINT CALLED ===");
+    
     try {
       const productId = parseInt(req.params.id);
+      console.log(`Raw product ID from params: ${req.params.id}, parsed: ${productId}`);
+      
       if (isNaN(productId)) {
+        console.log("Invalid product ID - not a number");
         return res.status(400).json({ message: "Invalid product ID" });
       }
 
-      console.log(`Attempting to delete product: ${productId}`);
+      console.log(`ROUTE: Attempting to delete product: ${productId}`);
       
       // Check if product exists before deletion
       const productsBeforeDelete = await storage.getProductsCount();
-      console.log(`Total products before delete: ${productsBeforeDelete}`);
+      console.log(`ROUTE: Total products before delete: ${productsBeforeDelete}`);
       
+      // Perform the deletion
+      console.log(`ROUTE: Calling storage.deleteProduct(${productId})`);
       await storage.deleteProduct(productId);
+      console.log(`ROUTE: storage.deleteProduct() completed`);
       
       // Check count after deletion to verify it worked
       const productsAfterDelete = await storage.getProductsCount();
-      console.log(`Total products after delete: ${productsAfterDelete}`);
+      console.log(`ROUTE: Total products after delete: ${productsAfterDelete}`);
       
       if (productsAfterDelete < productsBeforeDelete) {
-        console.log(`Product ${productId} successfully deleted from database`);
+        console.log(`ROUTE: SUCCESS - Product ${productId} successfully deleted from database`);
       } else {
-        console.log(`WARNING: Product ${productId} may not have been deleted - counts are the same`);
+        console.log(`ROUTE: WARNING - Product ${productId} may not have been deleted - counts are the same`);
       }
       
-      res.json({ message: "Product deleted successfully" });
+      res.json({ 
+        message: "Product deleted successfully",
+        productId: productId,
+        beforeCount: productsBeforeDelete,
+        afterCount: productsAfterDelete
+      });
     } catch (error) {
-      console.error("Error deleting product:", error);
-      res.status(500).json({ message: "Failed to delete product" });
+      console.error("ROUTE: Error deleting product:", error);
+      res.status(500).json({ message: "Failed to delete product", error: error.message });
     }
   });
 
