@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star } from "lucide-react";
+import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star, Globe } from "lucide-react";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -20,6 +20,7 @@ export default function Settings() {
   const [autoBackup, setAutoBackup] = useState(false);
   const [isAddCurrencyDialogOpen, setIsAddCurrencyDialogOpen] = useState(false);
   const [editingCurrency, setEditingCurrency] = useState<any>(null);
+  const [onlineOrderingEnabled, setOnlineOrderingEnabled] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -36,6 +37,14 @@ export default function Settings() {
   // Fetch currencies
   const { data: currencies = [], isLoading } = useQuery({
     queryKey: ["/api/currencies"],
+  });
+
+  // Fetch online ordering status
+  const { data: onlineOrderingStatus } = useQuery({
+    queryKey: ["/api/admin/online-ordering-status"],
+    onSuccess: (data: any) => {
+      setOnlineOrderingEnabled(data.enabled || false);
+    },
   });
 
   // Create currency mutation
@@ -109,6 +118,29 @@ export default function Settings() {
     },
   });
 
+  // Toggle online ordering mutation
+  const toggleOnlineOrderingMutation = useMutation({
+    mutationFn: (enabled: boolean) => apiRequest("/api/admin/toggle-online-ordering", {
+      method: "POST",
+      body: JSON.stringify({ enabled }),
+    }),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/online-ordering-status"] });
+      setOnlineOrderingEnabled(data.enabled);
+      toast({
+        title: "Success",
+        description: data.message,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to toggle online ordering",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetCurrencyForm = () => {
     setCurrencyForm({
       code: "",
@@ -170,9 +202,10 @@ export default function Settings() {
 
         <main className="flex-1 overflow-y-auto p-6">
           <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 text-xs sm:text-sm">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 text-xs sm:text-sm">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="business">Business</TabsTrigger>
+              <TabsTrigger value="online">Online</TabsTrigger>
               <TabsTrigger value="currencies">Currencies</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="notifications">Notifications</TabsTrigger>
@@ -246,6 +279,102 @@ export default function Settings() {
                   </div>
 
                   <Button>Update Business Info</Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="online" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Globe className="w-5 h-5" />
+                    <span>Online Restaurant</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label className="text-base font-medium">Enable Online Ordering</Label>
+                      <p className="text-sm text-gray-500">
+                        Allow customers to place orders through the restaurant website
+                      </p>
+                    </div>
+                    <Switch
+                      checked={onlineOrderingEnabled}
+                      onCheckedChange={(checked) => {
+                        toggleOnlineOrderingMutation.mutate(checked);
+                      }}
+                      disabled={toggleOnlineOrderingMutation.isPending}
+                    />
+                  </div>
+                  
+                  {onlineOrderingEnabled && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-green-800">Online Ordering Active</span>
+                      </div>
+                      <p className="text-sm text-green-700">
+                        Your restaurant website is live! Customers can browse the menu and place orders at:{" "}
+                        <a 
+                          href="/restaurant" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="font-medium underline hover:no-underline"
+                        >
+                          {window.location.origin}/restaurant
+                        </a>
+                      </p>
+                    </div>
+                  )}
+                  
+                  {!onlineOrderingEnabled && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                        <span className="text-sm font-medium text-gray-700">Online Ordering Disabled</span>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        Enable online ordering to allow customers to place orders through your restaurant website.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Online Features</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                            <span className="text-sm">Customer registration & login</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                            <span className="text-sm">Shopping cart functionality</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                            <span className="text-sm">Multiple order types (dine-in, takeaway, delivery)</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                            <span className="text-sm">Kitchen integration with POS orders</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                            <span className="text-sm">Real-time order notifications</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                            <span className="text-sm">Order status tracking</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

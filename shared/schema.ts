@@ -242,6 +242,7 @@ export const suppliers = pgTable("suppliers", {
 export const sales = pgTable("sales", {
   id: serial("id").primaryKey(),
   customerId: integer("customer_id").references(() => customers.id),
+  onlineCustomerId: integer("online_customer_id").references(() => onlineCustomers.id),
   userId: varchar("user_id").references(() => users.id),
   branchId: integer("branch_id").references(() => branches.id),
   registerId: integer("register_id").references(() => registers.id),
@@ -250,10 +251,14 @@ export const sales = pgTable("sales", {
   saleDate: timestamp("sale_date").defaultNow(),
   status: varchar("status", { length: 50 }),
   orderType: varchar("order_type", { length: 20 }).default("sale"), // sale, dine-in, takeaway, delivery
+  orderSource: varchar("order_source", { length: 20 }).default("pos"), // pos, online
   tableNumber: varchar("table_number", { length: 20 }),
   kitchenStatus: varchar("kitchen_status", { length: 20 }).default("new"), // new, preparing, ready, served
   specialInstructions: text("special_instructions"),
   estimatedTime: integer("estimated_time"), // in minutes
+  deliveryAddress: text("delivery_address"),
+  customerPhone: varchar("customer_phone", { length: 20 }),
+  customerName: varchar("customer_name", { length: 150 }),
 });
 
 export const saleItems = pgTable("sale_items", {
@@ -430,6 +435,39 @@ export const currencies = pgTable("currencies", {
 });
 
 // =========================================
+// 🌐 Online Restaurant & Customer Orders
+// =========================================
+
+export const onlineCustomers = pgTable("online_customers", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 150 }).notNull(),
+  email: varchar("email", { length: 150 }).unique().notNull(),
+  phone: varchar("phone", { length: 20 }),
+  password: text("password").notNull(),
+  address: text("address"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const cartItems = pgTable("cart_items", {
+  id: serial("id").primaryKey(),
+  onlineCustomerId: integer("online_customer_id").references(() => onlineCustomers.id, { onDelete: "cascade" }).notNull(),
+  productId: integer("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  quantity: integer("quantity").notNull(),
+  price: numeric("price", { precision: 12, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const menuCategories = pgTable("menu_categories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// =========================================
 // Relations
 // =========================================
 
@@ -478,6 +516,10 @@ export const salesRelations = relations(sales, ({ one, many }) => ({
     fields: [sales.customerId],
     references: [customers.id],
   }),
+  onlineCustomer: one(onlineCustomers, {
+    fields: [sales.onlineCustomerId],
+    references: [onlineCustomers.id],
+  }),
   user: one(users, {
     fields: [sales.userId],
     references: [users.id],
@@ -487,6 +529,22 @@ export const salesRelations = relations(sales, ({ one, many }) => ({
     references: [branches.id],
   }),
   items: many(saleItems),
+}));
+
+export const onlineCustomersRelations = relations(onlineCustomers, ({ many }) => ({
+  cartItems: many(cartItems),
+  sales: many(sales),
+}));
+
+export const cartItemsRelations = relations(cartItems, ({ one }) => ({
+  onlineCustomer: one(onlineCustomers, {
+    fields: [cartItems.onlineCustomerId],
+    references: [onlineCustomers.id],
+  }),
+  product: one(products, {
+    fields: [cartItems.productId],
+    references: [products.id],
+  }),
 }));
 
 export const saleItemsRelations = relations(saleItems, ({ one }) => ({
@@ -527,6 +585,9 @@ export type Employee = typeof employees.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
 export type Currency = typeof currencies.$inferSelect;
+export type OnlineCustomer = typeof onlineCustomers.$inferSelect;
+export type CartItem = typeof cartItems.$inferSelect;
+export type MenuCategory = typeof menuCategories.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -544,7 +605,17 @@ export const insertProductSchema = createInsertSchema(products);
 export const insertSaleSchema = createInsertSchema(sales).extend({
   status: z.enum(['completed', 'pending', 'cancelled']).optional(),
   orderType: z.enum(['sale', 'dine-in', 'takeaway', 'delivery']).optional(),
+  orderSource: z.enum(['pos', 'online']).optional(),
   kitchenStatus: z.enum(['new', 'preparing', 'ready', 'served']).optional(),
+});
+export const insertOnlineCustomerSchema = createInsertSchema(onlineCustomers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertCartItemSchema = createInsertSchema(cartItems).omit({
+  id: true,
+  createdAt: true,
 });
 export const insertCustomerSchema = createInsertSchema(customers);
 export const insertSupplierSchema = createInsertSchema(suppliers);
@@ -563,3 +634,5 @@ export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type InsertCurrency = z.infer<typeof insertCurrencySchema>;
+export type InsertOnlineCustomer = z.infer<typeof insertOnlineCustomerSchema>;
+export type InsertCartItem = z.infer<typeof insertCartItemSchema>;

@@ -12,6 +12,11 @@ import {
   sales,
   saleItems,
   activityLogs,
+  onlineCustomers,
+  cartItems,
+  menuCategories,
+  settings,
+  currencies,
   type User,
   type UpsertUser,
   type Product,
@@ -21,6 +26,12 @@ import {
   type SaleItem,
   type Customer,
   type Role,
+  type OnlineCustomer,
+  type CartItem,
+  type MenuCategory,
+  type InsertOnlineCustomer,
+  type InsertCartItem,
+  type Setting,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, like, and } from "drizzle-orm";
@@ -76,6 +87,30 @@ export interface IStorage {
   
   // Activity logging
   logActivity(userId: string, action: string, ipAddress?: string): Promise<void>;
+  
+  // Online customer operations
+  createOnlineCustomer(customer: InsertOnlineCustomer): Promise<OnlineCustomer>;
+  getOnlineCustomerByEmail(email: string): Promise<OnlineCustomer | undefined>;
+  authenticateOnlineCustomer(email: string, password: string): Promise<OnlineCustomer | null>;
+  
+  // Cart operations
+  getCartItems(onlineCustomerId: number): Promise<(CartItem & { product: Pick<Product, 'id' | 'name' | 'description' | 'price' | 'image'> })[]>;
+  addToCart(cartItem: InsertCartItem): Promise<CartItem>;
+  updateCartItem(id: number, quantity: number): Promise<CartItem>;
+  removeFromCart(id: number): Promise<void>;
+  clearCart(onlineCustomerId: number): Promise<void>;
+  
+  // Menu operations
+  getMenuProducts(): Promise<(Pick<Product, 'id' | 'name' | 'description' | 'price' | 'image' | 'categoryId'> & { category: { id: number; name: string } | null })[]>;
+  getMenuCategories(): Promise<MenuCategory[]>;
+  
+  // Settings operations
+  getSetting(key: string): Promise<Setting | undefined>;
+  updateSetting(key: string, value: string): Promise<Setting>;
+  
+  // Currency operations
+  getCurrencies(): Promise<any[]>;
+  createCurrency(currency: any): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -223,13 +258,23 @@ export class DatabaseStorage implements IStorage {
         saleDate: sales.saleDate,
         status: sales.status,
         orderType: sales.orderType,
+        orderSource: sales.orderSource,
         tableNumber: sales.tableNumber,
         kitchenStatus: sales.kitchenStatus,
         specialInstructions: sales.specialInstructions,
         estimatedTime: sales.estimatedTime,
+        deliveryAddress: sales.deliveryAddress,
+        customerPhone: sales.customerPhone,
+        customerName: sales.customerName,
         customer: {
           id: customers.id,
           name: customers.name,
+        },
+        onlineCustomer: {
+          id: onlineCustomers.id,
+          name: onlineCustomers.name,
+          email: onlineCustomers.email,
+          phone: onlineCustomers.phone,
         },
         user: {
           id: users.id,
@@ -238,6 +283,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(sales)
       .leftJoin(customers, eq(sales.customerId, customers.id))
+      .leftJoin(onlineCustomers, eq(sales.onlineCustomerId, onlineCustomers.id))
       .leftJoin(users, eq(sales.userId, users.id))
       .orderBy(desc(sales.saleDate));
   }
@@ -390,6 +436,157 @@ export class DatabaseStorage implements IStorage {
       action,
       ipAddress,
     });
+  }
+  
+  // Online customer operations
+  async createOnlineCustomer(customerData: InsertOnlineCustomer): Promise<OnlineCustomer> {
+    const [customer] = await db
+      .insert(onlineCustomers)
+      .values(customerData)
+      .returning();
+    return customer;
+  }
+  
+  async getOnlineCustomerByEmail(email: string): Promise<OnlineCustomer | undefined> {
+    const [customer] = await db
+      .select()
+      .from(onlineCustomers)
+      .where(eq(onlineCustomers.email, email));
+    return customer;
+  }
+  
+  async authenticateOnlineCustomer(email: string, password: string): Promise<OnlineCustomer | null> {
+    const [customer] = await db
+      .select()
+      .from(onlineCustomers)
+      .where(and(eq(onlineCustomers.email, email), eq(onlineCustomers.password, password)));
+    return customer || null;
+  }
+  
+  // Cart operations
+  async getCartItems(onlineCustomerId: number): Promise<(CartItem & { product: Pick<Product, 'id' | 'name' | 'description' | 'price' | 'image'> })[]> {
+    return await db
+      .select({
+        id: cartItems.id,
+        onlineCustomerId: cartItems.onlineCustomerId,
+        productId: cartItems.productId,
+        quantity: cartItems.quantity,
+        price: cartItems.price,
+        createdAt: cartItems.createdAt,
+        product: {
+          id: products.id,
+          name: products.name,
+          description: products.description,
+          price: products.price,
+          image: products.image,
+        },
+      })
+      .from(cartItems)
+      .innerJoin(products, eq(cartItems.productId, products.id))
+      .where(eq(cartItems.onlineCustomerId, onlineCustomerId));
+  }
+  
+  async addToCart(cartItemData: InsertCartItem): Promise<CartItem> {
+    // Check if item already exists in cart
+    const [existingItem] = await db
+      .select()
+      .from(cartItems)
+      .where(and(
+        eq(cartItems.onlineCustomerId, cartItemData.onlineCustomerId),
+        eq(cartItems.productId, cartItemData.productId)
+      ));
+    
+    if (existingItem) {
+      // Update quantity
+      const [updatedItem] = await db
+        .update(cartItems)
+        .set({ quantity: existingItem.quantity + cartItemData.quantity })
+        .where(eq(cartItems.id, existingItem.id))
+        .returning();
+      return updatedItem;
+    } else {
+      // Add new item
+      const [newItem] = await db
+        .insert(cartItems)
+        .values(cartItemData)
+        .returning();
+      return newItem;
+    }
+  }
+  
+  async updateCartItem(id: number, quantity: number): Promise<CartItem> {
+    const [updatedItem] = await db
+      .update(cartItems)
+      .set({ quantity })
+      .where(eq(cartItems.id, id))
+      .returning();
+    return updatedItem;
+  }
+  
+  async removeFromCart(id: number): Promise<void> {
+    await db.delete(cartItems).where(eq(cartItems.id, id));
+  }
+  
+  async clearCart(onlineCustomerId: number): Promise<void> {
+    await db.delete(cartItems).where(eq(cartItems.onlineCustomerId, onlineCustomerId));
+  }
+  
+  // Menu operations
+  async getMenuProducts(): Promise<(Pick<Product, 'id' | 'name' | 'description' | 'price' | 'image' | 'categoryId'> & { category: { id: number; name: string } | null })[]> {
+    return await db
+      .select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        image: products.image,
+        categoryId: products.categoryId,
+        category: {
+          id: categories.id,
+          name: categories.name,
+        },
+      })
+      .from(products)
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .where(sql`${products.price} > 0`); // Only show products with price > 0
+  }
+  
+  async getMenuCategories(): Promise<MenuCategory[]> {
+    return await db.select().from(menuCategories).where(eq(menuCategories.isActive, true));
+  }
+  
+  // Settings operations
+  async getSetting(key: string): Promise<Setting | undefined> {
+    const [setting] = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.keyName, key));
+    return setting;
+  }
+  
+  async updateSetting(key: string, value: string): Promise<Setting> {
+    const [setting] = await db
+      .insert(settings)
+      .values({ keyName: key, value })
+      .onConflictDoUpdate({
+        target: settings.keyName,
+        set: { value, updatedAt: new Date() },
+      })
+      .returning();
+    return setting;
+  }
+  
+  // Currency operations
+  async getCurrencies(): Promise<any[]> {
+    return await db.select().from(currencies);
+  }
+  
+  async createCurrency(currencyData: any): Promise<any> {
+    const [currency] = await db
+      .insert(currencies)
+      .values(currencyData)
+      .returning();
+    return currency;
   }
 }
 

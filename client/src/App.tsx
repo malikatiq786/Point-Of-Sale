@@ -31,6 +31,7 @@ import { Payments, Accounts, Transactions, Reports } from "@/features/financial"
 import CustomerLedgers from "@/features/customers/pages/customer-ledgers";
 import SupplierLedgers from "@/features/suppliers/pages/supplier-ledgers";
 import KitchenPOS from "@/features/kitchen/pages/kitchen-pos";
+import RestaurantApp from "@/pages/restaurant";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -104,6 +105,8 @@ function Router() {
           <Route path="/branches" component={Branches} />
           <Route path="/registers" component={Registers} />
           <Route path="/settings" component={Settings} />
+          {/* Public restaurant website */}
+          <Route path="/restaurant*" component={RestaurantApp} />
         </>
       )}
       <Route component={NotFound} />
