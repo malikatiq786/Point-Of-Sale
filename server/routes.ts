@@ -1574,9 +1574,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const product = await storage.createProduct(req.body);
       
-      // Log activity
+      // Log activity - handle both user formats
+      const userId = req.user?.claims?.sub || req.user?.id || "system";
       await storage.logActivity(
-        req.user.claims.sub,
+        userId,
         `Created product: ${product.name}`,
         req.ip
       );
