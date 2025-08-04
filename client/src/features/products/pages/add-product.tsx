@@ -58,6 +58,7 @@ export default function AddProduct() {
         description: "Product created successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       setFormData({
         name: "",
         description: "",
