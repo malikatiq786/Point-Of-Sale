@@ -594,7 +594,19 @@ export default function POSTerminal() {
 
   // Fetch all products (no server-side search)
   const { data: products = [], isLoading } = useQuery<any[]>({
-    queryKey: ["/api/products"],
+    queryKey: ["pos-products"],
+    queryFn: async () => {
+      const response = await fetch("/api/products", {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch products: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.products || data; // Handle both paginated and non-paginated responses
+    },
     retry: false,
   });
 
