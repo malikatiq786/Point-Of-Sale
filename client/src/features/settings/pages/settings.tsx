@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star, Globe } from "lucide-react";
+import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star, Globe, ShoppingCart, Menu, Eye, UserCheck, Package } from "lucide-react";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -21,6 +21,8 @@ export default function Settings() {
   const [isAddCurrencyDialogOpen, setIsAddCurrencyDialogOpen] = useState(false);
   const [editingCurrency, setEditingCurrency] = useState<any>(null);
   const [onlineOrderingEnabled, setOnlineOrderingEnabled] = useState(false);
+  const [isMenuManagementOpen, setIsMenuManagementOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -45,6 +47,26 @@ export default function Settings() {
     onSuccess: (data: any) => {
       setOnlineOrderingEnabled(data.enabled || false);
     },
+  });
+
+  // Fetch online customers
+  const { data: onlineCustomers = [] } = useQuery({
+    queryKey: ["/api/online/customers"],
+  });
+
+  // Fetch online orders
+  const { data: onlineOrders = [] } = useQuery({
+    queryKey: ["/api/online/orders"],
+  });
+
+  // Fetch menu products for management
+  const { data: menuProducts = [] } = useQuery({
+    queryKey: ["/api/products"],
+  });
+
+  // Fetch categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ["/api/categories"],
   });
 
   // Create currency mutation
@@ -284,6 +306,7 @@ export default function Settings() {
             </TabsContent>
 
             <TabsContent value="online" className="space-y-6">
+              {/* Website Status Card */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
@@ -339,41 +362,211 @@ export default function Settings() {
                       </p>
                     </div>
                   )}
+                </CardContent>
+              </Card>
 
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">Online Features</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                            <span className="text-sm">Customer registration & login</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                            <span className="text-sm">Shopping cart functionality</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                            <span className="text-sm">Multiple order types (dine-in, takeaway, delivery)</span>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                            <span className="text-sm">Kitchen integration with POS orders</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                            <span className="text-sm">Real-time order notifications</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                            <span className="text-sm">Order status tracking</span>
-                          </div>
-                        </div>
+              {/* Website Statistics */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <ShoppingCart className="h-8 w-8 text-blue-500" />
+                      <div>
+                        <p className="text-2xl font-bold">{onlineOrders.length}</p>
+                        <p className="text-sm text-gray-500">Online Orders</p>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <UserCheck className="h-8 w-8 text-green-500" />
+                      <div>
+                        <p className="text-2xl font-bold">{onlineCustomers.length}</p>
+                        <p className="text-sm text-gray-500">Registered Customers</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Package className="h-8 w-8 text-purple-500" />
+                      <div>
+                        <p className="text-2xl font-bold">{menuProducts.length}</p>
+                        <p className="text-sm text-gray-500">Menu Items</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Menu className="h-8 w-8 text-orange-500" />
+                      <div>
+                        <p className="text-2xl font-bold">{categories.length}</p>
+                        <p className="text-sm text-gray-500">Categories</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Menu Management */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Menu className="h-5 w-5" />
+                      Website Menu Management
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Category
+                      </Button>
+                      <Button size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Menu Item
+                      </Button>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex gap-2 mb-4">
+                      <Button 
+                        variant={selectedCategory === "all" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSelectedCategory("all")}
+                      >
+                        All Items ({menuProducts.length})
+                      </Button>
+                      {categories.map((category: any) => (
+                        <Button 
+                          key={category.id}
+                          variant={selectedCategory === category.id.toString() ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setSelectedCategory(category.id.toString())}
+                        >
+                          {category.name} ({menuProducts.filter((p: any) => p.categoryId === category.id).length})
+                        </Button>
+                      ))}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {menuProducts
+                        .filter((product: any) => selectedCategory === "all" || product.categoryId.toString() === selectedCategory)
+                        .map((product: any) => (
+                          <div key={product.id} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-medium">{product.name}</h4>
+                              <div className="flex gap-1">
+                                <Button size="sm" variant="outline">
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button size="sm" variant="outline">
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-500 mb-2">{product.description}</p>
+                            <div className="flex justify-between items-center">
+                              <span className="font-bold text-green-600">Rs {product.price}</span>
+                              <Badge variant={product.stock > 0 ? "default" : "secondary"}>
+                                Stock: {product.stock}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Online Customers */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCheck className="h-5 w-5" />
+                    Online Customers
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {onlineCustomers.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8">No online customers yet</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {onlineCustomers.slice(0, 6).map((customer: any) => (
+                          <div key={customer.id} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-medium">{customer.name}</h4>
+                                <p className="text-sm text-gray-500">{customer.email}</p>
+                                {customer.phone && (
+                                  <p className="text-sm text-gray-500">{customer.phone}</p>
+                                )}
+                              </div>
+                              <Badge>Active</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {onlineCustomers.length > 6 && (
+                      <div className="text-center">
+                        <Button variant="outline">View All Customers</Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Online Orders */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5" />
+                    Recent Online Orders
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {onlineOrders.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8">No online orders yet</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {onlineOrders.slice(0, 5).map((order: any) => (
+                          <div key={order.id} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-medium">Order #{order.id}</h4>
+                                <p className="text-sm text-gray-500">
+                                  {order.customerName} • {order.orderType}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {new Date(order.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold">Rs {order.total}</p>
+                                <Badge variant={order.status === 'completed' ? 'default' : 'secondary'}>
+                                  {order.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {onlineOrders.length > 5 && (
+                      <div className="text-center">
+                        <Button variant="outline">View All Online Orders</Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

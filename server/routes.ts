@@ -2338,6 +2338,28 @@ async function initializeSampleData(userId: string) {
     }
   });
 
+  // Admin: Get online customers
+  app.get('/api/online/customers', isAuthenticated, async (req, res) => {
+    try {
+      const customers = await storage.getAllOnlineCustomers();
+      res.json(customers);
+    } catch (error) {
+      console.error('Error fetching online customers:', error);
+      res.status(500).json({ message: 'Failed to fetch online customers' });
+    }
+  });
+
+  // Admin: Get online orders
+  app.get('/api/online/orders', isAuthenticated, async (req, res) => {
+    try {
+      const orders = await storage.getAllOnlineOrders();
+      res.json(orders);
+    } catch (error) {
+      console.error('Error fetching online orders:', error);
+      res.status(500).json({ message: 'Failed to fetch online orders' });
+    }
+  });
+
   // Log the initialization
   await storage.logActivity(
     userId,

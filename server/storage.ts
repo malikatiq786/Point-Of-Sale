@@ -92,6 +92,8 @@ export interface IStorage {
   createOnlineCustomer(customer: InsertOnlineCustomer): Promise<OnlineCustomer>;
   getOnlineCustomerByEmail(email: string): Promise<OnlineCustomer | undefined>;
   authenticateOnlineCustomer(email: string, password: string): Promise<OnlineCustomer | null>;
+  getAllOnlineCustomers(): Promise<OnlineCustomer[]>;
+  getAllOnlineOrders(): Promise<any[]>;
   
   // Cart operations
   getCartItems(onlineCustomerId: number): Promise<(CartItem & { product: Pick<Product, 'id' | 'name' | 'description' | 'price' | 'image'> })[]>;
@@ -461,6 +463,32 @@ export class DatabaseStorage implements IStorage {
       .from(onlineCustomers)
       .where(and(eq(onlineCustomers.email, email), eq(onlineCustomers.password, password)));
     return customer || null;
+  }
+
+  async getAllOnlineCustomers(): Promise<OnlineCustomer[]> {
+    const customers = await db
+      .select()
+      .from(onlineCustomers)
+      .orderBy(desc(onlineCustomers.createdAt));
+    return customers;
+  }
+
+  async getAllOnlineOrders(): Promise<any[]> {
+    const orders = await db
+      .select({
+        id: sales.id,
+        customerName: sql<string>`COALESCE(${onlineCustomers.name}, 'Guest')`,
+        orderType: sales.orderType,
+        total: sales.totalAmount,
+        status: sql<string>`'completed'`,
+        createdAt: sales.createdAt,
+        orderSource: sales.orderSource
+      })
+      .from(sales)
+      .leftJoin(onlineCustomers, eq(sales.onlineCustomerId, onlineCustomers.id))
+      .where(eq(sales.orderSource, 'online'))
+      .orderBy(desc(sales.createdAt));
+    return orders;
   }
   
   // Cart operations
