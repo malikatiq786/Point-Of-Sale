@@ -703,7 +703,7 @@ router.delete('/registers/:id', async (req: any, res: any) => {
 });
 
 // Inventory routes
-router.get('/warehouses', inventoryController.getWarehouses as any);
+router.get('/warehouses', isAuthenticated, inventoryController.getWarehouses as any);
 
 router.get('/stock', async (req: any, res: any) => {
   try {
@@ -758,157 +758,16 @@ router.post('/stock/adjust', async (req: any, res: any) => {
 router.post('/warehouses', isAuthenticated, inventoryController.createWarehouse as any);
 router.put('/warehouses/:id', isAuthenticated, inventoryController.updateWarehouse as any);
 router.delete('/warehouses/:id', isAuthenticated, inventoryController.deleteWarehouse as any);
-// Stock transfers routes - using in-memory storage
-let stockTransfers: any[] = [
-  {
-    id: 1,
-    fromWarehouseId: 1,
-    toWarehouseId: 2,
-    fromWarehouseName: "Main Warehouse",
-    toWarehouseName: "North Warehouse", 
-    transferDate: "2025-07-28T10:00:00Z",
-    status: "completed",
-    items: [
-      {
-        productName: "Final Test Product",
-        quantity: 2
-      }
-    ]
-  }
-];
 
-router.get('/stock/transfers', async (req: any, res: any) => {
-  try {
-    // Get warehouse names for each transfer
-    const warehouses = await db.select().from(schema.warehouses);
-    const warehouseMap = warehouses.reduce((acc: Record<number, string>, warehouse: any) => {
-      acc[warehouse.id] = warehouse.name || "Unknown";
-      return acc;
-    }, {} as Record<number, string>);
+// Stock management routes
+router.get('/stock', isAuthenticated, inventoryController.getStock as any);
 
-    const transfersWithNames = stockTransfers.map(transfer => ({
-      ...transfer,
-      fromWarehouseName: warehouseMap[transfer.fromWarehouseId] || "Unknown Warehouse",
-      toWarehouseName: warehouseMap[transfer.toWarehouseId] || "Unknown Warehouse"
-    }));
+router.get('/stock/transfers', isAuthenticated, inventoryController.getStockTransfers as any);
 
-    res.json(transfersWithNames);
-  } catch (error) {
-    console.error('Get stock transfers error:', error);
-    res.status(500).json({ message: 'Failed to fetch stock transfers' });
-  }
-});
+router.post('/stock/transfers', isAuthenticated, inventoryController.createStockTransfer as any);
 
-router.post('/stock/transfers', async (req: any, res: any) => {
-  try {
-    // Get warehouse names
-    const warehouses = await db.select().from(schema.warehouses);
-    const warehouseMap = warehouses.reduce((acc: Record<number, string>, warehouse: any) => {
-      acc[warehouse.id] = warehouse.name || "Unknown";
-      return acc;
-    }, {} as Record<number, string>);
+router.get('/stock/adjustments', isAuthenticated, inventoryController.getStockAdjustments as any);
+router.post('/stock/adjustments', isAuthenticated, inventoryController.adjustStock as any);
 
-    const transfer = {
-      id: Date.now(),
-      fromWarehouseId: req.body.fromWarehouseId,
-      toWarehouseId: req.body.toWarehouseId,
-      fromWarehouseName: warehouseMap[req.body.fromWarehouseId] || "Unknown Warehouse",
-      toWarehouseName: warehouseMap[req.body.toWarehouseId] || "Unknown Warehouse",
-      transferDate: new Date().toISOString(),
-      status: "completed",
-      items: req.body.items || []
-    };
-    
-    // Add to in-memory storage
-    stockTransfers.unshift(transfer); // Add to beginning of array
-    
-    res.status(201).json(transfer);
-  } catch (error) {
-    console.error('Create stock transfer error:', error);
-    res.status(500).json({ message: 'Failed to create stock transfer' });
-  }
-});
-// In-memory storage for stock adjustments
-const stockAdjustments: any[] = [
-  {
-    id: 1,
-    warehouseId: 1,
-    warehouseName: "Main Warehouse",
-    userId: "41128350",
-    userName: "Malik Atiq",
-    reason: "Physical count adjustment - Found discrepancy during monthly audit",
-    items: [
-      { productName: "Samsung Galaxy S23", quantity: -2, previousQuantity: 25, newQuantity: 23 },
-      { productName: "iPhone 15 Pro", quantity: 1, previousQuantity: 12, newQuantity: 13 }
-    ],
-    createdAt: "2025-07-28T08:30:00Z"
-  },
-  {
-    id: 2,
-    warehouseId: 2,
-    warehouseName: "Secondary Warehouse",
-    userId: "41128350",
-    userName: "Malik Atiq",
-    reason: "Damaged goods - Water damage from roof leak",
-    items: [
-      { productName: "Nike Air Max", quantity: -5, previousQuantity: 20, newQuantity: 15 }
-    ],
-    createdAt: "2025-07-27T14:15:00Z"
-  },
-  {
-    id: 3,
-    warehouseId: 1,
-    warehouseName: "Main Warehouse",
-    userId: "41128350",
-    userName: "Malik Atiq",
-    reason: "Expired products - Past expiration date removal",
-    items: [
-      { productName: "Wireless Earbuds", quantity: -3, previousQuantity: 8, newQuantity: 5 }
-    ],
-    createdAt: "2025-07-26T16:45:00Z"
-  }
-];
-
-router.get('/stock/adjustments', async (req: any, res: any) => {
-  try {
-    res.status(200).json(stockAdjustments);
-  } catch (error) {
-    console.error('Get stock adjustments error:', error);
-    res.status(500).json({ message: 'Failed to fetch stock adjustments' });
-  }
-});
-
-router.post('/stock/adjustments', async (req: any, res: any) => {
-  try {
-    // Get warehouse names
-    const warehouses = await db.select().from(schema.warehouses);
-    const warehouseMap = warehouses.reduce((acc: Record<number, string>, warehouse: any) => {
-      acc[warehouse.id] = warehouse.name || "Unknown";
-      return acc;
-    }, {} as Record<number, string>);
-
-    const adjustment = {
-      id: Date.now(),
-      warehouseId: req.body.warehouseId,
-      warehouseName: warehouseMap[req.body.warehouseId] || "Unknown Warehouse",
-      userId: "41128350", // Mock user ID
-      userName: "Malik Atiq", // Mock user name
-      reason: req.body.reason,
-      items: req.body.items || [],
-      createdAt: new Date().toISOString()
-    };
-    
-    // Add to in-memory storage
-    stockAdjustments.unshift(adjustment); // Add to beginning of array
-    
-    res.status(201).json(adjustment);
-  } catch (error) {
-    console.error('Create stock adjustment error:', error);
-    res.status(500).json({ message: 'Failed to create stock adjustment' });
-  }
-});
-
-// Remove the complex repository-based route
-// router.get('/stock/adjustments', isAuthenticated, inventoryController.getStockAdjustments as any);
 
 export { router as apiRoutes };

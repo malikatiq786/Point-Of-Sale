@@ -134,7 +134,19 @@ export class InventoryRepository {
   // Stock transfer methods
   async findStockTransfers() {
     try {
-      return [];
+      return await db.select({
+        id: schema.stockTransfers.id,
+        fromWarehouseId: schema.stockTransfers.fromWarehouseId,
+        toWarehouseId: schema.stockTransfers.toWarehouseId,
+        transferDate: schema.stockTransfers.transferDate,
+        status: schema.stockTransfers.status,
+        fromWarehouseName: sql`from_wh.name`,
+        toWarehouseName: sql`to_wh.name`,
+      })
+      .from(schema.stockTransfers)
+      .leftJoin(sql`${schema.warehouses} as from_wh`, eq(schema.stockTransfers.fromWarehouseId, sql`from_wh.id`))
+      .leftJoin(sql`${schema.warehouses} as to_wh`, eq(schema.stockTransfers.toWarehouseId, sql`to_wh.id`))
+      .orderBy(desc(schema.stockTransfers.transferDate));
     } catch (error) {
       console.error('Error finding stock transfers:', error);
       throw error;
@@ -150,13 +162,86 @@ export class InventoryRepository {
     }>;
   }) {
     try {
-      return {
-        id: Date.now(),
-        fromWarehouseId: transferData.fromWarehouseId,
-        toWarehouseId: transferData.toWarehouseId,
-        transferDate: new Date(),
-        status: 'completed'
-      };
+      // Create the transfer record first
+      const [transfer] = await db.insert(schema.stockTransfers)
+        .values({
+          fromWarehouseId: transferData.fromWarehouseId,
+          toWarehouseId: transferData.toWarehouseId,
+          transferDate: new Date(),
+          status: 'completed'
+        })
+        .returning();
+
+      // Process each item transfer - Update stock quantities
+      for (const item of transferData.items) {
+        // First, check if there's existing stock record for source warehouse
+        const [sourceStock] = await db.select()
+          .from(schema.stock)
+          .where(and(
+            eq(schema.stock.productVariantId, item.productVariantId),
+            eq(schema.stock.warehouseId, transferData.fromWarehouseId)
+          ));
+
+        if (!sourceStock) {
+          throw new Error(`No stock found for product variant ${item.productVariantId} in source warehouse`);
+        }
+
+        // Check if there's enough stock to transfer
+        const currentStock = parseFloat(sourceStock.quantity || '0');
+        if (currentStock < item.quantity) {
+          throw new Error(`Insufficient stock for product variant ${item.productVariantId}. Available: ${currentStock}, Requested: ${item.quantity}`);
+        }
+
+        // Decrease stock from source warehouse
+        await db.update(schema.stock)
+          .set({
+            quantity: sql`${schema.stock.quantity} - ${item.quantity}`
+          })
+          .where(and(
+            eq(schema.stock.productVariantId, item.productVariantId),
+            eq(schema.stock.warehouseId, transferData.fromWarehouseId)
+          ));
+
+        // Check if destination warehouse already has stock for this product
+        const [destinationStock] = await db.select()
+          .from(schema.stock)
+          .where(and(
+            eq(schema.stock.productVariantId, item.productVariantId),
+            eq(schema.stock.warehouseId, transferData.toWarehouseId)
+          ));
+
+        if (destinationStock) {
+          // Update existing stock in destination warehouse
+          await db.update(schema.stock)
+            .set({
+              quantity: sql`${schema.stock.quantity} + ${item.quantity}`
+            })
+            .where(and(
+              eq(schema.stock.productVariantId, item.productVariantId),
+              eq(schema.stock.warehouseId, transferData.toWarehouseId)
+            ));
+        } else {
+          // Create new stock record in destination warehouse
+          await db.insert(schema.stock)
+            .values({
+              productVariantId: item.productVariantId,
+              warehouseId: transferData.toWarehouseId,
+              quantity: item.quantity.toString()
+            });
+        }
+
+        // Insert transfer item record
+        await db.insert(schema.stockTransferItems)
+          .values({
+            transferId: transfer.id,
+            productVariantId: item.productVariantId,
+            quantity: item.quantity.toString()
+          });
+
+        console.log(`Stock transfer completed: ${item.quantity} units of product variant ${item.productVariantId} from warehouse ${transferData.fromWarehouseId} to ${transferData.toWarehouseId}`);
+      }
+
+      return transfer;
     } catch (error) {
       console.error('Error creating stock transfer:', error);
       throw error;
