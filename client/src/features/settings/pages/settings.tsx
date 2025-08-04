@@ -23,6 +23,8 @@ export default function Settings() {
   const [onlineOrderingEnabled, setOnlineOrderingEnabled] = useState(false);
   const [isMenuManagementOpen, setIsMenuManagementOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [isAddRiderDialogOpen, setIsAddRiderDialogOpen] = useState(false);
+  const [editingRider, setEditingRider] = useState<any>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -34,6 +36,17 @@ export default function Settings() {
     exchangeRate: "1.000000",
     isActive: true,
     isDefault: false
+  });
+
+  // Rider form state
+  const [riderForm, setRiderForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    licenseNumber: "",
+    vehicleType: "bike",
+    vehicleNumber: "",
+    isActive: true
   });
 
   // Fetch currencies
@@ -67,6 +80,11 @@ export default function Settings() {
   // Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
+  });
+
+  // Fetch delivery riders
+  const { data: deliveryRiders = [] } = useQuery({
+    queryKey: ["/api/delivery-riders"],
   });
 
   // Create currency mutation
@@ -163,6 +181,77 @@ export default function Settings() {
     },
   });
 
+  // Create rider mutation
+  const createRiderMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("/api/delivery-riders", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery-riders"] });
+      setIsAddRiderDialogOpen(false);
+      resetRiderForm();
+      toast({
+        title: "Success",
+        description: "Delivery rider created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create delivery rider",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update rider mutation
+  const updateRiderMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      apiRequest(`/api/delivery-riders/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery-riders"] });
+      setEditingRider(null);
+      resetRiderForm();
+      toast({
+        title: "Success",
+        description: "Delivery rider updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update delivery rider",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete rider mutation
+  const deleteRiderMutation = useMutation({
+    mutationFn: (id: number) =>
+      apiRequest(`/api/delivery-riders/${id}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery-riders"] });
+      toast({
+        title: "Success",
+        description: "Delivery rider deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete delivery rider",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetCurrencyForm = () => {
     setCurrencyForm({
       code: "",
@@ -171,6 +260,18 @@ export default function Settings() {
       exchangeRate: "1.000000",
       isActive: true,
       isDefault: false
+    });
+  };
+
+  const resetRiderForm = () => {
+    setRiderForm({
+      name: "",
+      phone: "",
+      email: "",
+      licenseNumber: "",
+      vehicleType: "bike",
+      vehicleNumber: "",
+      isActive: true
     });
   };
 
@@ -184,6 +285,20 @@ export default function Settings() {
       isActive: currency.isActive,
       isDefault: currency.isDefault
     });
+  };
+
+  const handleEditRider = (rider: any) => {
+    setEditingRider(rider);
+    setRiderForm({
+      name: rider.name,
+      phone: rider.phone,
+      email: rider.email || "",
+      licenseNumber: rider.licenseNumber || "",
+      vehicleType: rider.vehicleType || "bike",
+      vehicleNumber: rider.vehicleNumber || "",
+      isActive: rider.isActive
+    });
+    setIsAddRiderDialogOpen(true);
   };
 
   const handleSubmitCurrency = (e: React.FormEvent) => {
@@ -208,6 +323,28 @@ export default function Settings() {
     }
   };
 
+  const handleSubmitRider = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!riderForm.name || !riderForm.phone) {
+      toast({
+        title: "Error",
+        description: "Please fill in name and phone number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (editingRider) {
+      updateRiderMutation.mutate({
+        id: editingRider.id,
+        data: riderForm
+      });
+    } else {
+      createRiderMutation.mutate(riderForm);
+    }
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar user={user} />
@@ -224,11 +361,12 @@ export default function Settings() {
 
         <main className="flex-1 overflow-y-auto p-6">
           <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 text-xs sm:text-sm">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 text-xs sm:text-sm">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="business">Business</TabsTrigger>
               <TabsTrigger value="online">Online</TabsTrigger>
               <TabsTrigger value="currencies">Currencies</TabsTrigger>
+              <TabsTrigger value="riders">Delivery</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="notifications">Notifications</TabsTrigger>
               <TabsTrigger value="security">Security</TabsTrigger>
@@ -570,6 +708,203 @@ export default function Settings() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="riders" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <SettingsIcon className="w-5 h-5" />
+                      <span>Delivery Riders</span>
+                    </div>
+                    <Button 
+                      onClick={() => {
+                        resetRiderForm();
+                        setEditingRider(null);
+                        setIsAddRiderDialogOpen(true);
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Rider
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {deliveryRiders.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500">No delivery riders found</p>
+                        <p className="text-sm text-gray-400">Add riders to manage delivery assignments</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {deliveryRiders.map((rider: any) => (
+                          <div key={rider.id} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <h4 className="font-medium">{rider.name}</h4>
+                                <p className="text-sm text-gray-500">{rider.phone}</p>
+                                {rider.email && (
+                                  <p className="text-sm text-gray-500">{rider.email}</p>
+                                )}
+                              </div>
+                              <div className="flex gap-1">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleEditRider(rider)}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => deleteRiderMutation.mutate(rider.id)}
+                                  disabled={deleteRiderMutation.isPending}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              {rider.vehicleType && (
+                                <div className="flex items-center text-xs text-gray-600">
+                                  <span className="font-medium">Vehicle:</span>
+                                  <span className="ml-1 capitalize">{rider.vehicleType}</span>
+                                  {rider.vehicleNumber && (
+                                    <span className="ml-1">({rider.vehicleNumber})</span>
+                                  )}
+                                </div>
+                              )}
+                              
+                              {rider.licenseNumber && (
+                                <div className="flex items-center text-xs text-gray-600">
+                                  <span className="font-medium">License:</span>
+                                  <span className="ml-1">{rider.licenseNumber}</span>
+                                </div>
+                              )}
+                              
+                              <div className="flex justify-between items-center">
+                                <Badge variant={rider.isActive ? "default" : "secondary"}>
+                                  {rider.isActive ? "Active" : "Inactive"}
+                                </Badge>
+                                <span className="text-xs text-gray-400">
+                                  Added {new Date(rider.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Add/Edit Rider Dialog */}
+              <Dialog open={isAddRiderDialogOpen} onOpenChange={setIsAddRiderDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingRider ? "Edit Delivery Rider" : "Add New Delivery Rider"}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmitRider} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="riderName">Name *</Label>
+                      <Input
+                        id="riderName"
+                        value={riderForm.name}
+                        onChange={(e) => setRiderForm({ ...riderForm, name: e.target.value })}
+                        placeholder="Enter rider name"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="riderPhone">Phone *</Label>
+                      <Input
+                        id="riderPhone"
+                        value={riderForm.phone}
+                        onChange={(e) => setRiderForm({ ...riderForm, phone: e.target.value })}
+                        placeholder="Enter phone number"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="riderEmail">Email</Label>
+                      <Input
+                        id="riderEmail"
+                        type="email"
+                        value={riderForm.email}
+                        onChange={(e) => setRiderForm({ ...riderForm, email: e.target.value })}
+                        placeholder="Enter email address"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="vehicleType">Vehicle Type</Label>
+                        <select
+                          id="vehicleType"
+                          value={riderForm.vehicleType}
+                          onChange={(e) => setRiderForm({ ...riderForm, vehicleType: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="bike">Bike</option>
+                          <option value="scooter">Scooter</option>
+                          <option value="car">Car</option>
+                          <option value="bicycle">Bicycle</option>
+                        </select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="vehicleNumber">Vehicle Number</Label>
+                        <Input
+                          id="vehicleNumber"
+                          value={riderForm.vehicleNumber}
+                          onChange={(e) => setRiderForm({ ...riderForm, vehicleNumber: e.target.value })}
+                          placeholder="ABC-123"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="licenseNumber">License Number</Label>
+                      <Input
+                        id="licenseNumber"
+                        value={riderForm.licenseNumber}
+                        onChange={(e) => setRiderForm({ ...riderForm, licenseNumber: e.target.value })}
+                        placeholder="Enter license number"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="riderActive"
+                        checked={riderForm.isActive}
+                        onCheckedChange={(checked) => setRiderForm({ ...riderForm, isActive: checked })}
+                      />
+                      <Label htmlFor="riderActive">Active</Label>
+                    </div>
+                    
+                    <div className="flex justify-end space-x-2">
+                      <Button type="button" variant="outline" onClick={() => setIsAddRiderDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="submit" 
+                        disabled={createRiderMutation.isPending || updateRiderMutation.isPending}
+                      >
+                        {editingRider ? "Update" : "Create"} Rider
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
 
             <TabsContent value="currencies" className="space-y-6">

@@ -236,6 +236,35 @@ export const suppliers = pgTable("suppliers", {
 });
 
 // =========================================
+// 🚗 Delivery Riders & Management
+// =========================================
+
+export const deliveryRiders = pgTable("delivery_riders", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 150 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  email: varchar("email", { length: 100 }),
+  licenseNumber: varchar("license_number", { length: 50 }),
+  vehicleType: varchar("vehicle_type", { length: 50 }), // bike, car, scooter
+  vehicleNumber: varchar("vehicle_number", { length: 20 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const riderAssignments = pgTable("rider_assignments", {
+  id: serial("id").primaryKey(),
+  saleId: integer("sale_id").references(() => sales.id, { onDelete: "cascade" }).notNull(),
+  riderId: integer("rider_id").references(() => deliveryRiders.id).notNull(),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  assignedBy: varchar("assigned_by").references(() => users.id),
+  status: varchar("status", { length: 50 }).default("assigned"), // assigned, picked_up, delivered, cancelled
+  pickedUpAt: timestamp("picked_up_at"),
+  deliveredAt: timestamp("delivered_at"),
+  notes: text("notes"),
+});
+
+// =========================================
 // 🧾 POS & Sales
 // =========================================
 
@@ -259,6 +288,8 @@ export const sales = pgTable("sales", {
   deliveryAddress: text("delivery_address"),
   customerPhone: varchar("customer_phone", { length: 20 }),
   customerName: varchar("customer_name", { length: 150 }),
+  assignedRiderId: integer("assigned_rider_id").references(() => deliveryRiders.id),
+  deliveryStatus: varchar("delivery_status", { length: 50 }).default("pending"), // pending, assigned, picked_up, delivered
 });
 
 export const saleItems = pgTable("sale_items", {
@@ -528,7 +559,32 @@ export const salesRelations = relations(sales, ({ one, many }) => ({
     fields: [sales.branchId],
     references: [branches.id],
   }),
+  assignedRider: one(deliveryRiders, {
+    fields: [sales.assignedRiderId],
+    references: [deliveryRiders.id],
+  }),
   items: many(saleItems),
+  riderAssignments: many(riderAssignments),
+}));
+
+export const deliveryRidersRelations = relations(deliveryRiders, ({ many }) => ({
+  sales: many(sales),
+  riderAssignments: many(riderAssignments),
+}));
+
+export const riderAssignmentsRelations = relations(riderAssignments, ({ one }) => ({
+  sale: one(sales, {
+    fields: [riderAssignments.saleId],
+    references: [sales.id],
+  }),
+  rider: one(deliveryRiders, {
+    fields: [riderAssignments.riderId],
+    references: [deliveryRiders.id],
+  }),
+  assignedByUser: one(users, {
+    fields: [riderAssignments.assignedBy],
+    references: [users.id],
+  }),
 }));
 
 export const onlineCustomersRelations = relations(onlineCustomers, ({ many }) => ({
@@ -588,6 +644,8 @@ export type Currency = typeof currencies.$inferSelect;
 export type OnlineCustomer = typeof onlineCustomers.$inferSelect;
 export type CartItem = typeof cartItems.$inferSelect;
 export type MenuCategory = typeof menuCategories.$inferSelect;
+export type DeliveryRider = typeof deliveryRiders.$inferSelect;
+export type RiderAssignment = typeof riderAssignments.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -623,6 +681,15 @@ export const insertPurchaseSchema = createInsertSchema(purchases);
 export const insertEmployeeSchema = createInsertSchema(employees);
 export const insertExpenseSchema = createInsertSchema(expenses);
 export const insertCurrencySchema = createInsertSchema(currencies);
+export const insertDeliveryRiderSchema = createInsertSchema(deliveryRiders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertRiderAssignmentSchema = createInsertSchema(riderAssignments).omit({
+  id: true,
+  assignedAt: true,
+});
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -635,4 +702,6 @@ export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type InsertCurrency = z.infer<typeof insertCurrencySchema>;
 export type InsertOnlineCustomer = z.infer<typeof insertOnlineCustomerSchema>;
+export type InsertDeliveryRider = z.infer<typeof insertDeliveryRiderSchema>;
+export type InsertRiderAssignment = z.infer<typeof insertRiderAssignmentSchema>;
 export type InsertCartItem = z.infer<typeof insertCartItemSchema>;

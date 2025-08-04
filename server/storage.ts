@@ -17,6 +17,8 @@ import {
   menuCategories,
   settings,
   currencies,
+  deliveryRiders,
+  riderAssignments,
   type User,
   type UpsertUser,
   type Product,
@@ -32,6 +34,10 @@ import {
   type InsertOnlineCustomer,
   type InsertCartItem,
   type Setting,
+  type DeliveryRider,
+  type RiderAssignment,
+  type InsertDeliveryRider,
+  type InsertRiderAssignment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, like, and } from "drizzle-orm";
@@ -113,6 +119,20 @@ export interface IStorage {
   // Currency operations
   getCurrencies(): Promise<any[]>;
   createCurrency(currency: any): Promise<any>;
+  
+  // Delivery Rider operations
+  getDeliveryRiders(): Promise<DeliveryRider[]>;
+  getDeliveryRider(id: number): Promise<DeliveryRider | undefined>;
+  createDeliveryRider(data: InsertDeliveryRider): Promise<DeliveryRider>;
+  updateDeliveryRider(id: number, data: Partial<InsertDeliveryRider>): Promise<DeliveryRider>;
+  deleteDeliveryRider(id: number): Promise<void>;
+  getActiveDeliveryRiders(): Promise<DeliveryRider[]>;
+  
+  // Rider Assignment operations
+  assignRiderToOrder(saleId: number, riderId: number, assignedBy: string): Promise<RiderAssignment>;
+  updateRiderAssignmentStatus(assignmentId: number, status: string, notes?: string): Promise<RiderAssignment>;
+  getRiderAssignments(riderId?: number, saleId?: number): Promise<RiderAssignment[]>;
+  getOrderAssignment(saleId: number): Promise<RiderAssignment | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -635,6 +655,129 @@ export class DatabaseStorage implements IStorage {
       .values(currencyData)
       .returning();
     return currency;
+  }
+
+  // Delivery Rider operations
+  async getDeliveryRiders(): Promise<DeliveryRider[]> {
+    return await db.select().from(deliveryRiders).orderBy(desc(deliveryRiders.createdAt));
+  }
+
+  async getDeliveryRider(id: number): Promise<DeliveryRider | undefined> {
+    const [rider] = await db.select().from(deliveryRiders).where(eq(deliveryRiders.id, id));
+    return rider;
+  }
+
+  async createDeliveryRider(data: InsertDeliveryRider): Promise<DeliveryRider> {
+    const [rider] = await db
+      .insert(deliveryRiders)
+      .values({
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return rider;
+  }
+
+  async updateDeliveryRider(id: number, data: Partial<InsertDeliveryRider>): Promise<DeliveryRider> {
+    const [rider] = await db
+      .update(deliveryRiders)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(deliveryRiders.id, id))
+      .returning();
+    return rider;
+  }
+
+  async deleteDeliveryRider(id: number): Promise<void> {
+    await db.delete(deliveryRiders).where(eq(deliveryRiders.id, id));
+  }
+
+  async getActiveDeliveryRiders(): Promise<DeliveryRider[]> {
+    return await db
+      .select()
+      .from(deliveryRiders)
+      .where(eq(deliveryRiders.isActive, true))
+      .orderBy(deliveryRiders.name);
+  }
+
+  // Rider Assignment operations
+  async assignRiderToOrder(saleId: number, riderId: number, assignedBy: string): Promise<RiderAssignment> {
+    // First update the sale record
+    await db
+      .update(sales)
+      .set({
+        assignedRiderId: riderId,
+        deliveryStatus: 'assigned',
+      })
+      .where(eq(sales.id, saleId));
+
+    // Create assignment record
+    const [assignment] = await db
+      .insert(riderAssignments)
+      .values({
+        saleId,
+        riderId,
+        assignedBy,
+        status: 'assigned',
+        assignedAt: new Date(),
+      })
+      .returning();
+    
+    return assignment;
+  }
+
+  async updateRiderAssignmentStatus(assignmentId: number, status: string, notes?: string): Promise<RiderAssignment> {
+    const updateData: any = {
+      status,
+      notes,
+    };
+
+    if (status === 'picked_up') {
+      updateData.pickedUpAt = new Date();
+    } else if (status === 'delivered') {
+      updateData.deliveredAt = new Date();
+    }
+
+    const [assignment] = await db
+      .update(riderAssignments)
+      .set(updateData)
+      .where(eq(riderAssignments.id, assignmentId))
+      .returning();
+
+    // Also update the sale's delivery status
+    if (assignment) {
+      await db
+        .update(sales)
+        .set({ deliveryStatus: status })
+        .where(eq(sales.id, assignment.saleId));
+    }
+
+    return assignment;
+  }
+
+  async getRiderAssignments(riderId?: number, saleId?: number): Promise<RiderAssignment[]> {
+    let query = db.select().from(riderAssignments);
+    
+    if (riderId) {
+      query = query.where(eq(riderAssignments.riderId, riderId));
+    } else if (saleId) {
+      query = query.where(eq(riderAssignments.saleId, saleId));
+    }
+    
+    return await query.orderBy(desc(riderAssignments.assignedAt));
+  }
+
+  async getOrderAssignment(saleId: number): Promise<RiderAssignment | undefined> {
+    const [assignment] = await db
+      .select()
+      .from(riderAssignments)
+      .where(eq(riderAssignments.saleId, saleId))
+      .orderBy(desc(riderAssignments.assignedAt))
+      .limit(1);
+    return assignment;
   }
 }
 

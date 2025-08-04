@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, ChefHat, CheckCircle, AlertCircle, Utensils, Car, Home, Timer, Bell, Settings, Filter, Globe } from "lucide-react";
+import { Clock, ChefHat, CheckCircle, AlertCircle, Utensils, Car, Home, Timer, Bell, Settings, Filter, Globe, UserCheck } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 
 interface KitchenOrder {
@@ -43,12 +43,20 @@ export default function KitchenPOS() {
   const [selectedOrderSource, setSelectedOrderSource] = useState("all");
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [previousNewOrderCount, setPreviousNewOrderCount] = useState(0);
+  const [assigningRider, setAssigningRider] = useState<number | null>(null);
+  const [selectedRider, setSelectedRider] = useState<string>("");
   const { formatCurrencyValue } = useCurrency();
 
   // Fetch kitchen orders
   const { data: orders = [], isLoading } = useQuery<KitchenOrder[]>({
     queryKey: [`/api/kitchen/orders/${selectedStatus}`],
     refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
+    retry: false,
+  });
+
+  // Fetch delivery riders for assignment
+  const { data: deliveryRiders = [] } = useQuery({
+    queryKey: ["/api/delivery-riders/active"],
     retry: false,
   });
 
@@ -79,12 +87,58 @@ export default function KitchenPOS() {
     },
   });
 
+  // Assign rider mutation
+  const assignRiderMutation = useMutation({
+    mutationFn: async ({ orderId, riderId }: { orderId: number; riderId: number }) => {
+      const response = await fetch(`/api/orders/${orderId}/assign-rider`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ riderId }),
+      });
+      if (!response.ok) throw new Error('Failed to assign rider');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/kitchen/orders"] });
+      setAssigningRider(null);
+      setSelectedRider("");
+      toast({
+        title: "Rider assigned",
+        description: "Delivery rider has been assigned successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error assigning rider",
+        description: "Failed to assign rider. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Helper function to detect online orders
   const isOnlineOrder = (order: KitchenOrder) => {
     // Check if explicitly marked as online or if customer name suggests online ordering
     return order.isOnline || 
            (order.customer?.name && order.customer.name.toLowerCase().includes('online')) ||
            (order.id && order.id.toString().includes('online'));
+  };
+
+  // Helper function to handle rider assignment
+  const handleAssignRider = () => {
+    if (!selectedRider || !assigningRider) return;
+    
+    assignRiderMutation.mutate({
+      orderId: assigningRider,
+      riderId: parseInt(selectedRider)
+    });
+  };
+
+  // Helper function to get assigned rider name
+  const getAssignedRiderName = (order: any) => {
+    if (!order.assignedRiderId) return null;
+    const rider = deliveryRiders.find((r: any) => r.id === order.assignedRiderId);
+    return rider?.name || "Unknown Rider";
   };
 
   // Filter orders based on selected status, order type, and source
@@ -552,6 +606,45 @@ export default function KitchenPOS() {
                           <div>
                             <h5 className="text-xs font-semibold text-yellow-800 mb-1">Special Instructions</h5>
                             <p className="text-xs text-yellow-700">{order.specialInstructions}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Delivery Rider Assignment */}
+                    {order.orderType === 'delivery' && (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-2">
+                        <div className="flex items-start">
+                          <UserCheck className="h-4 w-4 text-purple-600 mr-2 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <h5 className="text-xs font-semibold text-purple-800 mb-1">Delivery Rider</h5>
+                            {getAssignedRiderName(order) ? (
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs text-purple-700 font-medium">{getAssignedRiderName(order)}</p>
+                                <button
+                                  onClick={() => {
+                                    setAssigningRider(order.id);
+                                    setSelectedRider("");
+                                  }}
+                                  className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition-colors ml-2"
+                                >
+                                  Change
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs text-purple-700">No rider assigned</p>
+                                <button
+                                  onClick={() => {
+                                    setAssigningRider(order.id);
+                                    setSelectedRider("");
+                                  }}
+                                  className="text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors"
+                                >
+                                  Assign
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -2245,6 +2245,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =========================================
+  // 🚗 Delivery Rider Management Routes
+  // =========================================
+
+  // Get all delivery riders
+  app.get('/api/delivery-riders', isAuthenticated, async (req, res) => {
+    try {
+      const riders = await storage.getDeliveryRiders();
+      res.json(riders);
+    } catch (error) {
+      console.error('Get delivery riders error:', error);
+      res.status(500).json({ message: 'Failed to fetch delivery riders' });
+    }
+  });
+
+  // Get active delivery riders (for assignment dropdown)
+  app.get('/api/delivery-riders/active', isAuthenticated, async (req, res) => {
+    try {
+      const riders = await storage.getActiveDeliveryRiders();
+      res.json(riders);
+    } catch (error) {
+      console.error('Get active delivery riders error:', error);
+      res.status(500).json({ message: 'Failed to fetch active delivery riders' });
+    }
+  });
+
+  // Get single delivery rider
+  app.get('/api/delivery-riders/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const rider = await storage.getDeliveryRider(parseInt(id));
+      if (!rider) {
+        return res.status(404).json({ message: 'Delivery rider not found' });
+      }
+      res.json(rider);
+    } catch (error) {
+      console.error('Get delivery rider error:', error);
+      res.status(500).json({ message: 'Failed to fetch delivery rider' });
+    }
+  });
+
+  // Create new delivery rider
+  app.post('/api/delivery-riders', isAuthenticated, async (req, res) => {
+    try {
+      const riderData = req.body;
+      const rider = await storage.createDeliveryRider(riderData);
+      res.status(201).json(rider);
+    } catch (error) {
+      console.error('Create delivery rider error:', error);
+      res.status(500).json({ message: 'Failed to create delivery rider' });
+    }
+  });
+
+  // Update delivery rider
+  app.put('/api/delivery-riders/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      const rider = await storage.updateDeliveryRider(parseInt(id), updateData);
+      res.json(rider);
+    } catch (error) {
+      console.error('Update delivery rider error:', error);
+      res.status(500).json({ message: 'Failed to update delivery rider' });
+    }
+  });
+
+  // Delete delivery rider
+  app.delete('/api/delivery-riders/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteDeliveryRider(parseInt(id));
+      res.json({ message: 'Delivery rider deleted successfully' });
+    } catch (error) {
+      console.error('Delete delivery rider error:', error);
+      res.status(500).json({ message: 'Failed to delete delivery rider' });
+    }
+  });
+
+  // =========================================
+  // 📦 Rider Assignment Routes
+  // =========================================
+
+  // Assign rider to order
+  app.post('/api/orders/:saleId/assign-rider', isAuthenticated, async (req: any, res) => {
+    try {
+      const { saleId } = req.params;
+      const { riderId } = req.body;
+      const userId = req.user?.claims?.sub;
+      
+      if (!riderId) {
+        return res.status(400).json({ message: 'Rider ID is required' });
+      }
+
+      const assignment = await storage.assignRiderToOrder(
+        parseInt(saleId),
+        parseInt(riderId),
+        userId
+      );
+      
+      res.status(201).json({
+        message: 'Rider assigned successfully',
+        assignment
+      });
+    } catch (error) {
+      console.error('Assign rider error:', error);
+      res.status(500).json({ message: 'Failed to assign rider to order' });
+    }
+  });
+
+  // Update rider assignment status
+  app.put('/api/rider-assignments/:assignmentId/status', isAuthenticated, async (req, res) => {
+    try {
+      const { assignmentId } = req.params;
+      const { status, notes } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: 'Status is required' });
+      }
+
+      const assignment = await storage.updateRiderAssignmentStatus(
+        parseInt(assignmentId),
+        status,
+        notes
+      );
+      
+      res.json({
+        message: 'Assignment status updated successfully',
+        assignment
+      });
+    } catch (error) {
+      console.error('Update assignment status error:', error);
+      res.status(500).json({ message: 'Failed to update assignment status' });
+    }
+  });
+
+  // Get rider assignments
+  app.get('/api/rider-assignments', isAuthenticated, async (req, res) => {
+    try {
+      const { riderId, saleId } = req.query;
+      const assignments = await storage.getRiderAssignments(
+        riderId ? parseInt(riderId as string) : undefined,
+        saleId ? parseInt(saleId as string) : undefined
+      );
+      res.json(assignments);
+    } catch (error) {
+      console.error('Get rider assignments error:', error);
+      res.status(500).json({ message: 'Failed to fetch rider assignments' });
+    }
+  });
+
+  // Get order assignment
+  app.get('/api/orders/:saleId/assignment', isAuthenticated, async (req, res) => {
+    try {
+      const { saleId } = req.params;
+      const assignment = await storage.getOrderAssignment(parseInt(saleId));
+      res.json(assignment || null);
+    } catch (error) {
+      console.error('Get order assignment error:', error);
+      res.status(500).json({ message: 'Failed to fetch order assignment' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
