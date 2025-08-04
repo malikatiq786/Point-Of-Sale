@@ -648,7 +648,7 @@ export default function Products() {
                 <p className="font-semibold text-gray-900">{selectedProduct?.name}</p>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Category</Label>
                   {selectedProduct?.category ? (
@@ -669,12 +669,24 @@ export default function Products() {
                     <p className="text-gray-400 text-sm">No Brand</p>
                   )}
                 </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Unit</Label>
+                  {selectedProduct?.unit ? (
+                    <Badge variant="default" className="mt-1 bg-green-100 text-green-800">
+                      {selectedProduct.unit.shortName || selectedProduct.unit.name}
+                    </Badge>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No Unit</p>
+                  )}
+                </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Current Stock</Label>
-                  <p className="text-lg font-bold text-blue-600">{selectedProduct?.stock || 0} units</p>
+                  <p className="text-lg font-bold text-blue-600">
+                  {selectedProduct?.stock || 0} {selectedProduct?.unit?.shortName || selectedProduct?.unit?.name || 'units'}
+                </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Warehouse</Label>
@@ -710,7 +722,7 @@ export default function Products() {
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                New stock will be: {selectedProduct?.stock + (adjustment.type === "increase" ? parseInt(adjustment.quantity || '0') : -parseInt(adjustment.quantity || '0'))} units
+                New stock will be: {selectedProduct?.stock + (adjustment.type === "increase" ? parseInt(adjustment.quantity || '0') : -parseInt(adjustment.quantity || '0'))} {selectedProduct?.unit?.shortName || selectedProduct?.unit?.name || 'units'}
               </p>
             </div>
 

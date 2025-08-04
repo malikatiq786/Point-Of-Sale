@@ -2192,6 +2192,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         warehouseName: "Main Warehouse",
         categoryName: product.category?.name || null,
         brandName: product.brand?.name || null,
+        unitName: product.unit?.name || null,
+        unitShortName: product.unit?.shortName || null,
         variantName: product.name, // Using product name as variant name for simplicity
         productVariantId: product.id
       }));

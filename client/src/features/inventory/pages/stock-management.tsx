@@ -273,13 +273,28 @@ export default function StockManagement() {
                             <span className="text-gray-500 ml-2">({stock.variantName})</span>
                           )}
                         </h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <div className="flex items-center flex-wrap gap-2 text-sm text-gray-500 mb-2">
                           <span className="flex items-center">
                             <Warehouse className="w-3 h-3 mr-1" />
                             {stock.warehouseName}
                           </span>
-                          {stock.categoryName && <span>Category: {stock.categoryName}</span>}
-                          {stock.brandName && <span>Brand: {stock.brandName}</span>}
+                        </div>
+                        <div className="flex items-center flex-wrap gap-2">
+                          {stock.categoryName && (
+                            <Badge variant="secondary" className="text-xs">
+                              {stock.categoryName}
+                            </Badge>
+                          )}
+                          {stock.brandName && (
+                            <Badge variant="outline" className="text-xs">
+                              {stock.brandName}
+                            </Badge>
+                          )}
+                          {stock.unitName && (
+                            <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+                              {stock.unitShortName || stock.unitName}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -289,7 +304,9 @@ export default function StockManagement() {
                         <div className="text-2xl font-bold text-gray-900">
                           {Math.round(parseFloat(stock.quantity || '0'))}
                         </div>
-                        <div className="text-xs text-gray-500">units</div>
+                        <div className="text-xs text-gray-500">
+                          {stock.unitShortName || stock.unitName || 'units'}
+                        </div>
                       </div>
                       
                       <Badge className={stockStatus.color}>
@@ -326,7 +343,7 @@ export default function StockManagement() {
                 <p className="font-semibold text-gray-900">{selectedStock?.productName}</p>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Category</Label>
                   {selectedStock?.categoryName ? (
@@ -347,12 +364,24 @@ export default function StockManagement() {
                     <p className="text-gray-400 text-sm">No Brand</p>
                   )}
                 </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Unit</Label>
+                  {selectedStock?.unitName ? (
+                    <Badge variant="default" className="mt-1 bg-green-100 text-green-800">
+                      {selectedStock.unitShortName || selectedStock.unitName}
+                    </Badge>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No Unit</p>
+                  )}
+                </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Current Stock</Label>
-                  <p className="text-lg font-bold text-blue-600">{selectedStock ? Math.round(parseFloat(selectedStock.quantity || '0')) : 0} units</p>
+                  <p className="text-lg font-bold text-blue-600">
+                    {selectedStock ? Math.round(parseFloat(selectedStock.quantity || '0')) : 0} {selectedStock?.unitShortName || selectedStock?.unitName || 'units'}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Warehouse</Label>
