@@ -1928,10 +1928,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/units", isAuthenticated, async (req, res) => {
     try {
+      const { name, shortName, symbol } = req.body;
+      const unitShortName = shortName || symbol;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Unit name is required" });
+      }
+      
+      if (!unitShortName) {
+        return res.status(400).json({ message: "Unit short name is required" });
+      }
+
+      // Check if unit with this name already exists
+      const existingUnitByName = unitsStorage.find(unit => 
+        unit.name.toLowerCase() === name.toLowerCase()
+      );
+      
+      if (existingUnitByName) {
+        return res.status(400).json({ message: "Unit name already exists" });
+      }
+
+      // Check if unit with this short name already exists
+      const existingUnitByShortName = unitsStorage.find(unit => 
+        unit.shortName.toLowerCase() === unitShortName.toLowerCase()
+      );
+      
+      if (existingUnitByShortName) {
+        return res.status(400).json({ message: "Unit short name already exists" });
+      }
+
       const unitData = {
         id: Date.now(),
-        name: req.body.name,
-        shortName: req.body.shortName || req.body.symbol, // Support both shortName and symbol
+        name: name,
+        shortName: unitShortName,
       };
       unitsStorage.push(unitData);
       console.log("Unit created:", unitData);
@@ -1951,10 +1980,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Unit not found" });
       }
       
+      const { name, shortName, symbol } = req.body;
+      const unitShortName = shortName || symbol;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Unit name is required" });
+      }
+      
+      if (!unitShortName) {
+        return res.status(400).json({ message: "Unit short name is required" });
+      }
+
+      // Check if another unit with this name already exists (excluding current unit)
+      const existingUnitByName = unitsStorage.find(unit => 
+        unit.id !== unitId && unit.name.toLowerCase() === name.toLowerCase()
+      );
+      
+      if (existingUnitByName) {
+        return res.status(400).json({ message: "Unit name already exists" });
+      }
+
+      // Check if another unit with this short name already exists (excluding current unit)
+      const existingUnitByShortName = unitsStorage.find(unit => 
+        unit.id !== unitId && unit.shortName.toLowerCase() === unitShortName.toLowerCase()
+      );
+      
+      if (existingUnitByShortName) {
+        return res.status(400).json({ message: "Unit short name already exists" });
+      }
+      
       unitsStorage[unitIndex] = {
         ...unitsStorage[unitIndex],
-        name: req.body.name,
-        shortName: req.body.shortName || req.body.symbol,
+        name: name,
+        shortName: unitShortName,
       };
       
       console.log("Unit updated:", unitsStorage[unitIndex]);
