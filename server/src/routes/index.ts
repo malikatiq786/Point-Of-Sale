@@ -98,15 +98,7 @@ router.get('/categories', isAuthenticated, (req: any, res: any) => {
   ]);
 });
 
-router.get('/brands', isAuthenticated, (req: any, res: any) => {
-  res.json([
-    { id: 1, name: 'Apple' },
-    { id: 2, name: 'Samsung' },
-    { id: 3, name: 'Nike' },
-    { id: 4, name: 'Adidas' },
-    { id: 5, name: 'Sony' }
-  ]);
-});
+// Brands routes moved to main routes.ts file for database integration
 
 router.get('/units', isAuthenticated, (req: any, res: any) => {
   res.json([
