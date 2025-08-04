@@ -7,10 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, Package, Eye, Filter, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, Eye, Filter, X, ChevronLeft, ChevronRight, Settings, Warehouse } from "lucide-react";
 import { Link } from "wouter";
 import { useCurrency } from "@/hooks/useCurrency";
 
@@ -25,6 +28,9 @@ export default function Products() {
   const [priceFilter, setPriceFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
+  const [showAdjustDialog, setShowAdjustDialog] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [adjustment, setAdjustment] = useState({ type: "increase", quantity: "", reason: "" });
   const { formatCurrencyValue } = useCurrency();
 
   // Delete product mutation
@@ -44,7 +50,7 @@ export default function Products() {
       queryClient.invalidateQueries({ queryKey: ["pos-products"] });
       // Invalidate any cached product queries with different pagination
       queryClient.invalidateQueries({ predicate: (query) => 
-        query.queryKey[0]?.toString().startsWith('products-') 
+        query.queryKey[0]?.toString().startsWith('products-') || false
       });
     },
     onError: (error) => {
@@ -57,10 +63,83 @@ export default function Products() {
     },
   });
 
+  // Stock adjustment mutation
+  const adjustStockMutation = useMutation({
+    mutationFn: async (adjustmentData: any) => {
+      const response = await fetch("/api/stock/adjustments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          warehouseId: 1, // Default to main warehouse
+          reason: adjustmentData.reason,
+          items: [{
+            productName: selectedProduct?.name,
+            quantity: adjustmentData.quantityChange,
+            previousQuantity: Math.round(parseFloat(selectedProduct?.stock || '0')),
+            newQuantity: Math.round(parseFloat(selectedProduct?.stock || '0')) + adjustmentData.quantityChange
+          }]
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to create stock adjustment");
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Stock adjusted successfully and logged in adjustments history",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/stock"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stock/adjustments"] });
+      queryClient.refetchQueries({ queryKey: [`products-${currentPage}-${itemsPerPage}`] });
+      setShowAdjustDialog(false);
+      setAdjustment({ type: "increase", quantity: "", reason: "" });
+      setSelectedProduct(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to adjust stock",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDeleteProduct = async (productId: number, productName: string) => {
     if (window.confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
       deleteProductMutation.mutate(productId);
     }
+  };
+
+  const handleAdjustStock = (product: any) => {
+    setSelectedProduct(product);
+    setShowAdjustDialog(true);
+  };
+
+  const handleSubmitAdjustment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adjustment.quantity || !adjustment.reason) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const quantityChange = adjustment.type === "increase" 
+      ? parseInt(adjustment.quantity) 
+      : -parseInt(adjustment.quantity);
+
+    adjustStockMutation.mutate({
+      quantityChange,
+      reason: adjustment.reason,
+    });
   };
 
   // Fetch products with pagination
@@ -82,7 +161,7 @@ export default function Products() {
     },
     retry: false,
     staleTime: 0, // Always consider data stale
-    cacheTime: 0, // Don't cache the data
+    gcTime: 0, // Don't cache the data
   });
 
   console.log('Products Query:', {
@@ -223,7 +302,7 @@ export default function Products() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category: any) => (
+                  {(categories as any[]).map((category: any) => (
                     <SelectItem key={category.id} value={category.id.toString()}>
                       {category.name}
                     </SelectItem>
@@ -241,7 +320,7 @@ export default function Products() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Brands</SelectItem>
-                  {brands.map((brand: any) => (
+                  {(brands as any[]).map((brand: any) => (
                     <SelectItem key={brand.id} value={brand.id.toString()}>
                       {brand.name}
                     </SelectItem>
@@ -299,7 +378,7 @@ export default function Products() {
                 )}
                 {categoryFilter && categoryFilter !== "all" && (
                   <Badge variant="secondary" className="text-xs">
-                    Category: {categories.find((c: any) => c.id.toString() === categoryFilter)?.name}
+                    Category: {(categories as any[]).find((c: any) => c.id.toString() === categoryFilter)?.name}
                     <X 
                       className="w-3 h-3 ml-1 cursor-pointer" 
                       onClick={() => setCategoryFilter("all")}
@@ -308,7 +387,7 @@ export default function Products() {
                 )}
                 {brandFilter && brandFilter !== "all" && (
                   <Badge variant="secondary" className="text-xs">
-                    Brand: {brands.find((b: any) => b.id.toString() === brandFilter)?.name}
+                    Brand: {(brands as any[]).find((b: any) => b.id.toString() === brandFilter)?.name}
                     <X 
                       className="w-3 h-3 ml-1 cursor-pointer" 
                       onClick={() => setBrandFilter("all")}
@@ -437,6 +516,15 @@ export default function Products() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleAdjustStock(product)}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Settings className="w-3 h-3 mr-1" />
+                          Adjust
+                        </Button>
                         <Link href={`/products/view/${product.id}`}>
                           <Button variant="outline" size="sm">
                             <Eye className="w-3 h-3 mr-1" />
@@ -540,6 +628,125 @@ export default function Products() {
           )}
         </CardContent>
       </Card>
+
+      {/* Stock Adjustment Dialog */}
+      <Dialog open={showAdjustDialog} onOpenChange={setShowAdjustDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Settings className="mr-2 h-5 w-5" />
+              Adjust Stock - {selectedProduct?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmitAdjustment} className="space-y-4">
+            {/* Product Information with Brand and Category */}
+            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Product</Label>
+                <p className="font-semibold text-gray-900">{selectedProduct?.name}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Category</Label>
+                  {selectedProduct?.category ? (
+                    <Badge variant="secondary" className="mt-1">
+                      {selectedProduct.category.name}
+                    </Badge>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No Category</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Brand</Label>
+                  {selectedProduct?.brand ? (
+                    <Badge variant="outline" className="mt-1">
+                      {selectedProduct.brand.name}
+                    </Badge>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No Brand</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Current Stock</Label>
+                  <p className="text-lg font-bold text-blue-600">{selectedProduct?.stock || 0} units</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Warehouse</Label>
+                  <div className="flex items-center mt-1">
+                    <Warehouse className="w-4 h-4 text-gray-500 mr-1" />
+                    <span className="text-sm text-gray-700">Main Warehouse</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label>Adjustment Type</Label>
+              <Select value={adjustment.type} onValueChange={(value) => setAdjustment({...adjustment, type: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select adjustment type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="increase">Increase Stock</SelectItem>
+                  <SelectItem value="decrease">Decrease Stock</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Quantity</Label>
+              <Input 
+                type="number" 
+                placeholder="Enter quantity" 
+                value={adjustment.quantity}
+                onChange={(e) => setAdjustment({...adjustment, quantity: e.target.value})}
+                min="1"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                New stock will be: {selectedProduct?.stock + (adjustment.type === "increase" ? parseInt(adjustment.quantity || '0') : -parseInt(adjustment.quantity || '0'))} units
+              </p>
+            </div>
+
+            <div>
+              <Label>Reason</Label>
+              <Textarea 
+                placeholder="Enter reason for adjustment" 
+                value={adjustment.reason}
+                onChange={(e) => setAdjustment({...adjustment, reason: e.target.value})}
+                rows={3}
+                required
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setShowAdjustDialog(false);
+                  setAdjustment({ type: "increase", quantity: "", reason: "" });
+                  setSelectedProduct(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={adjustStockMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {adjustStockMutation.isPending ? 'Adjusting...' : 'Adjust Stock'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

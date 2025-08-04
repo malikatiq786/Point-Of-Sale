@@ -319,17 +319,46 @@ export default function StockManagement() {
             <DialogTitle>Adjust Stock - {selectedStock?.productName}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmitAdjustment} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Current Stock</Label>
-                <div className="p-2 bg-gray-100 rounded text-center font-semibold">
-                  {selectedStock ? Math.round(parseFloat(selectedStock.quantity || '0')) : 0} units
+            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Product</Label>
+                <p className="font-semibold text-gray-900">{selectedStock?.productName}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Category</Label>
+                  {selectedStock?.categoryName ? (
+                    <Badge variant="secondary" className="mt-1">
+                      {selectedStock.categoryName}
+                    </Badge>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No Category</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Brand</Label>
+                  {selectedStock?.brandName ? (
+                    <Badge variant="outline" className="mt-1">
+                      {selectedStock.brandName}
+                    </Badge>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No Brand</p>
+                  )}
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Warehouse</Label>
-                <div className="p-2 bg-gray-100 rounded text-center">
-                  {selectedStock?.warehouseName}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Current Stock</Label>
+                  <p className="text-lg font-bold text-blue-600">{selectedStock ? Math.round(parseFloat(selectedStock.quantity || '0')) : 0} units</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Warehouse</Label>
+                  <div className="flex items-center mt-1">
+                    <Warehouse className="w-4 h-4 text-gray-500 mr-1" />
+                    <span className="text-sm text-gray-700">{selectedStock?.warehouseName || 'Main Warehouse'}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -367,6 +396,11 @@ export default function StockManagement() {
                 min="1"
                 required
               />
+              {selectedStock && (
+                <p className="text-xs text-gray-500 mt-1">
+                  New stock will be: {Math.round(parseFloat(selectedStock.quantity || '0')) + (adjustment.type === "increase" ? parseInt(adjustment.quantity || '0') : -parseInt(adjustment.quantity || '0'))} units
+                </p>
+              )}
             </div>
             
             <div className="space-y-2">
