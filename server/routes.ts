@@ -482,32 +482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Customers API - Removed old hardcoded routes, using database-backed routes from apiRoutes instead
 
-  // Suppliers API
-  app.get('/api/suppliers', (req, res) => {
-    console.log('Fetching suppliers, total:', suppliersStorage.length);
-    res.json(suppliersStorage);
-  });
-
-  app.post('/api/suppliers', (req, res) => {
-    try {
-      const { name, phone, email, address } = req.body;
-      
-      const supplierData = {
-        id: Date.now(),
-        name: name || '',
-        phone: phone || '',
-        email: email || '',
-        address: address || ''
-      };
-
-      suppliersStorage.push(supplierData);
-      console.log('Supplier created:', supplierData);
-      res.status(201).json(supplierData);
-    } catch (error) {
-      console.error('Create supplier error:', error);
-      res.status(500).json({ message: 'Failed to create supplier' });
-    }
-  });
+  // Suppliers API - Removed old hardcoded routes, using database-backed routes from apiRoutes instead
 
   // Customer Ledgers API
   let customerLedgersStorage: any[] = [

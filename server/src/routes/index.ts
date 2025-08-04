@@ -5,6 +5,7 @@ import { DashboardController } from '../controllers/DashboardController';
 import { UserController } from '../controllers/UserController';
 import { InventoryController } from '../controllers/InventoryController';
 import { CustomerController } from '../controllers/CustomerController';
+import { SupplierController } from '../controllers/SupplierController';
 import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
@@ -18,6 +19,7 @@ const dashboardController = new DashboardController();
 const userController = new UserController();
 const inventoryController = new InventoryController();
 const customerController = new CustomerController();
+const supplierController = new SupplierController();
 
 // Create router
 const router = Router();
@@ -487,27 +489,12 @@ router.post('/purchases', async (req: any, res: any) => {
 });
 
 // Supplier routes
-router.get('/suppliers', async (req: any, res: any) => {
-  try {
-    const suppliers = await db.select().from(schema.suppliers).limit(50);
-    res.json(suppliers);
-  } catch (error) {
-    console.error('Get suppliers error:', error);
-    res.status(500).json({ message: 'Failed to fetch suppliers' });
-  }
-});
-
-router.post('/suppliers', async (req: any, res: any) => {
-  try {
-    const [supplier] = await db.insert(schema.suppliers)
-      .values(req.body)
-      .returning();
-    res.status(201).json(supplier);
-  } catch (error) {
-    console.error('Create supplier error:', error);
-    res.status(500).json({ message: 'Failed to create supplier' });
-  }
-});
+router.get('/suppliers', isAuthenticated, supplierController.getSuppliers as any);
+router.post('/suppliers', isAuthenticated, supplierController.createSupplier as any);
+router.get('/suppliers/:id', isAuthenticated, supplierController.getSupplierById as any);
+router.put('/suppliers/:id', isAuthenticated, supplierController.updateSupplier as any);
+router.delete('/suppliers/:id', isAuthenticated, supplierController.deleteSupplier as any);
+router.get('/suppliers/search', isAuthenticated, supplierController.searchSuppliers as any);
 
 // Brand routes
 router.get('/brands', async (req: any, res: any) => {
