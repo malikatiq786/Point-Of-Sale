@@ -1484,7 +1484,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Product routes
+  // Product routes with pagination (path parameters)
+  app.get("/api/products/:page/:limit", isAuthenticated, async (req, res) => {
+    try {
+      const { page, limit } = req.params;
+      const { search } = req.query;
+      let products;
+      let totalCount = 0;
+      
+      if (search) {
+        products = await storage.searchProducts(search as string);
+        totalCount = products.length;
+        res.json({
+          products,
+          pagination: {
+            page: 1,
+            limit: products.length,
+            total: totalCount,
+            totalPages: 1
+          }
+        });
+      } else {
+        const limitNum = parseInt(limit);
+        const pageNum = parseInt(page);
+        const offset = (pageNum - 1) * limitNum;
+        
+        products = await storage.getProducts(limitNum, offset);
+        totalCount = await storage.getProductsCount();
+        
+        console.log(`Fetching products - Page: ${pageNum}, Limit: ${limitNum}, Offset: ${offset}, Total: ${totalCount}`);
+        console.log(`Products returned: ${products.length}`);
+        
+        res.json({
+          products,
+          pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total: totalCount,
+            totalPages: Math.ceil(totalCount / limitNum)
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
+  // Product routes (fallback for query parameters)
   app.get("/api/products", isAuthenticated, async (req, res) => {
     try {
       const { search, limit, page } = req.query;
