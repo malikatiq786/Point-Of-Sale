@@ -481,7 +481,7 @@ export class DatabaseStorage implements IStorage {
         orderType: sales.orderType,
         total: sales.totalAmount,
         status: sql<string>`'completed'`,
-        createdAt: sales.createdAt,
+        createdAt: sales.date,
         orderSource: sales.orderSource
       })
       .from(sales)
