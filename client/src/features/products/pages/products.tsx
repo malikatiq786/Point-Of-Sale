@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, Package, Eye, Filter, X } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, Eye, Filter, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { useCurrency } from "@/hooks/useCurrency";
 
@@ -23,13 +23,18 @@ export default function Products() {
   const [brandFilter, setBrandFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [priceFilter, setPriceFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(50);
   const { formatCurrencyValue } = useCurrency();
 
-  // Fetch products
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ["/api/products"],
+  // Fetch products with pagination
+  const { data: productsResponse, isLoading } = useQuery({
+    queryKey: ["/api/products", currentPage, itemsPerPage],
     retry: false,
   });
+
+  const products = productsResponse?.products || [];
+  const pagination = productsResponse?.pagination || { page: 1, limit: 50, total: 0, totalPages: 1 };
 
 
   // Fetch categories for filter dropdown
@@ -83,6 +88,12 @@ export default function Products() {
     setBrandFilter("all");
     setStockFilter("all");
     setPriceFilter("all");
+    setCurrentPage(1);
+  };
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   // Check if any filters are active
@@ -384,6 +395,63 @@ export default function Products() {
                 ))}
               </TableBody>
               </Table>
+              
+              {/* Pagination Controls */}
+              {pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+                  <div className="text-sm text-gray-500">
+                    Showing {(pagination.page - 1) * pagination.limit + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} products
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {[...Array(Math.min(5, pagination.totalPages))].map((_, index) => {
+                        let pageNumber;
+                        if (pagination.totalPages <= 5) {
+                          pageNumber = index + 1;
+                        } else if (pagination.page <= 3) {
+                          pageNumber = index + 1;
+                        } else if (pagination.page >= pagination.totalPages - 2) {
+                          pageNumber = pagination.totalPages - 4 + index;
+                        } else {
+                          pageNumber = pagination.page - 2 + index;
+                        }
+                        
+                        return (
+                          <Button
+                            key={pageNumber}
+                            variant={pagination.page === pageNumber ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handlePageChange(pageNumber)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {pageNumber}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.totalPages}
+                    >
+                      Next
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-12">

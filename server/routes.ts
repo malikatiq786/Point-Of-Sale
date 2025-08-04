@@ -1487,16 +1487,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product routes
   app.get("/api/products", isAuthenticated, async (req, res) => {
     try {
-      const { search, limit } = req.query;
+      const { search, limit, page } = req.query;
       let products;
+      let totalCount = 0;
       
       if (search) {
         products = await storage.searchProducts(search as string);
+        totalCount = products.length;
       } else {
-        products = await storage.getProducts(limit ? parseInt(limit as string) : undefined);
+        const limitNum = limit ? parseInt(limit as string) : 50;
+        const pageNum = page ? parseInt(page as string) : 1;
+        const offset = (pageNum - 1) * limitNum;
+        
+        products = await storage.getProducts(limitNum, offset);
+        totalCount = await storage.getProductsCount();
       }
       
-      res.json(products);
+      res.json({
+        products,
+        pagination: {
+          page: search ? 1 : (page ? parseInt(page as string) : 1),
+          limit: search ? products.length : (limit ? parseInt(limit as string) : 50),
+          total: totalCount,
+          totalPages: search ? 1 : Math.ceil(totalCount / (limit ? parseInt(limit as string) : 50))
+        }
+      });
     } catch (error) {
       console.error("Error fetching products:", error);
       res.status(500).json({ message: "Failed to fetch products" });

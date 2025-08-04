@@ -53,11 +53,12 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<(User & { role: string | null }) | undefined>;
   
   // Product operations
-  getProducts(limit?: number): Promise<(Product & { 
+  getProducts(limit?: number, offset?: number): Promise<(Product & { 
     category: { name: string } | null,
     brand: { name: string } | null,
     variants: (ProductVariant & { prices: ProductPrice[] })[]
   })[]>;
+  getProductsCount(): Promise<number>;
   searchProducts(query: string): Promise<Product[]>;
   createProduct(product: any): Promise<Product>;
   createCategory(category: any): Promise<any>;
@@ -202,7 +203,14 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getProducts(limit = 200): Promise<any[]> {
+  async getProductsCount(): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(products);
+    return result[0].count;
+  }
+
+  async getProducts(limit = 50, offset = 0): Promise<any[]> {
     return await db
       .select({
         id: products.id,
@@ -227,7 +235,8 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(brands, eq(products.brandId, brands.id))
       .leftJoin(units, eq(products.unitId, units.id))
       .orderBy(desc(products.id))
-      .limit(limit);
+      .limit(limit)
+      .offset(offset);
   }
 
   async searchProducts(query: string): Promise<Product[]> {
