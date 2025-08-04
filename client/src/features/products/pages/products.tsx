@@ -441,10 +441,12 @@ export default function Products() {
                           <Eye className="w-3 h-3 mr-1" />
                           View
                         </Button>
-                        <Button variant="outline" size="sm">
-                          <Edit className="w-3 h-3 mr-1" />
-                          Edit
-                        </Button>
+                        <Link href={`/products/edit/${product.id}`}>
+                          <Button variant="outline" size="sm">
+                            <Edit className="w-3 h-3 mr-1" />
+                            Edit
+                          </Button>
+                        </Link>
                         <Button 
                           variant="outline" 
                           size="sm" 

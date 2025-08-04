@@ -61,8 +61,10 @@ export interface IStorage {
   getProductsCount(): Promise<number>;
   searchProducts(query: string): Promise<Product[]>;
   createProduct(product: any): Promise<Product>;
+  updateProduct(id: number, product: any): Promise<Product>;
   deleteProduct(id: number): Promise<void>;
   checkProductExists(name: string, brandId: number): Promise<boolean>;
+  checkProductExistsExcluding(name: string, brandId: number, excludeId: number): Promise<boolean>;
   createCategory(category: any): Promise<any>;
   createBrand(brand: any): Promise<any>;
   updateBrand(id: number, brand: any): Promise<any>;
@@ -276,6 +278,42 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     
     return !!existingProduct;
+  }
+
+  async checkProductExistsExcluding(name: string, brandId: number, excludeId: number): Promise<boolean> {
+    const [existingProduct] = await db
+      .select({ id: products.id })
+      .from(products)
+      .where(and(
+        eq(products.name, name.trim()),
+        eq(products.brandId, brandId),
+        sql`${products.id} != ${excludeId}`
+      ))
+      .limit(1);
+    
+    return !!existingProduct;
+  }
+
+  async updateProduct(id: number, productData: any): Promise<Product> {
+    console.log(`STORAGE: Updating product with ID: ${id}`, productData);
+    
+    try {
+      const [product] = await db
+        .update(products)
+        .set(productData)
+        .where(eq(products.id, id))
+        .returning();
+      
+      if (!product) {
+        throw new Error(`Product with ID ${id} not found`);
+      }
+      
+      console.log(`STORAGE: Product ${id} updated successfully`);
+      return product;
+    } catch (error) {
+      console.error(`STORAGE: Error updating product ${id}:`, error);
+      throw error;
+    }
   }
 
   async getCustomers(limit = 50): Promise<Customer[]> {

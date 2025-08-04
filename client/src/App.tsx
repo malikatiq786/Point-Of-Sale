@@ -27,6 +27,7 @@ import Purchases from "@/features/purchases";
 import AddPurchase from "@/features/purchases/pages/add-purchase";
 import { Warehouses, StockManagement, StockTransfers, StockAdjustments } from "@/features/inventory";
 import AddProduct from "@/features/products/pages/add-product";
+import EditProduct from "@/features/products/pages/edit-product";
 import { BusinessProfile, Branches, Registers } from "@/features/business";
 import { Payments, Accounts, Transactions, Reports } from "@/features/financial";
 import CustomerLedgers from "@/features/customers/pages/customer-ledgers";
@@ -80,6 +81,7 @@ function Router() {
           <Route path="/kitchen-pos" component={KitchenPOS} />
           <Route path="/products" component={Products} />
           <Route path="/products/add" component={AddProduct} />
+          <Route path="/products/edit/:id" component={EditProduct} />
           <Route path="/categories" component={Categories} />
           <Route path="/brands" component={Brands} />
           <Route path="/units" component={Units} />

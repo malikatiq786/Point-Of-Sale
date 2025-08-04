@@ -1731,6 +1731,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/products/:id", isAuthenticated, async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const products = await storage.getProducts(1, 0); // Get all products to find the one
+      const allProducts = await storage.getProducts(200, 0); // Get more products to ensure we find it
+      
+      const product = allProducts.find((p: any) => p.id === productId);
+      
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      res.json(product);
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      res.status(500).json({ message: "Failed to fetch product" });
+    }
+  });
+
+  app.put("/api/products/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const { name, brandId } = req.body;
+      
+      // Validate required fields
+      if (!name) {
+        return res.status(400).json({ message: "Product name is required" });
+      }
+      
+      if (!brandId) {
+        return res.status(400).json({ message: "Brand is required" });
+      }
+
+      // Check if another product with this name and brand already exists (excluding current product)
+      const exists = await storage.checkProductExistsExcluding(name, brandId, productId);
+      if (exists) {
+        return res.status(400).json({ 
+          message: "A product with this name already exists for the selected brand. Please choose a different name or brand." 
+        });
+      }
+
+      const product = await storage.updateProduct(productId, req.body);
+      
+      // Log activity - handle both user formats
+      const userId = req.user?.claims?.sub || req.user?.id || "system";
+      await storage.logActivity(
+        userId,
+        `Updated product: ${product.name}`,
+        req.ip
+      );
+      
+      res.json(product);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      res.status(500).json({ message: "Failed to update product" });
+    }
+  });
+
   // Category routes
   app.get("/api/categories", isAuthenticated, async (req, res) => {
     try {
