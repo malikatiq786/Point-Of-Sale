@@ -12,11 +12,15 @@ export class InventoryController {
   // Get all warehouses
   getWarehouses = async (req: Request, res: Response) => {
     try {
+      console.log('InventoryController: Getting warehouses...');
       const result = await this.inventoryService.getWarehouses();
+      console.log('InventoryController: Warehouse result:', result);
 
       if (result.success) {
+        console.log('InventoryController: Returning warehouses:', result.data);
         res.status(HTTP_STATUS.OK).json(result.data);
       } else {
+        console.error('InventoryController: Failed to get warehouses:', result.error);
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
           message: result.error || ERROR_MESSAGES.INTERNAL_ERROR
         });
