@@ -4,6 +4,7 @@ import { SaleController } from '../controllers/SaleController';
 import { DashboardController } from '../controllers/DashboardController';
 import { UserController } from '../controllers/UserController';
 import { InventoryController } from '../controllers/InventoryController';
+import { CustomerController } from '../controllers/CustomerController';
 import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
@@ -16,6 +17,7 @@ const saleController = new SaleController();
 const dashboardController = new DashboardController();
 const userController = new UserController();
 const inventoryController = new InventoryController();
+const customerController = new CustomerController();
 
 // Create router
 const router = Router();
@@ -720,6 +722,14 @@ router.post('/stock/transfers', isAuthenticated, inventoryController.createStock
 
 router.get('/stock/adjustments', isAuthenticated, inventoryController.getStockAdjustments as any);
 router.post('/stock/adjustments', isAuthenticated, inventoryController.adjustStock as any);
+
+// Customer routes
+router.get('/customers', isAuthenticated, customerController.getCustomers as any);
+router.get('/customers/search', isAuthenticated, customerController.searchCustomers as any);
+router.get('/customers/:id', isAuthenticated, customerController.getCustomerById as any);
+router.post('/customers', isAuthenticated, customerController.createCustomer as any);
+router.put('/customers/:id', isAuthenticated, customerController.updateCustomer as any);
+router.delete('/customers/:id', isAuthenticated, customerController.deleteCustomer as any);
 
 
 export { router as apiRoutes };
