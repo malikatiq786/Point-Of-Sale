@@ -8,6 +8,8 @@ import {
   brands,
   units,
   stock,
+  stockAdjustments,
+  warehouses,
   customers,
   sales,
   saleItems,
@@ -777,6 +779,87 @@ export class DatabaseStorage implements IStorage {
 
   async getUnits(): Promise<any[]> {
     return await db.select().from(units).orderBy(units.id);
+  }
+
+  // Stock Management Methods
+  async getStock(): Promise<any[]> {
+    return await db
+      .select({
+        id: stock.id,
+        productVariantId: stock.productVariantId,
+        warehouseId: stock.warehouseId,
+        quantity: stock.quantity,
+        productName: products.name,
+        variantName: productVariants.variantName,
+        warehouseName: warehouses.name,
+        categoryName: categories.name,
+        brandName: brands.name,
+      })
+      .from(stock)
+      .leftJoin(productVariants, eq(stock.productVariantId, productVariants.id))
+      .leftJoin(products, eq(productVariants.productId, products.id))
+      .leftJoin(warehouses, eq(stock.warehouseId, warehouses.id))
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .leftJoin(brands, eq(products.brandId, brands.id))
+      .orderBy(desc(stock.id));
+  }
+
+  async getWarehouses(): Promise<any[]> {
+    return await db.select().from(warehouses).orderBy(warehouses.id);
+  }
+
+  async createStockAdjustment(adjustmentData: any): Promise<any> {
+    // Create the adjustment record
+    const [adjustment] = await db
+      .insert(stockAdjustments)
+      .values({
+        warehouseId: adjustmentData.warehouseId,
+        userId: adjustmentData.userId,
+        reason: adjustmentData.reason,
+      })
+      .returning();
+
+    // For simplified stock management, we'll work directly with product stock
+    // instead of the complex product variants system for now
+    if (adjustmentData.items && adjustmentData.items.length > 0) {
+      const item = adjustmentData.items[0];
+      
+      // Find the product by name and update its stock
+      const [product] = await db
+        .select()
+        .from(products)
+        .where(eq(products.name, item.productName))
+        .limit(1);
+
+      if (product) {
+        await db
+          .update(products)
+          .set({ 
+            stock: item.newQuantity,
+            updatedAt: new Date()
+          })
+          .where(eq(products.id, product.id));
+      }
+    }
+
+    return adjustment;
+  }
+
+  async getStockAdjustments(): Promise<any[]> {
+    return await db
+      .select({
+        id: stockAdjustments.id,
+        warehouseId: stockAdjustments.warehouseId,
+        userId: stockAdjustments.userId,
+        reason: stockAdjustments.reason,
+        createdAt: stockAdjustments.createdAt,
+        warehouseName: warehouses.name,
+        userName: users.name,
+      })
+      .from(stockAdjustments)
+      .leftJoin(warehouses, eq(stockAdjustments.warehouseId, warehouses.id))
+      .leftJoin(users, eq(stockAdjustments.userId, users.id))
+      .orderBy(desc(stockAdjustments.createdAt));
   }
 
   // Delivery Rider operations

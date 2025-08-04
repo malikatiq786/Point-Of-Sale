@@ -18,7 +18,8 @@ export default function Stock() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [selectedStock, setSelectedStock] = useState<any>(null);
-  const [adjustment, setAdjustment] = useState({ type: "increase", quantity: "", reason: "" });
+  const [adjustment, setAdjustment] = useState({ type: "increase", quantity: "", reason: "", productName: "" });
+  const [isAddMode, setIsAddMode] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -73,7 +74,8 @@ export default function Stock() {
       queryClient.invalidateQueries({ queryKey: ["/api/stock"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stock/adjustments"] });
       setShowAdjustDialog(false);
-      setAdjustment({ type: "increase", quantity: "", reason: "" });
+      setAdjustment({ type: "increase", quantity: "", reason: "", productName: "" });
+      setIsAddMode(false);
     },
     onError: (error: any) => {
       toast({
@@ -86,12 +88,20 @@ export default function Stock() {
 
   const handleAdjustStock = (stock: any) => {
     setSelectedStock(stock);
+    setIsAddMode(false);
+    setShowAdjustDialog(true);
+  };
+
+  const handleAddStockAdjustment = () => {
+    setSelectedStock(null);
+    setIsAddMode(true);
+    setAdjustment({ type: "increase", quantity: "", reason: "", productName: "" });
     setShowAdjustDialog(true);
   };
 
   const handleSubmitAdjustment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adjustment.quantity || !adjustment.reason) {
+    if (!adjustment.quantity || !adjustment.reason || (isAddMode && !adjustment.productName)) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -104,10 +114,19 @@ export default function Stock() {
       ? parseInt(adjustment.quantity) 
       : -parseInt(adjustment.quantity);
 
+    const productName = isAddMode ? adjustment.productName : selectedStock?.productName;
+    const currentQuantity = isAddMode ? 0 : Math.round(parseFloat(selectedStock?.quantity || '0'));
+    
     adjustStockMutation.mutate({
-      warehouseId: selectedStock.warehouseId,
+      warehouseId: isAddMode ? 1 : selectedStock.warehouseId,
       quantityChange,
       reason: adjustment.reason,
+      items: [{
+        productName: productName,
+        quantity: quantityChange,
+        previousQuantity: currentQuantity,
+        newQuantity: currentQuantity + quantityChange
+      }]
     });
   };
 
@@ -135,9 +154,12 @@ export default function Stock() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               </div>
               
-              <Button className="bg-primary-500 text-white hover:bg-primary-600">
+              <Button 
+                onClick={handleAddStockAdjustment}
+                className="bg-primary-500 text-white hover:bg-primary-600"
+              >
                 <Plus className="w-4 h-4 mr-2" />
-                Stock Adjustment
+                Add Stock Adjustment
               </Button>
             </div>
           </div>
@@ -238,23 +260,38 @@ export default function Stock() {
       <Dialog open={showAdjustDialog} onOpenChange={setShowAdjustDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adjust Stock - {selectedStock?.productName}</DialogTitle>
+            <DialogTitle>
+              {isAddMode ? 'Add Stock Adjustment' : `Adjust Stock - ${selectedStock?.productName}`}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmitAdjustment} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            {isAddMode ? (
               <div className="space-y-2">
-                <Label>Current Stock</Label>
-                <div className="p-2 bg-gray-100 rounded text-center font-semibold">
-                  {selectedStock ? Math.round(parseFloat(selectedStock.quantity || '0')) : 0} units
+                <Label>Product Name</Label>
+                <Input
+                  type="text"
+                  value={adjustment.productName}
+                  onChange={(e) => setAdjustment({ ...adjustment, productName: e.target.value })}
+                  placeholder="Enter product name"
+                  required
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Current Stock</Label>
+                  <div className="p-2 bg-gray-100 rounded text-center font-semibold">
+                    {selectedStock ? Math.round(parseFloat(selectedStock.quantity || '0')) : 0} units
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Warehouse</Label>
+                  <div className="p-2 bg-gray-100 rounded text-center">
+                    {selectedStock?.warehouseName}
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Warehouse</Label>
-                <div className="p-2 bg-gray-100 rounded text-center">
-                  {selectedStock?.warehouseName}
-                </div>
-              </div>
-            </div>
+            )}
             
             <div className="space-y-2">
               <Label>Adjustment Type</Label>

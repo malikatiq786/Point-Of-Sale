@@ -2179,13 +2179,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Other module routes with placeholder implementations
+  // Stock Management routes
   app.get("/api/stock", isAuthenticated, async (req, res) => {
     try {
-      res.json([]);
+      // For simplified stock management, return products with their stock levels
+      const products = await storage.getProducts(1000, 0); // Get all products
+      const stockData = products.map(product => ({
+        id: product.id,
+        productName: product.name,
+        quantity: product.stock || 0,
+        warehouseId: 1, // Default warehouse
+        warehouseName: "Main Warehouse",
+        categoryName: product.category?.name || null,
+        brandName: product.brand?.name || null,
+        variantName: product.name, // Using product name as variant name for simplicity
+        productVariantId: product.id
+      }));
+      
+      console.log(`Fetching stock data, total items: ${stockData.length}`);
+      res.json(stockData);
     } catch (error) {
       console.error("Error fetching stock:", error);
       res.status(500).json({ message: "Failed to fetch stock" });
+    }
+  });
+
+  app.get("/api/warehouses", isAuthenticated, async (req, res) => {
+    try {
+      // For now, return a default warehouse
+      const warehouses = [{
+        id: 1,
+        name: "Main Warehouse",
+        location: "Main Location"
+      }];
+      res.json(warehouses);
+    } catch (error) {
+      console.error("Error fetching warehouses:", error);
+      res.status(500).json({ message: "Failed to fetch warehouses" });
+    }
+  });
+
+  app.post("/api/stock/adjustments", isAuthenticated, async (req, res) => {
+    try {
+      const { warehouseId, reason, items } = req.body;
+      const userId = req.user?.claims?.sub;
+
+      if (!items || items.length === 0) {
+        return res.status(400).json({ message: "No items to adjust" });
+      }
+
+      console.log('Creating stock adjustment:', {
+        warehouseId,
+        reason,
+        items,
+        userId
+      });
+
+      const adjustment = await storage.createStockAdjustment({
+        warehouseId: warehouseId || 1,
+        userId,
+        reason,
+        items
+      });
+
+      res.json(adjustment);
+    } catch (error) {
+      console.error("Error creating stock adjustment:", error);
+      res.status(500).json({ message: "Failed to create stock adjustment" });
+    }
+  });
+
+  app.get("/api/stock/adjustments", isAuthenticated, async (req, res) => {
+    try {
+      const adjustments = await storage.getStockAdjustments();
+      console.log(`Fetching stock adjustments, total: ${adjustments.length}`);
+      res.json(adjustments);
+    } catch (error) {
+      console.error("Error fetching stock adjustments:", error);
+      res.status(500).json({ message: "Failed to fetch stock adjustments" });
     }
   });
 
