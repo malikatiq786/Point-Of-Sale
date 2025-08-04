@@ -1959,7 +1959,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize sample data route
   app.post("/api/initialize-sample-data", isAuthenticated, async (req: any, res) => {
     try {
-      await initializeSampleData(req.user.claims.sub);
+      const userId = req.user?.claims?.sub || req.user?.id || "system";
+      await initializeSampleData(userId);
       res.json({ message: "Sample data initialized successfully" });
     } catch (error) {
       console.error("Error initializing sample data:", error);
