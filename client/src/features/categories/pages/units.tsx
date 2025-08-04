@@ -41,7 +41,7 @@ export default function Units() {
   });
 
   // Fetch units
-  const { data: units = [], isLoading } = useQuery({
+  const { data: units = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/units'],
     retry: false,
   });
@@ -149,7 +149,7 @@ export default function Units() {
 
   const filteredUnits = units.filter((unit: any) =>
     unit.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    unit.symbol.toLowerCase().includes(searchQuery.toLowerCase())
+    (unit.shortName || unit.symbol || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -314,7 +314,7 @@ export default function Units() {
                     </div>
                     <div>
                       <CardTitle className="text-lg">{unit.name}</CardTitle>
-                      <p className="text-sm text-gray-500 mt-1">Symbol: {unit.symbol}</p>
+                      <p className="text-sm text-gray-500 mt-1">Symbol: {unit.shortName || unit.symbol || 'N/A'}</p>
                       {unit.description && (
                         <p className="text-xs text-gray-400 mt-1">{unit.description}</p>
                       )}
@@ -343,8 +343,8 @@ export default function Units() {
               
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <Badge className={`text-xs ${getUnitTypeColor(unit.type)}`}>
-                    {unit.type.charAt(0).toUpperCase() + unit.type.slice(1)}
+                  <Badge className={`text-xs ${getUnitTypeColor(unit.type || 'count')}`}>
+                    {(unit.type || 'count').charAt(0).toUpperCase() + (unit.type || 'count').slice(1)}
                   </Badge>
                   <div className="text-sm text-gray-500">
                     ID: {unit.id}
