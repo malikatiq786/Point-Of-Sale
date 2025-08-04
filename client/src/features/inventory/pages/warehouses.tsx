@@ -29,10 +29,13 @@ export default function Warehouses() {
   });
 
   // Fetch stock summary for each warehouse
-  const { data: stockSummary = [] } = useQuery({
+  const { data: stockSummary = [], refetch: refetchStock } = useQuery({
     queryKey: ["/api/stock"],
     retry: false,
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache stock data
   });
+
 
   const createWarehouseMutation = useMutation({
     mutationFn: (warehouseData: any) => apiRequest("POST", "/api/warehouses", warehouseData),
@@ -98,13 +101,13 @@ export default function Warehouses() {
   );
 
   const getWarehouseStockCount = (warehouseId: number) => {
-    return (stockSummary as any[]).filter((stock: any) => stock.warehouseId === warehouseId).length;
+    const warehouseStock = (stockSummary as any[]).filter((stock: any) => stock.warehouseId === warehouseId);
+    return warehouseStock.length;
   };
 
   const getWarehouseTotalItems = (warehouseId: number) => {
-    return (stockSummary as any[])
-      .filter((stock: any) => stock.warehouseId === warehouseId)
-      .reduce((total: number, stock: any) => total + parseFloat(stock.quantity || '0'), 0);
+    const warehouseStock = (stockSummary as any[]).filter((stock: any) => stock.warehouseId === warehouseId);
+    return warehouseStock.reduce((total: number, stock: any) => total + parseFloat(stock.quantity || '0'), 0);
   };
 
   const handleCreateWarehouse = (e: React.FormEvent) => {

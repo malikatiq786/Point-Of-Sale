@@ -65,8 +65,12 @@ export default function StockTransfers() {
         title: "Success",
         description: "Stock transfer created successfully",
       });
+      // Invalidate all related queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["/api/stock/transfers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stock"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouses"] });
+      // Force refetch of stock data
+      queryClient.refetchQueries({ queryKey: ["/api/stock"] });
       setShowCreateDialog(false);
       setTransfer({
         fromWarehouseId: "",

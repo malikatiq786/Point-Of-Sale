@@ -705,55 +705,7 @@ router.delete('/registers/:id', async (req: any, res: any) => {
 // Inventory routes
 router.get('/warehouses', isAuthenticated, inventoryController.getWarehouses as any);
 
-router.get('/stock', async (req: any, res: any) => {
-  try {
-    // Get stock data with product information
-    const stockData = await db
-      .select({
-        productId: schema.products.id,
-        productName: schema.products.name,
-        productVariantId: schema.products.id, // Using product ID as variant ID for now
-        variantName: schema.products.name, // Using product name as variant name
-        quantity: schema.products.stock,
-        warehouseId: sql`1`, // Default warehouse
-        warehouseName: sql`'Main Warehouse'`, // Default warehouse name
-        categoryName: schema.categories.name,
-        brandName: schema.brands.name,
-        price: schema.products.price,
-        lowStockAlert: schema.products.lowStockAlert
-      })
-      .from(schema.products)
-      .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
-      .leftJoin(schema.brands, eq(schema.products.brandId, schema.brands.id))
-      .limit(100);
 
-    res.json(stockData);
-  } catch (error) {
-    console.error('Get stock error:', error);
-    res.status(500).json({ message: 'Failed to fetch stock data' });
-  }
-});
-
-router.post('/stock/adjust', async (req: any, res: any) => {
-  try {
-    const { productVariantId, quantityChange, reason, userId } = req.body;
-    
-    // Update product stock directly (since we're using products table for stock)
-    await db.update(schema.products)
-      .set({ 
-        stock: sql`${schema.products.stock} + ${quantityChange}` 
-      })
-      .where(eq(schema.products.id, productVariantId));
-
-    // Log the adjustment (we can add this to stock_adjustments table later)
-    console.log(`Stock adjusted: Product ${productVariantId}, Change: ${quantityChange}, Reason: ${reason}`);
-    
-    res.json({ message: 'Stock adjusted successfully' });
-  } catch (error) {
-    console.error('Adjust stock error:', error);
-    res.status(500).json({ message: 'Failed to adjust stock' });
-  }
-});
 
 router.post('/warehouses', isAuthenticated, inventoryController.createWarehouse as any);
 router.put('/warehouses/:id', isAuthenticated, inventoryController.updateWarehouse as any);
