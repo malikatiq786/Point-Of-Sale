@@ -35,10 +35,7 @@ export default function Warehouses() {
   });
 
   const createWarehouseMutation = useMutation({
-    mutationFn: (warehouseData: any) => apiRequest("/api/warehouses", {
-      method: "POST",
-      body: JSON.stringify(warehouseData),
-    }),
+    mutationFn: (warehouseData: any) => apiRequest("POST", "/api/warehouses", warehouseData),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -58,10 +55,7 @@ export default function Warehouses() {
   });
 
   const updateWarehouseMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number, data: any }) => apiRequest(`/api/warehouses/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: ({ id, data }: { id: number, data: any }) => apiRequest("PUT", `/api/warehouses/${id}`, data),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -81,9 +75,7 @@ export default function Warehouses() {
   });
 
   const deleteWarehouseMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/warehouses/${id}`, {
-      method: "DELETE",
-    }),
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/warehouses/${id}`),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -100,17 +92,17 @@ export default function Warehouses() {
     },
   });
 
-  const filteredWarehouses = warehouses.filter((warehouse: any) =>
+  const filteredWarehouses = (warehouses as any[]).filter((warehouse: any) =>
     warehouse.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     warehouse.location?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getWarehouseStockCount = (warehouseId: number) => {
-    return stockSummary.filter((stock: any) => stock.warehouseId === warehouseId).length;
+    return (stockSummary as any[]).filter((stock: any) => stock.warehouseId === warehouseId).length;
   };
 
   const getWarehouseTotalItems = (warehouseId: number) => {
-    return stockSummary
+    return (stockSummary as any[])
       .filter((stock: any) => stock.warehouseId === warehouseId)
       .reduce((total: number, stock: any) => total + parseFloat(stock.quantity || '0'), 0);
   };

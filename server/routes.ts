@@ -2206,20 +2206,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/warehouses", isAuthenticated, async (req, res) => {
-    try {
-      // For now, return a default warehouse
-      const warehouses = [{
-        id: 1,
-        name: "Main Warehouse",
-        location: "Main Location"
-      }];
-      res.json(warehouses);
-    } catch (error) {
-      console.error("Error fetching warehouses:", error);
-      res.status(500).json({ message: "Failed to fetch warehouses" });
-    }
-  });
 
   app.post("/api/stock/adjustments", isAuthenticated, async (req, res) => {
     try {

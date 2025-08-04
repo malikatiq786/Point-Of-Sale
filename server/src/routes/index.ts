@@ -703,14 +703,7 @@ router.delete('/registers/:id', async (req: any, res: any) => {
 });
 
 // Inventory routes
-router.get('/warehouses', (req: any, res: any) => {
-  res.json([
-    { id: 1, name: 'Main Warehouse', location: 'Central Distribution Center - Downtown' },
-    { id: 2, name: 'North Warehouse', location: 'North Side Storage Facility' },
-    { id: 3, name: 'South Warehouse', location: 'South Side Distribution Center' },
-    { id: 4, name: 'West Warehouse', location: 'West Side Storage Hub' }
-  ]);
-});
+router.get('/warehouses', inventoryController.getWarehouses as any);
 
 router.get('/stock', async (req: any, res: any) => {
   try {
