@@ -282,6 +282,15 @@ export default function RestaurantApp() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Get the sub-path after /restaurant
+  const getSubPath = (fullPath: string) => {
+    if (fullPath === "/restaurant") return "/restaurant";
+    if (fullPath.startsWith("/restaurant/")) return fullPath;
+    return "/restaurant";
+  };
+
+  const currentPath = getSubPath(location);
+
   const logoutMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch("/api/online/logout", {
@@ -329,10 +338,10 @@ export default function RestaurantApp() {
       />
 
       <main>
-        {location === "/restaurant" && <MenuPage customer={customer} onLoginRequired={() => setShowLoginModal(true)} />}
-        {location === "/restaurant/cart" && <CartPage customer={customer} />}
-        {location === "/restaurant/about" && <AboutPage />}
-        {location === "/restaurant/contact" && <ContactPage />}
+        {currentPath === "/restaurant" && <MenuPage customer={customer} onLoginRequired={() => setShowLoginModal(true)} />}
+        {currentPath === "/restaurant/cart" && <CartPage customer={customer} />}
+        {currentPath === "/restaurant/about" && <AboutPage />}
+        {currentPath === "/restaurant/contact" && <ContactPage />}
       </main>
     </div>
   );
