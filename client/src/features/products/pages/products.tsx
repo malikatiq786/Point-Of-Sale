@@ -31,6 +31,7 @@ export default function Products() {
     retry: false,
   });
 
+
   // Fetch categories for filter dropdown
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],

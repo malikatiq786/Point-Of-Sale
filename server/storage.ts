@@ -202,7 +202,7 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getProducts(limit = 50): Promise<any[]> {
+  async getProducts(limit = 200): Promise<any[]> {
     return await db
       .select({
         id: products.id,
@@ -226,6 +226,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(categories, eq(products.categoryId, categories.id))
       .leftJoin(brands, eq(products.brandId, brands.id))
       .leftJoin(units, eq(products.unitId, units.id))
+      .orderBy(desc(products.id))
       .limit(limit);
   }
 
