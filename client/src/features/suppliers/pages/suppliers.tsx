@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Edit, Trash2, Truck, Eye, Phone, Mail, MapPin } from "lucide-react";
 
 export default function Suppliers() {
@@ -15,6 +18,23 @@ export default function Suppliers() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
+  const [newSupplier, setNewSupplier] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: ""
+  });
+  const [editSupplier, setEditSupplier] = useState({
+    id: 0,
+    name: "",
+    email: "",
+    phone: "",
+    address: ""
+  });
 
   // Fetch suppliers
   const { data: suppliers = [], isLoading } = useQuery({
@@ -22,11 +42,117 @@ export default function Suppliers() {
     retry: false,
   });
 
-  const filteredSuppliers = suppliers.filter((supplier: any) =>
+  const filteredSuppliers = (suppliers as any[]).filter((supplier: any) =>
     supplier.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     supplier.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     supplier.phone?.includes(searchQuery)
   );
+
+  const createSupplierMutation = useMutation({
+    mutationFn: (supplierData: any) => apiRequest("POST", "/api/suppliers", supplierData),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Supplier created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      setShowAddDialog(false);
+      setNewSupplier({ name: "", email: "", phone: "", address: "" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create supplier",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateSupplierMutation = useMutation({
+    mutationFn: (supplierData: any) => apiRequest("PUT", `/api/suppliers/${supplierData.id}`, supplierData),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Supplier updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      setShowEditDialog(false);
+      setEditSupplier({ id: 0, name: "", email: "", phone: "", address: "" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update supplier",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteSupplierMutation = useMutation({
+    mutationFn: (supplierId: number) => apiRequest("DELETE", `/api/suppliers/${supplierId}`),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Supplier deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete supplier",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateSupplier = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSupplier.name) {
+      toast({
+        title: "Error",
+        description: "Supplier name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    createSupplierMutation.mutate(newSupplier);
+  };
+
+  const handleEditSupplier = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editSupplier.name) {
+      toast({
+        title: "Error",
+        description: "Supplier name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateSupplierMutation.mutate(editSupplier);
+  };
+
+  const handleViewSupplier = (supplier: any) => {
+    setSelectedSupplier(supplier);
+    setShowViewDialog(true);
+  };
+
+  const handleEditClick = (supplier: any) => {
+    setEditSupplier({
+      id: supplier.id,
+      name: supplier.name || "",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      address: supplier.address || ""
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleDeleteSupplier = (supplier: any) => {
+    if (confirm(`Are you sure you want to delete ${supplier.name}?`)) {
+      deleteSupplierMutation.mutate(supplier.id);
+    }
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -53,10 +179,194 @@ export default function Suppliers() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               </div>
               
-              <Button className="bg-primary-500 text-white hover:bg-primary-600">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Supplier
-              </Button>
+              <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                <DialogTrigger asChild>
+                  <Button className="bg-primary-500 text-white hover:bg-primary-600">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Supplier
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Supplier</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateSupplier} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Name *</Label>
+                      <Input
+                        id="name"
+                        value={newSupplier.name}
+                        onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
+                        placeholder="Enter supplier name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newSupplier.email}
+                        onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
+                        placeholder="Enter email address"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        value={newSupplier.phone}
+                        onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Textarea
+                        id="address"
+                        value={newSupplier.address}
+                        onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })}
+                        placeholder="Enter supplier address"
+                        rows={3}
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-3">
+                      <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={createSupplierMutation.isPending}>
+                        {createSupplierMutation.isPending ? "Creating..." : "Create Supplier"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+              
+              {/* Edit Supplier Dialog */}
+              <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit Supplier</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleEditSupplier} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Name *</Label>
+                      <Input
+                        id="edit-name"
+                        value={editSupplier.name}
+                        onChange={(e) => setEditSupplier({ ...editSupplier, name: e.target.value })}
+                        placeholder="Enter supplier name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email">Email</Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={editSupplier.email}
+                        onChange={(e) => setEditSupplier({ ...editSupplier, email: e.target.value })}
+                        placeholder="Enter email address"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-phone">Phone</Label>
+                      <Input
+                        id="edit-phone"
+                        value={editSupplier.phone}
+                        onChange={(e) => setEditSupplier({ ...editSupplier, phone: e.target.value })}
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-address">Address</Label>
+                      <Textarea
+                        id="edit-address"
+                        value={editSupplier.address}
+                        onChange={(e) => setEditSupplier({ ...editSupplier, address: e.target.value })}
+                        placeholder="Enter supplier address"
+                        rows={3}
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-3">
+                      <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={updateSupplierMutation.isPending}>
+                        {updateSupplierMutation.isPending ? "Updating..." : "Update Supplier"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              {/* View Supplier Dialog */}
+              <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Supplier Details</DialogTitle>
+                  </DialogHeader>
+                  {selectedSupplier && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Supplier ID</Label>
+                          <p className="text-sm">{selectedSupplier.id}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Name</Label>
+                          <p className="text-sm font-semibold">{selectedSupplier.name}</p>
+                        </div>
+                      </div>
+                      
+                      {selectedSupplier.email && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Email</Label>
+                          <p className="text-sm">{selectedSupplier.email}</p>
+                        </div>
+                      )}
+                      
+                      {selectedSupplier.phone && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Phone</Label>
+                          <p className="text-sm">{selectedSupplier.phone}</p>
+                        </div>
+                      )}
+                      
+                      {selectedSupplier.address && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Address</Label>
+                          <p className="text-sm">{selectedSupplier.address}</p>
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Active Orders</Label>
+                          <p className="text-sm">0</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Registration Date</Label>
+                          <p className="text-sm">{selectedSupplier.createdAt ? new Date(selectedSupplier.createdAt).toLocaleDateString() : 'N/A'}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-end space-x-3 pt-4">
+                        <Button variant="outline" onClick={() => setShowViewDialog(false)}>
+                          Close
+                        </Button>
+                        <Button onClick={() => {
+                          setShowViewDialog(false);
+                          handleEditClick(selectedSupplier);
+                        }}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit Supplier
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </header>
@@ -87,7 +397,10 @@ export default function Suppliers() {
                 <p className="text-gray-500 text-center mb-6">
                   {searchQuery ? "Try adjusting your search terms" : "Get started by adding your first supplier"}
                 </p>
-                <Button className="bg-primary-500 text-white hover:bg-primary-600">
+                <Button 
+                  className="bg-primary-500 text-white hover:bg-primary-600"
+                  onClick={() => setShowAddDialog(true)}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Supplier
                 </Button>
@@ -129,13 +442,13 @@ export default function Suppliers() {
                           Active Orders: 0
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => handleViewSupplier(supplier)}>
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => handleEditClick(supplier)}>
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteSupplier(supplier)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
