@@ -241,292 +241,303 @@ export default function KitchenPOS() {
 
   return (
     <KitchenLayout>
-      {/* Compact Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 -mx-6 -mt-6 px-6 pt-4 pb-5 mb-6">
+      {/* Professional Header */}
+      <div className="bg-white border-b border-gray-100 -mx-6 -mt-6 px-8 py-6 mb-8 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="bg-orange-500 p-2 rounded-xl shadow-lg">
-              <ChefHat className="h-5 w-5 text-white" />
+          <div className="flex items-center space-x-4">
+            <div className="bg-gradient-to-br from-red-500 to-red-600 p-3 rounded-2xl shadow-lg ring-4 ring-red-50">
+              <ChefHat className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white mb-0.5">
-                Kitchen Dashboard
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">
+                Kitchen Operations
               </h1>
-              <p className="text-slate-300 text-sm">Real-time order management</p>
+              <p className="text-gray-500 text-sm font-medium">Live order management system</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => setAudioEnabled(!audioEnabled)}
-              className={`text-white hover:bg-white/20 backdrop-blur-sm border border-white/20 text-xs px-2 py-1 h-7 ${
-                audioEnabled ? 'bg-white/20' : 'bg-transparent'
+              className={`font-medium border-2 px-4 py-2 h-9 transition-all duration-200 ${
+                audioEnabled 
+                  ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' 
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
               }`}
-              title={audioEnabled ? 'Ring & vibration enabled' : 'Ring & vibration disabled'}
             >
-              <Bell className="h-3 w-3 mr-1" />
-              {audioEnabled ? 'Ring On' : 'Ring Off'}
+              <Bell className="h-4 w-4 mr-2" />
+              {audioEnabled ? 'Notifications On' : 'Notifications Off'}
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="text-white hover:bg-white/20 backdrop-blur-sm border border-white/20 px-2 py-1 h-7"
+              className="font-medium border-2 border-gray-200 text-gray-600 hover:bg-gray-50 px-4 py-2 h-9"
             >
-              <Settings className="h-3 w-3" />
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="mb-6 space-y-6">
-        {/* Status Filters */}
-        <div>
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-slate-600" />
-              <span className="text-slate-700 font-medium text-sm">Filter by Status</span>
+      {/* Streamlined Control Panel */}
+      <div className="mb-8">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          {/* Status Overview Cards */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Order Status Overview</h2>
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span>Live updates</span>
+              </div>
             </div>
-            <div className="text-xs text-slate-500">Updates every 5s</div>
-          </div>
-          
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { key: "all", label: "All Orders", count: orders.length, color: "from-blue-500 to-blue-600", bgColor: "bg-blue-50", textColor: "text-blue-700", icon: ChefHat },
-              { key: "new", label: "New Orders", count: statusCounts.new, color: "from-red-500 to-red-600", bgColor: "bg-red-50", textColor: "text-red-700", icon: AlertCircle },
-              { key: "preparing", label: "Preparing", count: statusCounts.preparing, color: "from-amber-500 to-amber-600", bgColor: "bg-amber-50", textColor: "text-amber-700", icon: Clock },
-              { key: "ready", label: "Ready to Serve", count: statusCounts.ready, color: "from-green-500 to-green-600", bgColor: "bg-green-50", textColor: "text-green-700", icon: CheckCircle },
-            ].map(({ key, label, count, color, bgColor, textColor, icon: Icon }) => (
-              <Card
-                key={key}
-                onClick={() => setSelectedStatus(key)}
-                className={`cursor-pointer transition-all duration-200 border hover:shadow-lg transform hover:-translate-y-0.5 ${
-                  selectedStatus === key 
-                    ? `${bgColor} border-current ${textColor} shadow-md scale-102` 
-                    : "bg-white border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className={`p-1.5 rounded-md ${
-                      selectedStatus === key 
-                        ? `bg-gradient-to-r ${color} text-white` 
-                        : "bg-slate-100 text-slate-600"
-                    }`}>
-                      <Icon className="h-3.5 w-3.5" />
-                    </div>
-                    <div className={`text-lg font-bold ${
-                      selectedStatus === key ? textColor : "text-slate-900"
-                    }`}>
-                      {count}
-                    </div>
-                  </div>
-                  <div className={`font-medium text-xs ${
-                    selectedStatus === key ? textColor : "text-slate-700"
+            
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                { 
+                  key: "all", 
+                  label: "Total Orders", 
+                  count: orders.length, 
+                  gradient: "from-blue-500 to-blue-600", 
+                  ring: "ring-blue-100",
+                  bg: "bg-blue-50",
+                  icon: ChefHat 
+                },
+                { 
+                  key: "new", 
+                  label: "New Orders", 
+                  count: statusCounts.new, 
+                  gradient: "from-red-500 to-red-600", 
+                  ring: "ring-red-100",
+                  bg: "bg-red-50",
+                  icon: AlertCircle 
+                },
+                { 
+                  key: "preparing", 
+                  label: "In Progress", 
+                  count: statusCounts.preparing, 
+                  gradient: "from-amber-500 to-amber-600", 
+                  ring: "ring-amber-100",
+                  bg: "bg-amber-50",
+                  icon: Clock 
+                },
+                { 
+                  key: "ready", 
+                  label: "Ready to Serve", 
+                  count: statusCounts.ready, 
+                  gradient: "from-green-500 to-green-600", 
+                  ring: "ring-green-100",
+                  bg: "bg-green-50",
+                  icon: CheckCircle 
+                },
+              ].map(({ key, label, count, gradient, ring, bg, icon: Icon }) => (
+                <div
+                  key={key}
+                  onClick={() => setSelectedStatus(key)}
+                  className={`cursor-pointer group transition-all duration-300 ${
+                    selectedStatus === key 
+                      ? `transform scale-105 shadow-lg` 
+                      : "hover:transform hover:scale-102 hover:shadow-md"
+                  }`}
+                >
+                  <div className={`relative overflow-hidden rounded-xl border-2 p-5 ${
+                    selectedStatus === key 
+                      ? `${bg} border-current shadow-lg ring-4 ${ring}` 
+                      : "bg-white border-gray-100 hover:border-gray-200"
                   }`}>
-                    {label}
+                    <div className="flex items-center justify-between">
+                      <div className={`p-3 rounded-xl ring-4 bg-gradient-to-br ${gradient} text-white ${ring}`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-gray-900">{count}</div>
+                        <div className="text-sm font-medium text-gray-600">{label}</div>
+                      </div>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Order Source Filters */}
-        <div>
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="flex items-center space-x-2">
-              <Globe className="h-4 w-4 text-slate-600" />
-              <span className="text-slate-700 font-medium text-sm">Filter by Order Source</span>
+          {/* Quick Filters */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* Order Source Filter */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Order Source</h3>
+              <div className="flex space-x-2">
+                {[
+                  { key: "all", label: "All", count: orders.length },
+                  { key: "online", label: "Online", count: sourceCounts["online"] },
+                  { key: "in-store", label: "In-Store", count: sourceCounts["in-store"] },
+                ].map(({ key, label, count }) => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedOrderSource(key)}
+                    className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all duration-200 font-medium ${
+                      selectedOrderSource === key
+                        ? "bg-red-50 border-red-200 text-red-700 shadow-sm"
+                        : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="text-lg font-bold">{count}</div>
+                    <div className="text-xs">{label}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { key: "all", label: "All Orders", count: orders.length, color: "from-slate-500 to-slate-600", bgColor: "bg-slate-50", textColor: "text-slate-700", icon: ChefHat },
-              { key: "online", label: "Online Orders", count: sourceCounts["online"], color: "from-orange-500 to-orange-600", bgColor: "bg-orange-50", textColor: "text-orange-700", icon: Globe },
-              { key: "in-store", label: "In-Store Orders", count: sourceCounts["in-store"], color: "from-indigo-500 to-indigo-600", bgColor: "bg-indigo-50", textColor: "text-indigo-700", icon: Home },
-            ].map(({ key, label, count, color, bgColor, textColor, icon: Icon }) => (
-              <Card
-                key={key}
-                onClick={() => setSelectedOrderSource(key)}
-                className={`cursor-pointer transition-all duration-200 border hover:shadow-lg transform hover:-translate-y-0.5 ${
-                  selectedOrderSource === key 
-                    ? `${bgColor} border-current ${textColor} shadow-md scale-102` 
-                    : "bg-white border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <CardContent className="p-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className={`p-1 rounded-md ${
-                      selectedOrderSource === key 
-                        ? `bg-gradient-to-r ${color} text-white` 
-                        : "bg-slate-100 text-slate-600"
-                    }`}>
-                      <Icon className="h-3 w-3" />
-                    </div>
-                    <div className={`text-lg font-bold ${
-                      selectedOrderSource === key ? textColor : "text-slate-900"
-                    }`}>
-                      {count}
-                    </div>
-                  </div>
-                  <div className={`font-medium text-xs ${
-                    selectedOrderSource === key ? textColor : "text-slate-700"
-                  }`}>
-                    {label}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
 
-        {/* Order Type Filters */}
-        <div>
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="flex items-center space-x-2">
-              <Utensils className="h-4 w-4 text-slate-600" />
-              <span className="text-slate-700 font-medium text-sm">Filter by Order Type</span>
+            {/* Order Type Filter */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Order Type</h3>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { key: "all", label: "All", count: orders.length, icon: ChefHat },
+                  { key: "dine-in", label: "Dine", count: typeCounts["dine-in"], icon: Home },
+                  { key: "takeaway", label: "Take", count: typeCounts["takeaway"], icon: Utensils },
+                  { key: "delivery", label: "Delivery", count: typeCounts["delivery"], icon: Car },
+                ].map(({ key, label, count, icon: Icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedOrderType(key)}
+                    className={`px-3 py-3 rounded-lg border-2 transition-all duration-200 font-medium text-center ${
+                      selectedOrderType === key
+                        ? "bg-red-50 border-red-200 text-red-700 shadow-sm"
+                        : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 mx-auto mb-1" />
+                    <div className="text-sm font-bold">{count}</div>
+                    <div className="text-xs">{label}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { key: "all", label: "All Types", count: orders.length, color: "from-slate-500 to-slate-600", bgColor: "bg-slate-50", textColor: "text-slate-700", icon: ChefHat },
-              { key: "dine-in", label: "Dine-In", count: typeCounts["dine-in"], color: "from-blue-500 to-blue-600", bgColor: "bg-blue-50", textColor: "text-blue-700", icon: Home },
-              { key: "takeaway", label: "Takeaway", count: typeCounts["takeaway"], color: "from-green-500 to-green-600", bgColor: "bg-green-50", textColor: "text-green-700", icon: Utensils },
-              { key: "delivery", label: "Delivery", count: typeCounts["delivery"], color: "from-purple-500 to-purple-600", bgColor: "bg-purple-50", textColor: "text-purple-700", icon: Car },
-            ].map(({ key, label, count, color, bgColor, textColor, icon: Icon }) => (
-              <Card
-                key={key}
-                onClick={() => setSelectedOrderType(key)}
-                className={`cursor-pointer transition-all duration-200 border hover:shadow-lg transform hover:-translate-y-0.5 ${
-                  selectedOrderType === key 
-                    ? `${bgColor} border-current ${textColor} shadow-md scale-102` 
-                    : "bg-white border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <CardContent className="p-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className={`p-1 rounded-md ${
-                      selectedOrderType === key 
-                        ? `bg-gradient-to-r ${color} text-white` 
-                        : "bg-slate-100 text-slate-600"
-                    }`}>
-                      <Icon className="h-3 w-3" />
-                    </div>
-                    <div className={`text-lg font-bold ${
-                      selectedOrderType === key ? textColor : "text-slate-900"
-                    }`}>
-                      {count}
-                    </div>
-                  </div>
-                  <div className={`font-medium text-xs ${
-                    selectedOrderType === key ? textColor : "text-slate-700"
-                  }`}>
-                    {label}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
           </div>
         </div>
       </div>
 
-      {/* Compact Orders Grid - Smaller Cards */}
+      {/* Professional Order Cards */}
       {isLoading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-6 gap-2">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse h-36">
-              <CardHeader className="pb-1">
-                <div className="flex items-center justify-between">
-                  <div className="h-2 bg-slate-200 rounded w-1/2"></div>
-                  <div className="h-3 bg-slate-200 rounded-full w-8"></div>
-                </div>
-                <div className="h-1 bg-slate-200 rounded w-3/4 mt-1"></div>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                <div className="h-1 bg-slate-200 rounded"></div>
-                <div className="h-1 bg-slate-200 rounded w-4/5"></div>
-                <div className="h-4 bg-slate-200 rounded mt-2"></div>
-              </CardContent>
-            </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="animate-pulse bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-6 bg-gray-200 rounded w-20"></div>
+                <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+              </div>
+              <div className="space-y-3 mb-4">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              </div>
+              <div className="h-10 bg-gray-200 rounded mb-4"></div>
+              <div className="flex space-x-2">
+                <div className="h-10 bg-gray-200 rounded flex-1"></div>
+                <div className="h-10 bg-gray-200 rounded flex-1"></div>
+              </div>
+            </div>
           ))}
         </div>
       ) : filteredOrders.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredOrders.map((order) => {
             const IconComponent = getOrderIcon(order.orderType);
             const timeSince = getTimeSinceOrder(order.saleDate);
             const priorityColor = getPriorityColor(order.saleDate);
             
             return (
-              <Card key={order.id} className={`relative overflow-hidden hover:shadow-md transition-all duration-200 border bg-white hover:bg-slate-50 transform hover:-translate-y-0.5 ${priorityColor} shadow-sm`}>
-                {/* Priority indicator */}
-                <div className={`absolute top-0 left-0 w-1 h-full ${priorityColor.replace('border-l-', 'bg-')}`}></div>
+              <div key={order.id} className={`relative group overflow-hidden bg-white rounded-xl border-2 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:scale-105 ${
+                priorityColor === 'border-l-red-500' ? 'border-red-200 bg-red-50' :
+                priorityColor === 'border-l-yellow-500' ? 'border-yellow-200 bg-yellow-50' :
+                'border-gray-200'
+              }`}>
+                {/* Priority Indicator */}
+                <div className={`absolute top-0 left-0 w-1 h-full ${
+                  priorityColor === 'border-l-red-500' ? 'bg-red-500' :
+                  priorityColor === 'border-l-yellow-500' ? 'bg-yellow-500' :
+                  'bg-green-500'
+                }`}></div>
                 
-                {/* Online order indicator */}
+                {/* Online Order Badge */}
                 {isOnlineOrder(order) && (
-                  <div className="absolute top-1 right-1">
-                    <Badge className="text-xs px-1 py-0 bg-orange-100 text-orange-700 border border-orange-200">
-                      <Globe className="h-2 w-2 mr-0.5" />Online
-                    </Badge>
+                  <div className="absolute top-4 right-4">
+                    <div className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center shadow-sm">
+                      <Globe className="h-3 w-3 mr-1" />
+                      Online
+                    </div>
                   </div>
                 )}
                 
-                <CardHeader className="pb-1 pl-2 pt-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-1">
-                      <div className={`p-0.5 rounded-sm ${getOrderColor(order.orderType).replace('text-', 'bg-').replace('-600', '-100')}`}>
-                        <IconComponent className={`h-2.5 w-2.5 ${getOrderColor(order.orderType)}`} />
+                <div className="p-6">
+                  {/* Order Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-lg ${
+                        order.orderType === 'dine-in' ? 'bg-blue-100 text-blue-600' :
+                        order.orderType === 'takeaway' ? 'bg-green-100 text-green-600' :
+                        order.orderType === 'delivery' ? 'bg-purple-100 text-purple-600' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        <IconComponent className="h-5 w-5" />
                       </div>
                       <div>
-                        <CardTitle className="text-xs font-bold text-slate-900 mb-0">
-                          #{order.id}
-                        </CardTitle>
-                        <div className="flex items-center">
-                          <Badge className={`text-xs font-medium px-1 py-0 border-0 ${getOrderColor(order.orderType)}`}>
-                            {order.orderType === 'dine-in' ? 'Dine' : 
-                             order.orderType === 'takeaway' ? 'Take' : 
-                             order.orderType === 'delivery' ? 'Delivery' : 'Sale'}
-                            {order.tableNumber && ` ${order.tableNumber}`}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right ml-1">
-                      <Badge className={`text-xs font-semibold px-1 py-0 border-0 ${getStatusColor(order.kitchenStatus)}`}>
-                        {order.kitchenStatus.charAt(0).toUpperCase() + order.kitchenStatus.slice(1)}
-                      </Badge>
-                      <div className="flex items-center text-xs text-slate-500 mt-0.5">
-                        <Timer className="mr-0.5 h-2 w-2" />
-                        <span className="text-xs">{timeSince}</span>
+                        <h3 className="text-xl font-bold text-gray-900">#{order.id}</h3>
+                        <p className="text-sm text-gray-500">
+                          {order.orderType === 'dine-in' ? 'Dine-In' : 
+                           order.orderType === 'takeaway' ? 'Takeaway' : 
+                           order.orderType === 'delivery' ? 'Delivery' : 'Order'}
+                          {order.tableNumber && ` • Table ${order.tableNumber}`}
+                        </p>
                       </div>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="pl-2 space-y-1 pb-2">
+
+                  {/* Status Badge */}
+                  <div className="mb-4">
+                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                      order.kitchenStatus === 'new' ? 'bg-red-100 text-red-800 ring-1 ring-red-200' :
+                      order.kitchenStatus === 'preparing' ? 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-200' :
+                      order.kitchenStatus === 'ready' ? 'bg-green-100 text-green-800 ring-1 ring-green-200' :
+                      'bg-gray-100 text-gray-800 ring-1 ring-gray-200'
+                    }`}>
+                      {order.kitchenStatus === 'new' && '🔥 '}
+                      {order.kitchenStatus === 'preparing' && '👨‍🍳 '}
+                      {order.kitchenStatus === 'ready' && '✅ '}
+                      {order.kitchenStatus.charAt(0).toUpperCase() + order.kitchenStatus.slice(1)}
+                    </div>
+                  </div>
+
+                  {/* Time Info */}
+                  <div className="flex items-center text-sm text-gray-500 mb-4">
+                    <Timer className="h-4 w-4 mr-2" />
+                    <span>{timeSince}</span>
+                    <div className="ml-auto text-xl font-bold text-gray-900">
+                      {formatCurrencyValue(order.totalAmount)}
+                    </div>
+                  </div>
+                
+                  <div className="space-y-4">
                     {/* Order Items */}
-                    <div className="bg-slate-50 rounded-sm p-1.5">
-                      <h4 className="font-medium text-slate-700 mb-1 flex items-center text-xs">
-                        <Utensils className="h-2 w-2 mr-0.5" />
-                        Items
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-700 mb-3 text-sm flex items-center">
+                        <ChefHat className="h-4 w-4 mr-2" />
+                        Items ({order.items.length})
                       </h4>
-                      <div className="space-y-0.5">
-                        {order.items.slice(0, 3).map((item) => (
-                          <div key={item.id} className="flex items-center justify-between bg-white rounded-sm p-1 shadow-sm">
-                            <span className="font-medium text-slate-800 text-xs truncate">
+                      <div className="space-y-2">
+                        {order.items.slice(0, 3).map((item, index) => (
+                          <div key={index} className="flex justify-between items-center">
+                            <span className="text-gray-700 font-medium text-sm">
                               {item.productVariant.product.name}
                             </span>
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-0.5 py-0">
-                              {item.quantity}
-                            </Badge>
+                            <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-xs font-bold">
+                              ×{item.quantity}
+                            </span>
                           </div>
                         ))}
                         {order.items.length > 3 && (
-                          <div className="text-xs text-slate-500 text-center py-0.5">
+                          <div className="text-sm text-gray-500 text-center pt-2 border-t border-gray-200">
                             +{order.items.length - 3} more items
                           </div>
                         )}
@@ -535,100 +546,66 @@ export default function KitchenPOS() {
 
                     {/* Special Instructions */}
                     {order.specialInstructions && (
-                      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-sm p-1.5">
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                         <div className="flex items-start">
-                          <AlertCircle className="h-2.5 w-2.5 text-amber-600 mr-1 mt-0.5 flex-shrink-0" />
+                          <AlertCircle className="h-4 w-4 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
                           <div>
-                            <p className="font-medium text-amber-800 mb-0.5 text-xs">Instructions</p>
-                            <p className="text-xs text-amber-700 truncate">
-                              {order.specialInstructions}
-                            </p>
+                            <h5 className="text-sm font-semibold text-yellow-800 mb-1">Special Instructions</h5>
+                            <p className="text-sm text-yellow-700">{order.specialInstructions}</p>
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {/* Customer & Total */}
-                    <div className="flex items-center justify-between bg-slate-50 rounded-sm p-1.5">
-                      <div>
-                        {order.customer && (
-                          <div className="text-xs text-slate-600 mb-0.5 truncate">
-                            <span className="font-medium text-slate-700">Customer:</span> {order.customer.name}
-                          </div>
-                        )}
-                        <div className="text-sm font-bold text-slate-900">
-                          {formatCurrencyValue(parseFloat(order.totalAmount || '0'))}
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Action Buttons */}
-                    <div className="flex flex-col space-y-0.5 pt-1">
+                    <div className="flex space-x-2">
                       {order.kitchenStatus === 'new' && (
-                        <Button
-                          size="sm"
-                          onClick={() => updateStatusMutation.mutate({ 
-                            orderId: order.id, 
-                            status: 'preparing',
-                            estimatedTime: 15 
-                          })}
+                        <Button 
+                          size="sm" 
+                          onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: 'preparing', estimatedTime: 15 })}
                           disabled={updateStatusMutation.isPending}
-                          className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium shadow-sm hover:shadow-md transform hover:scale-101 transition-all duration-200 h-6 text-xs"
+                          className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white border-0 font-semibold py-3 shadow-sm"
                         >
-                          <Clock className="mr-0.5 h-2 w-2" />
-                          Start
+                          👨‍🍳 Start Cooking
                         </Button>
                       )}
                       
                       {order.kitchenStatus === 'preparing' && (
-                        <Button
-                          size="sm"
-                          onClick={() => updateStatusMutation.mutate({ 
-                            orderId: order.id, 
-                            status: 'ready' 
-                          })}
+                        <Button 
+                          size="sm" 
+                          onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: 'ready' })}
                           disabled={updateStatusMutation.isPending}
-                          className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium shadow-sm hover:shadow-md transform hover:scale-101 transition-all duration-200 h-6 text-xs"
+                          className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white border-0 font-semibold py-3 shadow-sm"
                         >
-                          <CheckCircle className="mr-0.5 h-2 w-2" />
-                          Ready
+                          ✅ Mark Ready
                         </Button>
                       )}
                       
                       {order.kitchenStatus === 'ready' && (
-                        <Button
-                          size="sm"
-                          onClick={() => updateStatusMutation.mutate({ 
-                            orderId: order.id, 
-                            status: 'served' 
-                          })}
+                        <Button 
+                          size="sm" 
+                          onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: 'served' })}
                           disabled={updateStatusMutation.isPending}
-                          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium shadow-sm hover:shadow-md transform hover:scale-101 transition-all duration-200 h-6 text-xs"
+                          className="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white border-0 font-semibold py-3 shadow-sm"
                         >
-                          <CheckCircle className="mr-0.5 h-2 w-2" />
-                          Served
+                          🍽️ Mark Served
                         </Button>
                       )}
                     </div>
-                  </CardContent>
-              </Card>
+                  </div>
+                </div>
+              </div>
             );
           })}
         </div>
       ) : (
-        <div className="text-center py-12">
-          <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ChefHat className="w-8 h-8 text-slate-400" />
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="bg-gray-100 rounded-full p-6 mb-6">
+            <ChefHat className="h-12 w-12 text-gray-400" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900 mb-2">
-            {selectedStatus === "all" && selectedOrderType === "all" 
-              ? "No Active Orders" 
-              : `No ${selectedStatus !== "all" ? selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1) + " " : ""}${selectedOrderType !== "all" ? selectedOrderType.charAt(0).toUpperCase() + selectedOrderType.slice(1).replace("-", "-") : ""} Orders`}
-          </h3>
-          <p className="text-slate-500 text-sm max-w-sm mx-auto">
-            {selectedStatus === "all" && selectedOrderType === "all"
-              ? "New orders will appear here in real-time as they come in from the POS system" 
-              : `Orders matching your selected filters will be displayed here when available`}
+          <h3 className="text-2xl font-semibold text-gray-700 mb-2">No orders found</h3>
+          <p className="text-gray-500 text-center max-w-md">
+            Orders will appear here when they're received. The kitchen display updates automatically every 5 seconds.
           </p>
         </div>
       )}
