@@ -433,11 +433,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async logActivity(userId: string, action: string, ipAddress?: string): Promise<void> {
-    await db.insert(activityLogs).values({
-      userId,
-      action,
-      ipAddress,
-    });
+    try {
+      // Check if this is an online customer (userId format: "online-{id}")
+      if (userId.startsWith('online-')) {
+        // For online customers, we'll skip activity logging since they don't exist in users table
+        // In a production system, you might want to create a separate activity log for online customers
+        console.log(`Online customer activity: ${action} (User: ${userId})`);
+        return;
+      }
+      
+      // For regular users, check if user exists before logging
+      const [userExists] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId));
+      if (!userExists) {
+        console.log(`Skipping activity log - user ${userId} not found`);
+        return;
+      }
+      
+      await db.insert(activityLogs).values({
+        userId,
+        action,
+        ipAddress,
+      });
+    } catch (error) {
+      // Log the error but don't fail the operation
+      console.error('Activity logging failed:', error);
+    }
   }
   
   // Online customer operations
