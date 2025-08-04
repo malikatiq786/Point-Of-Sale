@@ -27,6 +27,36 @@ export default function Products() {
   const [itemsPerPage] = useState(50);
   const { formatCurrencyValue } = useCurrency();
 
+  // Delete product mutation
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: number) => {
+      const response = await apiRequest('DELETE', `/api/products/${productId}`);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Product deleted",
+        description: "Product has been deleted successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`products-${currentPage}-${itemsPerPage}`] });
+      queryClient.invalidateQueries({ queryKey: ["pos-products"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete product. Please try again.",
+        variant: "destructive",
+      });
+      console.error('Delete product error:', error);
+    },
+  });
+
+  const handleDeleteProduct = async (productId: number, productName: string) => {
+    if (window.confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
+      deleteProductMutation.mutate(productId);
+    }
+  };
+
   // Fetch products with pagination
   const { data: productsResponse, isLoading, error } = useQuery({
     queryKey: [`products-${currentPage}-${itemsPerPage}`],
@@ -404,9 +434,15 @@ export default function Products() {
                           <Edit className="w-3 h-3 mr-1" />
                           Edit
                         </Button>
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteProduct(product.id, product.name)}
+                          disabled={deleteProductMutation.isPending}
+                        >
                           <Trash2 className="w-3 h-3 mr-1" />
-                          Delete
+                          {deleteProductMutation.isPending ? 'Deleting...' : 'Delete'}
                         </Button>
                       </div>
                     </TableCell>

@@ -61,6 +61,7 @@ export interface IStorage {
   getProductsCount(): Promise<number>;
   searchProducts(query: string): Promise<Product[]>;
   createProduct(product: any): Promise<Product>;
+  deleteProduct(id: number): Promise<void>;
   createCategory(category: any): Promise<any>;
   createBrand(brand: any): Promise<any>;
   updateBrand(id: number, brand: any): Promise<any>;
@@ -248,6 +249,10 @@ export class DatabaseStorage implements IStorage {
       .from(products)
       .where(like(products.name, `%${query}%`))
       .limit(20);
+  }
+
+  async deleteProduct(id: number): Promise<void> {
+    await db.delete(products).where(eq(products.id, id));
   }
 
   async getCustomers(limit = 50): Promise<Customer[]> {
