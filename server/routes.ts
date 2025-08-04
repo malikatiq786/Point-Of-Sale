@@ -480,32 +480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(reportData);
   });
 
-  // Customers API
-  app.get('/api/customers', (req, res) => {
-    console.log('Fetching customers, total:', customersStorage.length);
-    res.json(customersStorage);
-  });
-
-  app.post('/api/customers', (req, res) => {
-    try {
-      const { name, phone, email, address } = req.body;
-      
-      const customerData = {
-        id: Date.now(),
-        name: name || '',
-        phone: phone || '',
-        email: email || '',
-        address: address || ''
-      };
-
-      customersStorage.push(customerData);
-      console.log('Customer created:', customerData);
-      res.status(201).json(customerData);
-    } catch (error) {
-      console.error('Create customer error:', error);
-      res.status(500).json({ message: 'Failed to create customer' });
-    }
-  });
+  // Customers API - Removed old hardcoded routes, using database-backed routes from apiRoutes instead
 
   // Suppliers API
   app.get('/api/suppliers', (req, res) => {
