@@ -1965,15 +1965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Online customer endpoints (simplified)
-  app.get('/api/online/me', (req: any, res) => {
-    const customer = (req.session as any)?.onlineCustomer;
-    if (customer) {
-      res.json({ id: customer.id, name: customer.name, email: customer.email });
-    } else {
-      res.status(401).json({ message: 'Not authenticated' });
-    }
-  });
+  // Note: Online customer endpoints are defined below with proper middleware
 
   const httpServer = createServer(app);
   return httpServer;
