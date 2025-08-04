@@ -1965,7 +1965,274 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Note: Online customer endpoints are defined below with proper middleware
+  // Online customer authentication middleware
+  const isOnlineAuthenticated = (req: any, res: any, next: any) => {
+    if (req.session?.onlineCustomer) {
+      return next();
+    }
+    return res.status(401).json({ message: 'Not authenticated' });
+  };
+
+  // =========================================
+  // ✅ ONLINE RESTAURANT ENDPOINTS PROPERLY INTEGRATED
+  // =========================================
+
+  // Online customer registration
+  app.post('/api/online/register', async (req, res) => {
+    try {
+      const { name, email, phone, password, address } = req.body;
+      
+      // Check if customer already exists
+      const existingCustomer = await storage.getOnlineCustomerByEmail(email);
+      if (existingCustomer) {
+        return res.status(400).json({ message: 'Email already registered' });
+      }
+      
+      const customer = await storage.createOnlineCustomer({
+        name,
+        email,
+        phone,
+        password,
+        address
+      });
+      
+      // Store customer in session
+      (req.session as any).onlineCustomer = customer;
+      
+      res.status(201).json({
+        message: 'Registration successful',
+        customer: { id: customer.id, name: customer.name, email: customer.email }
+      });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ message: 'Registration failed' });
+    }
+  });
+
+  // Online customer login
+  app.post('/api/online/login', async (req, res) => {
+    console.log('🔐 Online login request received:', { email: req.body?.email });
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        console.log('❌ Missing email or password');
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+      
+      console.log('🔍 Authenticating customer:', email);
+      const customer = await storage.authenticateOnlineCustomer(email, password);
+      
+      if (!customer) {
+        console.log('❌ Authentication failed for:', email);
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      
+      console.log('✅ Customer authenticated:', { id: customer.id, name: customer.name });
+      
+      // Store customer in session
+      (req.session as any).onlineCustomer = customer;
+      
+      const response = {
+        message: 'Login successful',
+        customer: { id: customer.id, name: customer.name, email: customer.email }
+      };
+      
+      console.log('📤 Sending login response:', response);
+      res.json(response);
+    } catch (error) {
+      console.error('💥 Login error:', error);
+      res.status(500).json({ message: 'Login failed' });
+    }
+  });
+
+  // Online customer logout
+  app.post('/api/online/logout', (req: any, res) => {
+    delete req.session.onlineCustomer;
+    res.json({ message: 'Logout successful' });
+  });
+
+  // Get current online customer
+  app.get('/api/online/me', isOnlineAuthenticated, (req: any, res) => {
+    const customer = req.session.onlineCustomer;
+    res.json({ id: customer.id, name: customer.name, email: customer.email });
+  });
+
+  // Get menu (public - no auth required)
+  app.get('/api/online/menu', async (req, res) => {
+    try {
+      // Check if online ordering is enabled
+      const onlineOrderingSetting = await storage.getSetting('online_ordering_enabled');
+      if (onlineOrderingSetting?.value !== 'true') {
+        return res.status(503).json({ message: 'Online ordering is currently disabled' });
+      }
+      
+      const products = await storage.getMenuProducts();
+      console.log('Fetching menu products, found:', products.length);
+      res.json(products);
+    } catch (error) {
+      console.error('Get menu error:', error);
+      res.status(500).json({ message: 'Failed to get menu' });
+    }
+  });
+
+  // Get categories (public - no auth required)
+  app.get('/api/online/categories', async (req, res) => {
+    try {
+      const categories = await storage.getMenuCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error('Get categories error:', error);
+      res.status(500).json({ message: 'Failed to get categories' });
+    }
+  });
+
+  // Get cart items
+  app.get('/api/online/cart', isOnlineAuthenticated, async (req: any, res) => {
+    try {
+      const customer = req.session.onlineCustomer;
+      const cartItems = await storage.getCartItems(customer.id);
+      res.json(cartItems);
+    } catch (error) {
+      console.error('Get cart error:', error);
+      res.status(500).json({ message: 'Failed to get cart items' });
+    }
+  });
+
+  // Add to cart
+  app.post('/api/online/cart', isOnlineAuthenticated, async (req: any, res) => {
+    try {
+      const customer = req.session.onlineCustomer;
+      const { productId, quantity, specialInstructions } = req.body;
+      
+      if (!productId || !quantity) {
+        return res.status(400).json({ message: 'Product ID and quantity are required' });
+      }
+      
+      const cartItem = await storage.addToCart({
+        customerId: customer.id,
+        productId: parseInt(productId),
+        quantity: parseInt(quantity),
+        specialInstructions: specialInstructions || ''
+      });
+      
+      res.status(201).json(cartItem);
+    } catch (error) {
+      console.error('Add to cart error:', error);
+      res.status(500).json({ message: 'Failed to add item to cart' });
+    }
+  });
+
+  // Update cart item
+  app.put('/api/online/cart/:id', isOnlineAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { quantity, specialInstructions } = req.body;
+      
+      const updatedItem = await storage.updateCartItem(parseInt(id), {
+        quantity: parseInt(quantity),
+        specialInstructions
+      });
+      
+      res.json(updatedItem);
+    } catch (error) {
+      console.error('Update cart error:', error);
+      res.status(500).json({ message: 'Failed to update cart item' });
+    }
+  });
+
+  app.delete('/api/online/cart/:id', isOnlineAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.removeFromCart(parseInt(id));
+      res.json({ message: 'Item removed from cart' });
+    } catch (error) {
+      console.error('Remove from cart error:', error);
+      res.status(500).json({ message: 'Failed to remove item from cart' });
+    }
+  });
+
+  // Place online order
+  app.post('/api/online/orders', isOnlineAuthenticated, async (req: any, res) => {
+    try {
+      const customer = req.session.onlineCustomer;
+      const { orderType, specialInstructions, deliveryAddress, customerPhone } = req.body;
+      
+      // Get cart items
+      const cartItems = await storage.getCartItems(customer.id);
+      if (cartItems.length === 0) {
+        return res.status(400).json({ message: 'Cart is empty' });
+      }
+      
+      // Calculate total
+      const totalAmount = cartItems.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
+      
+      // Create sale record
+      const saleData = {
+        onlineCustomerId: customer.id,
+        customerName: customer.name,
+        customerPhone: customerPhone || customer.phone,
+        totalAmount: totalAmount.toString(),
+        paidAmount: totalAmount.toString(),
+        status: 'completed',
+        orderType: orderType || 'takeaway',
+        orderSource: 'online',
+        kitchenStatus: ['dine-in', 'takeaway', 'delivery'].includes(orderType) ? 'new' : null,
+        specialInstructions,
+        deliveryAddress: orderType === 'delivery' ? deliveryAddress : null,
+      };
+      
+      const sale = await storage.createSale(saleData);
+      
+      // Clear cart
+      await storage.clearCart(customer.id);
+      
+      // Log activity
+      await storage.logActivity(
+        `online-${customer.id}`,
+        `Online order placed: $${totalAmount} (${orderType})`,
+        req.ip
+      );
+      
+      res.status(201).json({
+        message: 'Order placed successfully',
+        orderId: sale.id,
+        totalAmount,
+        estimatedTime: 30 // Default 30 minutes
+      });
+    } catch (error) {
+      console.error('Place order error:', error);
+      res.status(500).json({ message: 'Failed to place order' });
+    }
+  });
+
+  // Admin: Toggle online ordering
+  app.post('/api/admin/toggle-online-ordering', isAuthenticated, async (req, res) => {
+    try {
+      const { enabled } = req.body;
+      await storage.updateSetting('online_ordering_enabled', enabled ? 'true' : 'false');
+      
+      res.json({ 
+        message: `Online ordering ${enabled ? 'enabled' : 'disabled'}`,
+        enabled 
+      });
+    } catch (error) {
+      console.error('Toggle online ordering error:', error);
+      res.status(500).json({ message: 'Failed to toggle online ordering' });
+    }
+  });
+
+  // Admin: Get online ordering status
+  app.get('/api/admin/online-ordering-status', isAuthenticated, async (req, res) => {
+    try {
+      const setting = await storage.getSetting('online_ordering_enabled');
+      const enabled = setting?.value === 'true';
+      res.json({ enabled });
+    } catch (error) {
+      console.error('Get online ordering status error:', error);
+      res.status(500).json({ message: 'Failed to get status' });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
