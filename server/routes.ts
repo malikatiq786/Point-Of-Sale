@@ -2043,8 +2043,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Units routes  
   app.get("/api/units", isAuthenticated, async (req, res) => {
     try {
-      console.log("Fetching units, total:", unitsStorage.length);
-      res.json(unitsStorage);
+      const units = await storage.getUnits();
+      console.log("Fetching units, total:", units.length);
+      res.json(units);
     } catch (error) {
       console.error("Error fetching units:", error);
       res.status(500).json({ message: "Failed to fetch units" });

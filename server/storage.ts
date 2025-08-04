@@ -129,6 +129,9 @@ export interface IStorage {
   getCurrencies(): Promise<any[]>;
   createCurrency(currency: any): Promise<any>;
   
+  // Unit operations
+  getUnits(): Promise<any[]>;
+  
   // Delivery Rider operations
   getDeliveryRiders(): Promise<DeliveryRider[]>;
   getDeliveryRider(id: number): Promise<DeliveryRider | undefined>;
@@ -770,6 +773,10 @@ export class DatabaseStorage implements IStorage {
       .values(currencyData)
       .returning();
     return currency;
+  }
+
+  async getUnits(): Promise<any[]> {
+    return await db.select().from(units).orderBy(units.id);
   }
 
   // Delivery Rider operations
