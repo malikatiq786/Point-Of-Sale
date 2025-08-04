@@ -217,7 +217,7 @@ export default function AddProduct() {
                       <SelectContent>
                         {units.map((unit: any) => (
                           <SelectItem key={unit.id} value={unit.id.toString()}>
-                            {unit.name} ({unit.short_name})
+                            {unit.name} ({unit.shortName})
                           </SelectItem>
                         ))}
                       </SelectContent>

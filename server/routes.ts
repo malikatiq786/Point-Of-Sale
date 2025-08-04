@@ -1753,7 +1753,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/products/:id", isAuthenticated, async (req: any, res) => {
     try {
       const productId = parseInt(req.params.id);
-      const { name, brandId } = req.body;
+      const { 
+        name, 
+        description, 
+        barcode, 
+        categoryId, 
+        brandId, 
+        unitId, 
+        price, 
+        stock, 
+        lowStockAlert, 
+        image 
+      } = req.body;
       
       // Validate required fields
       if (!name) {
@@ -1772,7 +1783,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const product = await storage.updateProduct(productId, req.body);
+      // Prepare update data with proper type conversion
+      const updateData = {
+        name: name.trim(),
+        description: description || null,
+        barcode: barcode || null,
+        categoryId: categoryId || null,
+        brandId: brandId,
+        unitId: unitId || null,
+        price: price ? parseFloat(price) : 0,
+        stock: stock ? parseInt(stock) : 0,
+        lowStockAlert: lowStockAlert ? parseInt(lowStockAlert) : 0,
+        image: image || null
+      };
+
+      const product = await storage.updateProduct(productId, updateData);
       
       // Log activity - handle both user formats
       const userId = req.user?.claims?.sub || req.user?.id || "system";

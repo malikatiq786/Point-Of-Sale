@@ -26,9 +26,9 @@ export default function EditProduct() {
     name: "",
     description: "",
     barcode: "",
-    categoryId: "",
-    brandId: "",
-    unitId: "",
+    categoryId: "none",
+    brandId: "none",
+    unitId: "none",
     price: "",
     stock: "",
     lowStockAlert: "",
@@ -36,25 +36,25 @@ export default function EditProduct() {
   });
 
   // Fetch categories
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<any[]>({
     queryKey: ["/api/categories"],
     retry: false,
   });
 
   // Fetch brands
-  const { data: brands = [] } = useQuery({
+  const { data: brands = [] } = useQuery<any[]>({
     queryKey: ["/api/brands"],
     retry: false,
   });
 
   // Fetch units
-  const { data: units = [] } = useQuery({
+  const { data: units = [] } = useQuery<any[]>({
     queryKey: ["/api/units"],
     retry: false,
   });
 
   // Fetch existing product data
-  const { data: existingProduct, isLoading: isLoadingProduct } = useQuery({
+  const { data: existingProduct, isLoading: isLoadingProduct } = useQuery<any>({
     queryKey: [`/api/products/${productId}`],
     enabled: !!productId,
     retry: false,
@@ -67,9 +67,9 @@ export default function EditProduct() {
         name: existingProduct.name || "",
         description: existingProduct.description || "",
         barcode: existingProduct.barcode || "",
-        categoryId: existingProduct.categoryId?.toString() || "",
-        brandId: existingProduct.brandId?.toString() || "",
-        unitId: existingProduct.unitId?.toString() || "",
+        categoryId: existingProduct.categoryId ? existingProduct.categoryId.toString() : "none",
+        brandId: existingProduct.brandId ? existingProduct.brandId.toString() : "none",
+        unitId: existingProduct.unitId ? existingProduct.unitId.toString() : "none",
         price: existingProduct.price?.toString() || "",
         stock: existingProduct.stock?.toString() || "",
         lowStockAlert: existingProduct.lowStockAlert?.toString() || "",
@@ -120,7 +120,7 @@ export default function EditProduct() {
       return;
     }
 
-    if (!formData.brandId) {
+    if (!formData.brandId || formData.brandId === "none") {
       toast({
         title: "Validation Error",
         description: "Brand is required",
@@ -131,9 +131,9 @@ export default function EditProduct() {
 
     const productData = {
       ...formData,
-      categoryId: formData.categoryId ? parseInt(formData.categoryId) : null,
-      brandId: formData.brandId ? parseInt(formData.brandId) : null,
-      unitId: formData.unitId ? parseInt(formData.unitId) : null,
+      categoryId: formData.categoryId && formData.categoryId !== "none" ? parseInt(formData.categoryId) : null,
+      brandId: formData.brandId && formData.brandId !== "none" ? parseInt(formData.brandId) : null,
+      unitId: formData.unitId && formData.unitId !== "none" ? parseInt(formData.unitId) : null,
       price: formData.price ? parseFloat(formData.price) : 0,
       stock: formData.stock ? parseInt(formData.stock) : 0,
       lowStockAlert: formData.lowStockAlert ? parseInt(formData.lowStockAlert) : 0,
@@ -251,7 +251,7 @@ export default function EditProduct() {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Category</SelectItem>
+                    <SelectItem value="none">No Category</SelectItem>
                     {categories.map((category: any) => (
                       <SelectItem key={category.id} value={category.id.toString()}>
                         {category.name}
@@ -292,7 +292,7 @@ export default function EditProduct() {
                     <SelectValue placeholder="Select unit" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Unit</SelectItem>
+                    <SelectItem value="none">No Unit</SelectItem>
                     {units.map((unit: any) => (
                       <SelectItem key={unit.id} value={unit.id.toString()}>
                         {unit.name} ({unit.shortName})
