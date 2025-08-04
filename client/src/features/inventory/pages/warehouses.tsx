@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/layouts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,9 @@ export default function Warehouses() {
     retry: false,
     staleTime: 0, // Always fetch fresh data
     cacheTime: 0, // Don't cache stock data
+    refetchOnMount: true,
   });
+
 
 
   const createWarehouseMutation = useMutation({
