@@ -1439,6 +1439,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stock Adjustments API - Working with simple product system
+  app.get('/api/stock/adjustments', isAuthenticated, async (req, res) => {
+    try {
+      const adjustments = await storage.getStockAdjustments();
+      res.json(adjustments);
+    } catch (error) {
+      console.error('Error fetching stock adjustments:', error);
+      res.status(500).json({ message: 'Failed to fetch stock adjustments' });
+    }
+  });
+
+  app.post('/api/stock/adjustments', isAuthenticated, async (req, res) => {
+    try {
+      console.log('Stock adjustment request received:', req.body);
+      
+      const { warehouseId = 1, reason, items } = req.body;
+      
+      if (!reason || !items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: 'Reason and items are required' });
+      }
+
+      // Get current user for tracking
+      const userId = req.session?.user?.id || req.user?.claims?.sub || "1";
+      
+      const adjustmentData = {
+        warehouseId,
+        userId,
+        reason,
+        items
+      };
+
+      const adjustment = await storage.createStockAdjustment(adjustmentData);
+      console.log('Stock adjustment created successfully:', adjustment);
+      
+      res.status(201).json({ 
+        message: 'Stock adjustment created successfully',
+        data: adjustment 
+      });
+    } catch (error) {
+      console.error('Error creating stock adjustment:', error);
+      res.status(500).json({ message: 'Failed to create stock adjustment' });
+    }
+  });
+
   // Use new MVC routes (after auth routes to avoid conflicts) - COMPLETELY DISABLED to use simple endpoints
   app.use('/api', apiRoutes);
 
