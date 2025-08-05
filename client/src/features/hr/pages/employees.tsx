@@ -15,6 +15,9 @@ export default function Employees() {
   const [searchQuery, setSearchQuery] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [employeeData, setEmployeeData] = useState({
     name: "",
     email: "",
@@ -74,7 +77,69 @@ export default function Employees() {
     },
   });
 
-  const filteredEmployees = employees.filter((employee: any) => {
+  const updateEmployeeMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await fetch(`/api/employees/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to update employee");
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Employee updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      setShowEditDialog(false);
+      setSelectedEmployee(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update employee",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteEmployeeMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/employees/${id}`, {
+        method: "DELETE",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to delete employee");
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Employee deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete employee",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const filteredEmployees = (employees as any[]).filter((employee: any) => {
     const matchesSearch = employee.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          employee.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          employee.position?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -97,8 +162,49 @@ export default function Employees() {
     createEmployeeMutation.mutate(employeeData);
   };
 
+  const handleViewEmployee = (employee: any) => {
+    setSelectedEmployee(employee);
+    setShowViewDialog(true);
+  };
+
+  const handleEditEmployee = (employee: any) => {
+    setSelectedEmployee(employee);
+    setEmployeeData({
+      name: employee.name || "",
+      email: employee.email || "",
+      phone: employee.phone || "",
+      position: employee.position || "",
+      salary: employee.salary || "",
+      hireDate: employee.hireDate || ""
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateEmployee = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!employeeData.name || !employeeData.email) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updateEmployeeMutation.mutate({
+      id: selectedEmployee.id,
+      data: employeeData
+    });
+  };
+
+  const handleDeleteEmployee = (employee: any) => {
+    if (window.confirm(`Are you sure you want to delete ${employee.name}?`)) {
+      deleteEmployeeMutation.mutate(employee.id);
+    }
+  };
+
   // Get unique positions for filter
-  const positions = [...new Set(employees.map((emp: any) => emp.position).filter(Boolean))];
+  const positions = Array.from(new Set((employees as any[]).map((emp: any) => emp.position).filter(Boolean)));
 
   return (
     <AppLayout>
@@ -222,16 +328,22 @@ export default function Employees() {
                     
                     <div className="flex justify-between items-center mt-4 pt-4 border-t">
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => handleViewEmployee(employee)}>
                           <Eye className="w-4 h-4 mr-1" />
                           View
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => handleEditEmployee(employee)}>
                           <Edit className="w-4 h-4 mr-1" />
                           Edit
                         </Button>
                       </div>
-                      <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteEmployee(employee)}
+                        disabled={deleteEmployeeMutation.isPending}
+                      >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
@@ -327,6 +439,160 @@ export default function Employees() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Employee Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Employee</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateEmployee} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Full Name *</Label>
+                <Input
+                  type="text"
+                  placeholder="Enter full name"
+                  value={employeeData.name}
+                  onChange={(e) => setEmployeeData({ ...employeeData, name: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Email Address *</Label>
+                <Input
+                  type="email"
+                  placeholder="Enter email address"
+                  value={employeeData.email}
+                  onChange={(e) => setEmployeeData({ ...employeeData, email: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Phone Number</Label>
+                <Input
+                  type="tel"
+                  placeholder="Enter phone number"
+                  value={employeeData.phone}
+                  onChange={(e) => setEmployeeData({ ...employeeData, phone: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Position</Label>
+                <Input
+                  type="text"
+                  placeholder="Enter job position"
+                  value={employeeData.position}
+                  onChange={(e) => setEmployeeData({ ...employeeData, position: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Monthly Salary ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={employeeData.salary}
+                  onChange={(e) => setEmployeeData({ ...employeeData, salary: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Hire Date</Label>
+                <Input
+                  type="date"
+                  value={employeeData.hireDate}
+                  onChange={(e) => setEmployeeData({ ...employeeData, hireDate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updateEmployeeMutation.isPending}>
+                {updateEmployeeMutation.isPending ? "Updating..." : "Update Employee"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Employee Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Employee Details</DialogTitle>
+          </DialogHeader>
+          {selectedEmployee && (
+            <div className="space-y-6">
+              <div className="flex items-center space-x-4">
+                <UserCheck className="w-16 h-16 text-green-500" />
+                <div>
+                  <h3 className="text-2xl font-bold">{selectedEmployee.name}</h3>
+                  {selectedEmployee.position && (
+                    <Badge variant="secondary" className="mt-1">
+                      <Briefcase className="w-3 h-3 mr-1" />
+                      {selectedEmployee.position}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">Contact Information</h4>
+                  {selectedEmployee.email && (
+                    <div className="flex items-center space-x-3">
+                      <Mail className="w-5 h-5 text-gray-400" />
+                      <span>{selectedEmployee.email}</span>
+                    </div>
+                  )}
+                  {selectedEmployee.phone && (
+                    <div className="flex items-center space-x-3">
+                      <Phone className="w-5 h-5 text-gray-400" />
+                      <span>{selectedEmployee.phone}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">Employment Details</h4>
+                  {selectedEmployee.hireDate && (
+                    <div className="flex items-center space-x-3">
+                      <Calendar className="w-5 h-5 text-gray-400" />
+                      <span>Joined: {new Date(selectedEmployee.hireDate).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {selectedEmployee.salary && (
+                    <div className="flex items-center space-x-3">
+                      <span className="w-5 h-5 text-center text-green-500 font-bold">$</span>
+                      <span className="font-medium text-green-600">
+                        ${parseFloat(selectedEmployee.salary).toLocaleString()} / month
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={() => setShowViewDialog(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </AppLayout>

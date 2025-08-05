@@ -730,6 +730,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/employees/:id', (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name, email, phone, position, salary, hireDate } = req.body;
+      
+      const employeeIndex = employeesStorage.findIndex(emp => emp.id === id);
+      
+      if (employeeIndex === -1) {
+        return res.status(404).json({ message: 'Employee not found' });
+      }
+
+      const updatedEmployee = {
+        ...employeesStorage[employeeIndex],
+        name: name || employeesStorage[employeeIndex].name,
+        email: email || employeesStorage[employeeIndex].email,
+        phone: phone || employeesStorage[employeeIndex].phone,
+        position: position || employeesStorage[employeeIndex].position,
+        salary: salary || employeesStorage[employeeIndex].salary,
+        hireDate: hireDate || employeesStorage[employeeIndex].hireDate,
+        updatedAt: new Date().toISOString()
+      };
+
+      employeesStorage[employeeIndex] = updatedEmployee;
+      console.log('Employee updated:', updatedEmployee);
+      res.json(updatedEmployee);
+    } catch (error) {
+      console.error('Update employee error:', error);
+      res.status(500).json({ message: 'Failed to update employee' });
+    }
+  });
+
+  app.delete('/api/employees/:id', (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const employeeIndex = employeesStorage.findIndex(emp => emp.id === id);
+      
+      if (employeeIndex === -1) {
+        return res.status(404).json({ message: 'Employee not found' });
+      }
+
+      const deletedEmployee = employeesStorage.splice(employeeIndex, 1)[0];
+      console.log('Employee deleted:', deletedEmployee.name);
+      res.json({ message: 'Employee deleted successfully', employee: deletedEmployee });
+    } catch (error) {
+      console.error('Delete employee error:', error);
+      res.status(500).json({ message: 'Failed to delete employee' });
+    }
+  });
+
   // Attendance API
   let attendanceStorage: any[] = [
     {
