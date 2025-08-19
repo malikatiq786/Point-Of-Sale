@@ -2013,6 +2013,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/brands", isAuthenticated, async (req, res) => {
     try {
       const { name, description } = req.body;
+      console.log("Creating brand with name:", name);
       
       if (!name) {
         return res.status(400).json({ message: "Brand name is required" });
@@ -2020,16 +2021,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if brand with this name already exists
       const existingBrands = await storage.getBrands();
+      console.log("Existing brands:", existingBrands.map(b => b.name));
+      
       const existingBrand = existingBrands.find(brand => 
         brand.name.toLowerCase() === name.toLowerCase()
       );
       
       if (existingBrand) {
+        console.log("Found existing brand:", existingBrand.name);
         return res.status(400).json({ message: "Brand name already exists" });
       }
 
+      console.log("No existing brand found, creating new one");
       const brand = await storage.createBrand({ name, description });
-      res.json(brand);
+      res.status(201).json(brand);
     } catch (error) {
       console.error("Error creating brand:", error);
       // Handle unique constraint violation from database

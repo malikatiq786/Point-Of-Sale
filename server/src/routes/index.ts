@@ -508,27 +508,69 @@ router.get('/brands', async (req: any, res: any) => {
   }
 });
 
-router.post('/brands', async (req: any, res: any) => {
+router.post('/brands', isAuthenticated, async (req: any, res: any) => {
   try {
+    const { name, description } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ message: "Brand name is required" });
+    }
+
+    // Check if brand with this name already exists (case-insensitive)
+    const existingBrands = await db.select().from(schema.brands);
+    const existingBrand = existingBrands.find(brand => 
+      brand.name.toLowerCase() === name.toLowerCase()
+    );
+    
+    if (existingBrand) {
+      return res.status(400).json({ message: "Brand name already exists" });
+    }
+
     const [brand] = await db.insert(schema.brands)
-      .values(req.body)
+      .values({ name, description })
       .returning();
     res.status(201).json(brand);
   } catch (error) {
     console.error('Create brand error:', error);
+    // Handle unique constraint violation from database
+    if (error.message && error.message.includes('unique')) {
+      return res.status(400).json({ message: "Brand name already exists" });
+    }
     res.status(500).json({ message: 'Failed to create brand' });
   }
 });
 
-router.put('/brands/:id', async (req: any, res: any) => {
+router.put('/brands/:id', isAuthenticated, async (req: any, res: any) => {
   try {
+    const { id } = req.params;
+    const { name, description } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ message: "Brand name is required" });
+    }
+
+    // Check if another brand with this name already exists (excluding current brand)
+    const existingBrands = await db.select().from(schema.brands);
+    const existingBrand = existingBrands.find(brand => 
+      brand.name.toLowerCase() === name.toLowerCase() && 
+      brand.id !== parseInt(id)
+    );
+    
+    if (existingBrand) {
+      return res.status(400).json({ message: "Brand name already exists" });
+    }
+
     const [brand] = await db.update(schema.brands)
-      .set(req.body)
-      .where(eq(schema.brands.id, parseInt(req.params.id)))
+      .set({ name, description })
+      .where(eq(schema.brands.id, parseInt(id)))
       .returning();
     res.json(brand);
   } catch (error) {
     console.error('Update brand error:', error);
+    // Handle unique constraint violation from database
+    if (error.message && error.message.includes('unique')) {
+      return res.status(400).json({ message: "Brand name already exists" });
+    }
     res.status(500).json({ message: 'Failed to update brand' });
   }
 });
