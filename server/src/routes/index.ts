@@ -91,16 +91,17 @@ router.post('/products', isAuthenticated, async (req: any, res: any) => {
 });
 router.get('/products/low-stock', isAuthenticated, productController.getLowStockProducts as any);
 router.get('/products/:id', isAuthenticated, productController.getProductById as any);
-// Categories and brands routes
-router.get('/categories', isAuthenticated, (req: any, res: any) => {
-  res.json([
-    { id: 1, name: 'Electronics' },
-    { id: 2, name: 'Books & Media' },
-    { id: 3, name: 'Food & Beverages' },
-    { id: 4, name: 'Clothing' },
-    { id: 5, name: 'Home & Garden' }
-  ]);
-});
+// Categories route disabled - using main routes.ts version for database integration
+// router.get('/categories', isAuthenticated, async (req: any, res: any) => {
+//   try {
+//     const categories = await storage.getCategories();
+//     console.log('Categories route returning:', categories.length, 'categories');
+//     res.json(categories);
+//   } catch (error) {
+//     console.error('Error fetching categories:', error);
+//     res.status(500).json({ message: 'Failed to fetch categories' });
+//   }
+// });
 
 // Brands routes moved to main routes.ts file for database integration
 
