@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Category name is required"),
-  description: z.string().optional(),
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
@@ -24,6 +23,7 @@ export default function Categories() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [showDeletableDialog, setShowDeletableDialog] = useState(false);
+  const [viewingCategory, setViewingCategory] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -31,7 +31,6 @@ export default function Categories() {
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: "",
-      description: "",
     },
   });
 
@@ -125,8 +124,11 @@ export default function Categories() {
     setEditingCategory(category);
     form.reset({
       name: category.name,
-      description: category.description || "",
     });
+  };
+
+  const handleView = (category: any) => {
+    setViewingCategory(category);
   };
 
   const handleDelete = (id: number) => {
@@ -202,19 +204,7 @@ export default function Categories() {
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter category description" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
                   
                   <div className="flex justify-end space-x-2">
                     <Button 
@@ -379,7 +369,12 @@ export default function Categories() {
                     ID: {category.id}
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleView(category)}
+                      data-testid={`button-view-${category.id}`}
+                    >
                       <Eye className="w-4 h-4" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(category)}>
@@ -400,6 +395,66 @@ export default function Categories() {
           ))
         )}
       </div>
+
+      {/* View Category Dialog */}
+      <Dialog open={!!viewingCategory} onOpenChange={(open) => {
+        if (!open) {
+          setViewingCategory(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Eye className="w-5 h-5 mr-2" />
+              Category Details
+            </DialogTitle>
+          </DialogHeader>
+          
+          {viewingCategory && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Category ID</label>
+                  <p className="text-lg font-semibold">{viewingCategory.id}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Category Name</label>
+                  <p className="text-lg font-semibold">{viewingCategory.name}</p>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-gray-500">Parent Category</label>
+                <p className="text-lg">
+                  {viewingCategory.parentId ? 
+                    categories.find((cat: any) => cat.id === viewingCategory.parentId)?.name || 'Unknown' 
+                    : 'None (Root Category)'
+                  }
+                </p>
+              </div>
+
+              <div className="flex justify-center pt-4">
+                <div className="flex items-center justify-center h-20 w-20 bg-gray-100 rounded-lg">
+                  <Tags className="w-10 h-10 text-gray-400" />
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setViewingCategory(null)}>
+                  Close
+                </Button>
+                <Button onClick={() => {
+                  setViewingCategory(null);
+                  handleEdit(viewingCategory);
+                }} className="bg-blue-600 hover:bg-blue-700">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Category
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
