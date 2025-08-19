@@ -2100,18 +2100,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Units storage for in-memory persistence
-  let unitsStorage: any[] = [
-    { id: 1, name: "Each", shortName: "ea" },
-    { id: 2, name: "Pounds", shortName: "lbs" },
-    { id: 3, name: "Kilograms", shortName: "kg" },
-    { id: 4, name: "Meters", shortName: "m" },
-    { id: 5, name: "Liters", shortName: "L" },
-    { id: 6, name: "Pieces", shortName: "pcs" },
-    { id: 7, name: "Bottles", shortName: "btl" },
-    { id: 8, name: "Boxes", shortName: "box" }
-  ];
-
   app.post("/api/units", isAuthenticated, async (req, res) => {
     try {
       const { name, shortName, symbol } = req.body;
@@ -2126,7 +2114,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if unit with this name already exists
-      const existingUnitByName = unitsStorage.find(unit => 
+      const existingUnits = await storage.getUnits();
+      const existingUnitByName = existingUnits.find(unit => 
         unit.name.toLowerCase() === name.toLowerCase()
       );
       
@@ -2135,22 +2124,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if unit with this short name already exists
-      const existingUnitByShortName = unitsStorage.find(unit => 
-        unit.shortName.toLowerCase() === unitShortName.toLowerCase()
+      const existingUnitByShortName = existingUnits.find(unit => 
+        unit.shortName && unit.shortName.toLowerCase() === unitShortName.toLowerCase()
       );
       
       if (existingUnitByShortName) {
         return res.status(400).json({ message: "Unit short name already exists" });
       }
 
-      const unitData = {
-        id: Date.now(),
+      const unit = await storage.createUnit({
         name: name,
         shortName: unitShortName,
-      };
-      unitsStorage.push(unitData);
-      console.log("Unit created:", unitData);
-      res.status(201).json(unitData);
+      });
+      console.log("Unit created:", unit);
+      res.status(201).json(unit);
     } catch (error) {
       console.error("Error creating unit:", error);
       res.status(500).json({ message: "Failed to create unit" });
@@ -2160,12 +2147,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/units/:id", isAuthenticated, async (req, res) => {
     try {
       const unitId = parseInt(req.params.id);
-      const unitIndex = unitsStorage.findIndex(u => u.id === unitId);
-      
-      if (unitIndex === -1) {
-        return res.status(404).json({ message: "Unit not found" });
-      }
-      
       const { name, shortName, symbol } = req.body;
       const unitShortName = shortName || symbol;
       
@@ -2178,7 +2159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if another unit with this name already exists (excluding current unit)
-      const existingUnitByName = unitsStorage.find(unit => 
+      const existingUnits = await storage.getUnits();
+      const existingUnitByName = existingUnits.find(unit => 
         unit.id !== unitId && unit.name.toLowerCase() === name.toLowerCase()
       );
       
@@ -2187,22 +2169,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if another unit with this short name already exists (excluding current unit)
-      const existingUnitByShortName = unitsStorage.find(unit => 
-        unit.id !== unitId && unit.shortName.toLowerCase() === unitShortName.toLowerCase()
+      const existingUnitByShortName = existingUnits.find(unit => 
+        unit.id !== unitId && unit.shortName && unit.shortName.toLowerCase() === unitShortName.toLowerCase()
       );
       
       if (existingUnitByShortName) {
         return res.status(400).json({ message: "Unit short name already exists" });
       }
       
-      unitsStorage[unitIndex] = {
-        ...unitsStorage[unitIndex],
+      const unit = await storage.updateUnit(unitId, {
         name: name,
         shortName: unitShortName,
-      };
+      });
       
-      console.log("Unit updated:", unitsStorage[unitIndex]);
-      res.json(unitsStorage[unitIndex]);
+      console.log("Unit updated:", unit);
+      res.json(unit);
     } catch (error) {
       console.error("Error updating unit:", error);
       res.status(500).json({ message: "Failed to update unit" });
@@ -2212,14 +2193,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/units/:id", isAuthenticated, async (req, res) => {
     try {
       const unitId = parseInt(req.params.id);
-      const unitIndex = unitsStorage.findIndex(u => u.id === unitId);
-      
-      if (unitIndex === -1) {
-        return res.status(404).json({ message: "Unit not found" });
-      }
-      
-      const deletedUnit = unitsStorage.splice(unitIndex, 1)[0];
-      console.log("Unit deleted:", deletedUnit);
+      await storage.deleteUnit(unitId);
+      console.log("Unit deleted:", unitId);
       res.json({ message: "Unit deleted successfully" });
     } catch (error) {
       console.error("Error deleting unit:", error);

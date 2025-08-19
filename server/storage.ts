@@ -133,6 +133,9 @@ export interface IStorage {
   
   // Unit operations
   getUnits(): Promise<any[]>;
+  createUnit(unit: any): Promise<any>;
+  updateUnit(id: number, unit: any): Promise<any>;
+  deleteUnit(id: number): Promise<void>;
   
   // Delivery Rider operations
   getDeliveryRiders(): Promise<DeliveryRider[]>;
@@ -778,7 +781,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUnits(): Promise<any[]> {
-    return await db.select().from(units).orderBy(units.id);
+    return await db.select({
+      id: units.id,
+      name: units.name,
+      shortName: units.shortName
+    }).from(units).orderBy(units.id);
+  }
+
+  async createUnit(unitData: any): Promise<any> {
+    const [unit] = await db
+      .insert(units)
+      .values(unitData)
+      .returning();
+    return unit;
+  }
+
+  async updateUnit(id: number, unitData: any): Promise<any> {
+    const [unit] = await db
+      .update(units)
+      .set(unitData)
+      .where(eq(units.id, id))
+      .returning();
+    return unit;
+  }
+
+  async deleteUnit(id: number): Promise<void> {
+    await db.delete(units).where(eq(units.id, id));
   }
 
   // Stock Management Methods
