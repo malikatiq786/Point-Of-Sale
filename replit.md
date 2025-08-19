@@ -25,7 +25,7 @@ The application employs a modern full-stack architecture with distinct frontend,
 - **Authentication**: Integrates Replit OIDC authentication with Express sessions stored in PostgreSQL. It implements a robust role-based access control (RBAC) system with 75 granular permissions and 6 role types (Super Admin, Admin/Owner, Manager, Cashier, Accountant, Warehouse Staff).
 - **Core Modules**:
     - **POS Terminal**: Features real-time product search, cart management, multiple payment methods, and detailed transaction recording.
-    - **Inventory Management**: Comprehensive product catalog with variants, categories, brands, real-time stock tracking, and price management.
+    - **Inventory Management**: Comprehensive product catalog with variants, categories, brands, real-time stock tracking, and price management. Product view/edit functionality includes full relationship data (category, brand, unit names).
     - **Customer Management**: Stores customer information, tracks purchase history, and provides basic analytics.
     - **Dashboard & Analytics**: Displays real-time statistics, activity logs, and key performance metrics.
     - **HR Modules**: Employees, Attendance, and Payroll with full CRUD operations and backend integration.

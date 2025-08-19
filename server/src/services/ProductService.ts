@@ -27,7 +27,7 @@ export class ProductService {
     }
   }
 
-  // Get product by ID
+  // Get product by ID with relationships
   async getProductById(productId: number) {
     try {
       console.log('ProductService: Getting product by ID:', productId);
@@ -39,11 +39,27 @@ export class ProductService {
           error: 'Product not found'
         };
       }
+
+      // Fetch related data
+      const [category, brand, unit] = await Promise.all([
+        product.categoryId ? this.productRepository.getCategoryById(product.categoryId) : null,
+        product.brandId ? this.productRepository.getBrandById(product.brandId) : null,
+        product.unitId ? this.productRepository.getUnitById(product.unitId) : null
+      ]);
       
-      console.log('ProductService: Found product:', product);
+      // Add formatted price and relationships
+      const productWithRelations = {
+        ...product,
+        formattedPrice: `$${parseFloat(product.price || '0').toFixed(2)}`,
+        category: category || null,
+        brand: brand || null,
+        unit: unit || null
+      };
+      
+      console.log('ProductService: Product with relationships:', productWithRelations);
       return {
         success: true,
-        data: product
+        data: productWithRelations
       };
     } catch (error) {
       console.error('ProductService: Error getting product by ID:', error);

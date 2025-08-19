@@ -69,10 +69,53 @@ export class ProductRepository {
         .where(eq(schema.products.id, id))
         .limit(1);
       
+      console.log('ProductRepository: Found product:', results[0]);
       return results[0] || null;
     } catch (error) {
-      console.error('Error finding product by ID:', error);
+      console.error('ProductRepository: Error finding product by ID:', error);
       throw error;
+    }
+  }
+
+  // Get category by ID
+  async getCategoryById(id: number) {
+    try {
+      const results = await db.select()
+        .from(schema.categories)
+        .where(eq(schema.categories.id, id))
+        .limit(1);
+      return results[0] || null;
+    } catch (error) {
+      console.error('ProductRepository: Error finding category by ID:', error);
+      return null;
+    }
+  }
+
+  // Get brand by ID
+  async getBrandById(id: number) {
+    try {
+      const results = await db.select()
+        .from(schema.brands)
+        .where(eq(schema.brands.id, id))
+        .limit(1);
+      return results[0] || null;
+    } catch (error) {
+      console.error('ProductRepository: Error finding brand by ID:', error);
+      return null;
+    }
+  }
+
+  // Get unit by ID
+  async getUnitById(id: number) {
+    try {
+      const results = await db.select()
+        .from(schema.units)
+        .where(eq(schema.units.id, id))
+        .limit(1);
+      return results[0] || null;
+    } catch (error) {
+      console.error('ProductRepository: Error finding unit by ID:', error);
+      return null;
     }
   }
 
