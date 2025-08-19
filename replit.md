@@ -32,10 +32,11 @@ The application employs a modern full-stack architecture with distinct frontend,
     - **Financial Modules**: Payments, Accounts, Transactions, Expenses, and comprehensive financial reporting.
     - **Business Setup**: Modules for Business Profile, Branches, and Registers, including mandatory register opening balance validation for POS terminals.
     - **Stock Management**: Capabilities for Stock Transfers and Stock Adjustments.
+    - **Units Management**: Complete CRUD operations for product units with full field support (name, shortName, type, description) and database persistence.
 
 ### System Design Choices
 - **Data Flow**: Authentication flows are handled via Replit OIDC, leading to session creation in PostgreSQL. Sales transactions involve product selection, cart management, payment processing, and automatic inventory updates. Data synchronization uses React Query for real-time updates and optimistic UI.
-- **Server Architecture**: Follows an MVC pattern with clear separation into models, controllers, services, repositories, constants, types, utils, validators, and routes within a `/server/src` directory.
+- **Server Architecture**: Follows an MVC pattern with clear separation into models, controllers, services, repositories, constants, types, utils, validators, and routes within a `/server/src` directory. Units API routing is handled by the MVC structure in `server/src/routes/index.ts`.
 - **Data Validation**: Comprehensive Zod validation schemas are used for all forms and API endpoints.
 
 ## External Dependencies

@@ -781,11 +781,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUnits(): Promise<any[]> {
-    return await db.select({
-      id: units.id,
-      name: units.name,
-      shortName: units.shortName
-    }).from(units).orderBy(units.id);
+    const results = await db.select().from(units).orderBy(units.id);
+    // Map database field names to frontend expected names
+    return results.map(unit => ({
+      id: unit.id,
+      name: unit.name,
+      shortName: unit.shortName,
+      type: unit.type,
+      description: unit.description
+    }));
   }
 
   async createUnit(unitData: any): Promise<any> {

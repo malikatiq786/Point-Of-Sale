@@ -121,6 +121,8 @@ export const units = pgTable("units", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 50 }),
   shortName: varchar("short_name", { length: 10 }),
+  type: varchar("type", { length: 20 }),
+  description: text("description"),
 });
 
 export const productAttributes = pgTable("product_attributes", {

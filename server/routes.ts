@@ -5,6 +5,8 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { insertCustomerSchema, insertSaleSchema } from "@shared/schema";
 import { apiRoutes } from "./src/routes/index";
+import { db } from "./db";
+import { units } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -2088,17 +2090,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Units routes  
-  app.get("/api/units", isAuthenticated, async (req, res) => {
-    try {
-      const units = await storage.getUnits();
-      console.log("Fetching units, total:", units.length);
-      res.json(units);
-    } catch (error) {
-      console.error("Error fetching units:", error);
-      res.status(500).json({ message: "Failed to fetch units" });
-    }
-  });
+  // Units routes - handled by MVC routes in src/routes/index.ts
+  // The /api/units endpoints are now handled by the router in server/src/routes/index.ts
 
   app.post("/api/units", isAuthenticated, async (req, res) => {
     try {
@@ -2135,6 +2128,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const unit = await storage.createUnit({
         name: name,
         shortName: unitShortName,
+        type: req.body.type || 'count',
+        description: req.body.description || null,
       });
       console.log("Unit created:", unit);
       res.status(201).json(unit);
@@ -2180,6 +2175,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const unit = await storage.updateUnit(unitId, {
         name: name,
         shortName: unitShortName,
+        type: req.body.type || 'count',
+        description: req.body.description || null,
       });
       
       console.log("Unit updated:", unit);

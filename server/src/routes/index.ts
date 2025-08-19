@@ -105,14 +105,24 @@ router.get('/products/:id', isAuthenticated, productController.getProductById as
 
 // Brands routes moved to main routes.ts file for database integration
 
-router.get('/units', isAuthenticated, (req: any, res: any) => {
-  res.json([
-    { id: 1, name: 'Each', short_name: 'ea' },
-    { id: 2, name: 'Pounds', short_name: 'lbs' },
-    { id: 3, name: 'Kilograms', short_name: 'kg' },
-    { id: 4, name: 'Meters', short_name: 'm' },
-    { id: 5, name: 'Liters', short_name: 'L' }
-  ]);
+router.get('/units', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const results = await db.select().from(schema.units).orderBy(schema.units.id);
+    
+    // Map database fields to frontend expected format
+    const units = results.map(unit => ({
+      id: unit.id,
+      name: unit.name,
+      shortName: unit.shortName,
+      type: unit.type,
+      description: unit.description
+    }));
+    
+    res.json(units);
+  } catch (error) {
+    console.error('Error fetching units:', error);
+    res.status(500).json({ message: 'Failed to fetch units' });
+  }
 });
 
 // Sale routes

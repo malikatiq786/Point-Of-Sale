@@ -55,6 +55,8 @@ export default function Units() {
         body: JSON.stringify({
           name: data.name,
           shortName: data.symbol, // Map symbol to shortName for backend compatibility
+          type: data.type,
+          description: data.description,
         }),
       });
       if (!response.ok) throw new Error('Failed to create unit');
@@ -80,6 +82,8 @@ export default function Units() {
         body: JSON.stringify({
           name: data.name,
           shortName: data.symbol, // Map symbol to shortName for backend compatibility
+          type: data.type,
+          description: data.description,
         }),
       });
       if (!response.ok) throw new Error('Failed to update unit');
@@ -124,10 +128,11 @@ export default function Units() {
     setEditingUnit(unit);
     form.reset({
       name: unit.name,
-      symbol: unit.shortName || unit.symbol, // Handle both shortName and symbol
+      symbol: unit.shortName || unit.symbol, // Handle both shortName and symbol  
       type: unit.type || "count",
       description: unit.description || "",
     });
+    setIsAddDialogOpen(true);
   };
 
   const handleDelete = (id: number) => {
