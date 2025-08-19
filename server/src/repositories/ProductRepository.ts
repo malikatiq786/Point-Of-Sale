@@ -1,13 +1,13 @@
 import { eq, and, or, like, sql } from 'drizzle-orm';
 import * as schema from '../../../shared/schema';
-import { storage } from '../../storage';
+import { db } from '../../db';
 
 export class ProductRepository {
 
   // Find all products
   async findAll(searchQuery?: string, categoryId?: number, brandId?: number) {
     try {
-      let query = storage.db.select()
+      let query = db.select()
         .from(schema.products);
 
       const conditions = [];
@@ -39,7 +39,7 @@ export class ProductRepository {
   async create(productData: any) {
     try {
       console.log('ProductRepository: Creating product with data:', productData);
-      const results = await storage.db.insert(schema.products)
+      const results = await db.insert(schema.products)
         .values({
           name: productData.name,
           description: productData.description,
@@ -64,7 +64,7 @@ export class ProductRepository {
   // Find product by ID
   async findById(id: number) {
     try {
-      const results = await storage.db.select()
+      const results = await db.select()
         .from(schema.products)
         .where(eq(schema.products.id, id))
         .limit(1);
@@ -80,9 +80,9 @@ export class ProductRepository {
   async findLowStock(threshold: number = 10) {
     try {
       return await db.select()
-        .from(products)
+        .from(schema.products)
         .where(
-          sql`${products.stock} < ${threshold}`
+          sql`${schema.products.stock} < ${threshold}`
         );
     } catch (error) {
       console.error('Error finding low stock products:', error);
@@ -93,12 +93,11 @@ export class ProductRepository {
   // Update product stock
   async updateStock(productId: number, quantity: number) {
     try {
-      const results = await db.update(products)
+      const results = await db.update(schema.products)
         .set({ 
-          stock: quantity,
-          updatedAt: new Date()
+          stock: quantity
         })
-        .where(eq(products.id, productId))
+        .where(eq(schema.products.id, productId))
         .returning();
       
       return results[0] || null;

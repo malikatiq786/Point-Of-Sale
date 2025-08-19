@@ -58,14 +58,14 @@ export class ProductController {
       } else {
         console.error('ProductController: Service error:', result.error);
         res.status(HTTP_STATUS.BAD_REQUEST).json({
-          message: result.error || ERROR_MESSAGES.VALIDATION_FAILED
+          message: result.error || ERROR_MESSAGES.INVALID_INPUT
         });
       }
     } catch (error) {
       console.error('ProductController: Error in createProduct:', error);
       res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
         message: ERROR_MESSAGES.INTERNAL_ERROR,
-        error: error.message
+        error: (error as Error).message
       });
     }
   };
@@ -80,17 +80,17 @@ export class ProductController {
         });
       }
       
-      const result = await this.productService.getProducts();
-      const product = result.data?.find((p: any) => p.id === productId);
+      const result = await this.productService.getProductById(productId);
       
-      if (product) {
-        res.status(HTTP_STATUS.OK).json(product);
+      if (result.success && result.data) {
+        res.status(HTTP_STATUS.OK).json(result.data);
       } else {
         res.status(HTTP_STATUS.NOT_FOUND).json({
-          message: 'Product not found'
+          message: ERROR_MESSAGES.PRODUCT_NOT_FOUND
         });
       }
     } catch (error) {
+      console.error('ProductController: Error in getProductById:', error);
       res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
         message: ERROR_MESSAGES.INTERNAL_ERROR
       });
