@@ -48,7 +48,10 @@ export default function Brands() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error('Failed to create brand');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create brand');
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -57,8 +60,9 @@ export default function Brands() {
       form.reset();
       toast({ title: "Success", description: "Brand created successfully" });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create brand", variant: "destructive" });
+    onError: (error: any) => {
+      const errorMessage = error.message || "Failed to create brand";
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
     },
   });
 
@@ -70,7 +74,10 @@ export default function Brands() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error('Failed to update brand');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update brand');
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -79,8 +86,9 @@ export default function Brands() {
       form.reset();
       toast({ title: "Success", description: "Brand updated successfully" });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update brand", variant: "destructive" });
+    onError: (error: any) => {
+      const errorMessage = error.message || "Failed to update brand";
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
     },
   });
 
@@ -88,15 +96,19 @@ export default function Brands() {
   const deleteBrandMutation = useMutation({
     mutationFn: async (id: number) => {
       const response = await fetch(`/api/brands/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete brand');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete brand');
+      }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/brands'] });
       toast({ title: "Success", description: "Brand deleted successfully" });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to delete brand", variant: "destructive" });
+    onError: (error: any) => {
+      const errorMessage = error.message || "Failed to delete brand";
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
     },
   });
 
