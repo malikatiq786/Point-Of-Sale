@@ -54,7 +54,10 @@ export default function Categories() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error('Failed to create category');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create category');
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -77,7 +80,10 @@ export default function Categories() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error('Failed to update category');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update category');
+      }
       return response.json();
     },
     onSuccess: () => {
