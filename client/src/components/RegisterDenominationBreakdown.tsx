@@ -297,100 +297,97 @@ export function RegisterDenominationBreakdown({
               </p>
             </div>
             
-            {/* Professional Enterprise Notes Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {denominationTypes
-                .filter(denom => denom.type === 'note')
-                .sort((a, b) => parseFloat(b.value) - parseFloat(a.value)) // Sort highest to lowest
-                .map(denom => {
-                  const value = parseFloat(denom.value);
-                  const quantity = quantities[denom.id] || 0;
-                  const total = quantity * value;
-                  
-                  return (
-                    <div key={denom.id} className="group relative bg-white border border-slate-200 hover:border-slate-300 rounded-2xl p-6 transition-all duration-300 hover:shadow-xl shadow-sm">
-                      {/* Premium Denomination Header */}
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-4">
-                          <div className="relative">
-                            <div className="w-16 h-10 bg-gradient-to-r from-slate-700 to-slate-900 rounded-lg flex items-center justify-center shadow-lg">
-                              <span className="text-white font-bold text-sm tracking-wider">
-                                {value >= 1000 ? `${value/1000}K` : value}
-                              </span>
-                            </div>
-                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full shadow-sm"></div>
+            {/* Compact List View */}
+            <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden" style={{ userSelect: 'none' }}>
+              <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-4 py-3 border-b border-slate-300">
+                <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                  <div className="col-span-3">Denomination</div>
+                  <div className="col-span-3">Quantity</div>
+                  <div className="col-span-3">Unit Value</div>
+                  <div className="col-span-3 text-right">Total Amount</div>
+                </div>
+              </div>
+              
+              <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-track-slate-100 scrollbar-thumb-slate-300">
+                {denominationTypes
+                  .filter(denom => denom.type === 'note')
+                  .sort((a, b) => parseFloat(b.value) - parseFloat(a.value))
+                  .map(denom => {
+                    const value = parseFloat(denom.value);
+                    const quantity = quantities[denom.id] || 0;
+                    const total = quantity * value;
+                    
+                    return (
+                      <div key={denom.id} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 hover:bg-white transition-colors items-center">
+                        {/* Denomination Display */}
+                        <div className="col-span-3 flex items-center gap-3">
+                          <div className="w-10 h-6 bg-gradient-to-r from-slate-600 to-slate-800 rounded flex items-center justify-center">
+                            <span className="text-white font-bold text-xs">
+                              {value >= 1000 ? `${value/1000}K` : value}
+                            </span>
                           </div>
                           <div>
-                            <div className="font-bold text-slate-900 text-xl tracking-tight">
+                            <div className="font-semibold text-slate-900 text-sm">
                               PKR {value.toLocaleString()}
                             </div>
-                            <div className="text-slate-500 text-sm font-medium uppercase tracking-wide">
-                              Bank Note
-                            </div>
+                            <div className="text-xs text-slate-500">Note</div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Quantity Control Section */}
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor={`qty-${denom.id}`} className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
-                            Quantity
-                          </Label>
-                        </div>
-                        
-                        <div className="flex items-center justify-center gap-3">
+                        {/* Quantity Controls */}
+                        <div className="col-span-3 flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => handleQuantityChange(denom.id, String(Math.max(0, quantity - 1)))}
-                            className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-red-50 border-2 border-slate-200 hover:border-red-200 flex items-center justify-center text-slate-600 hover:text-red-600 transition-all duration-200 font-bold text-lg"
+                            className="w-6 h-6 rounded bg-slate-100 hover:bg-red-50 border border-slate-200 hover:border-red-200 flex items-center justify-center text-slate-600 hover:text-red-600 transition-colors text-sm font-bold"
+                            style={{ userSelect: 'none' }}
                           >
                             −
                           </button>
-                          <div className="relative">
-                            <Input
-                              id={`qty-${denom.id}`}
-                              type="number"
-                              min="0"
-                              value={quantity || ''}
-                              onChange={(e) => handleQuantityChange(denom.id, e.target.value)}
-                              placeholder="0"
-                              className="w-20 h-12 text-center font-bold text-xl border-2 border-slate-200 focus:border-blue-500 rounded-xl bg-slate-50 focus:bg-white text-slate-900"
-                              data-testid={`input-quantity-${denom.id}`}
-                            />
-                          </div>
+                          <Input
+                            id={`qty-${denom.id}`}
+                            type="number"
+                            min="0"
+                            value={quantity || ''}
+                            onChange={(e) => handleQuantityChange(denom.id, e.target.value)}
+                            placeholder="0"
+                            className="w-16 h-8 text-center font-medium text-sm border border-slate-200 focus:border-blue-400 rounded bg-white"
+                            data-testid={`input-quantity-${denom.id}`}
+                          />
                           <button
                             type="button"
                             onClick={() => handleQuantityChange(denom.id, String(quantity + 1))}
-                            className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-green-50 border-2 border-slate-200 hover:border-green-200 flex items-center justify-center text-slate-600 hover:text-green-600 transition-all duration-200 font-bold text-lg"
+                            className="w-6 h-6 rounded bg-slate-100 hover:bg-green-50 border border-slate-200 hover:border-green-200 flex items-center justify-center text-slate-600 hover:text-green-600 transition-colors text-sm font-bold"
+                            style={{ userSelect: 'none' }}
                           >
                             +
                           </button>
                         </div>
 
-                        {/* Total Amount Display */}
-                        <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
-                              Total Value
-                            </span>
-                            <div className="text-right">
-                              <div className="font-bold text-slate-900 text-xl">
-                                PKR {total.toLocaleString()}
-                              </div>
-                              {quantity > 0 && (
-                                <div className="text-xs text-slate-500 mt-1">
-                                  {quantity} × {value.toLocaleString()}
-                                </div>
-                              )}
-                            </div>
+                        {/* Unit Value */}
+                        <div className="col-span-3">
+                          <div className="text-sm font-medium text-slate-700">
+                            PKR {value.toLocaleString()}
                           </div>
+                          <div className="text-xs text-slate-500">per note</div>
+                        </div>
+
+                        {/* Total Amount */}
+                        <div className="col-span-3 text-right">
+                          <div className="font-bold text-slate-900 text-sm">
+                            PKR {total.toLocaleString()}
+                          </div>
+                          {quantity > 0 && (
+                            <div className="text-xs text-slate-500">
+                              {quantity} × {value.toLocaleString()}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  );
-                })
-              }
+                    );
+                  })
+                }
+              </div>
             </div>
           </div>
 
