@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from "@/layouts";
-import { Plus, Filter, Download, Calendar, DollarSign, Users, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Filter, Download, Calendar, DollarSign, Users, TrendingUp, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,6 +51,7 @@ export default function ExpensesPage() {
   const [filters, setFilters] = useState<ExpenseFilters>({});
   const [showFilters, setShowFilters] = useState(false);
   const [isCreateExpenseOpen, setIsCreateExpenseOpen] = useState(false);
+  const [viewingExpense, setViewingExpense] = useState<any>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -501,9 +502,7 @@ export default function ExpensesPage() {
                   <th className="text-left p-3">Vendor</th>
                   <th className="text-left p-3">Amount</th>
                   <th className="text-left p-3">Status</th>
-                  {filters.approvalStatus === 'pending' && (
-                    <th className="text-left p-3">Actions</th>
-                  )}
+                  <th className="text-left p-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -541,10 +540,20 @@ export default function ExpensesPage() {
                         {expense.approvalStatus.charAt(0).toUpperCase() + expense.approvalStatus.slice(1)}
                       </Badge>
                     </td>
-                    {filters.approvalStatus === 'pending' && (
-                      <td className="p-3">
-                        {expense.approvalStatus === 'pending' ? (
-                          <div className="flex items-center gap-2">
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setViewingExpense({ ...expenseItem, expense, category, vendor })}
+                          data-testid={`button-view-${expense.id}`}
+                          className="text-blue-600 border-blue-600 hover:bg-blue-50 text-xs px-2 py-1"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                        {filters.approvalStatus === 'pending' && expense.approvalStatus === 'pending' && (
+                          <>
                             <Button
                               size="sm"
                               variant="outline"
@@ -567,14 +576,10 @@ export default function ExpensesPage() {
                               <XCircle className="h-3 w-3 mr-1" />
                               Reject
                             </Button>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">
-                            {expense.approvalStatus === 'approved' ? 'Approved' : 'Rejected'}
-                          </span>
+                          </>
                         )}
-                      </td>
-                    )}
+                      </div>
+                    </td>
                   </tr>
                   );
                 })}
@@ -592,6 +597,110 @@ export default function ExpensesPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* View Expense Dialog */}
+      <Dialog open={!!viewingExpense} onOpenChange={() => setViewingExpense(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Expense Details</DialogTitle>
+            <DialogDescription>
+              {viewingExpense?.expense?.expenseNumber}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewingExpense && (
+            <div className="grid gap-4">
+              {/* Basic Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Expense Number</label>
+                  <p className="font-medium">{viewingExpense.expense.expenseNumber}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Date</label>
+                  <p>{formatDate(viewingExpense.expense.expenseDate)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Category</label>
+                  <p>{viewingExpense.category?.name || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Vendor</label>
+                  <p>{viewingExpense.vendor?.name || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Amount</label>
+                  <p className="font-semibold text-lg">{formatCurrency(viewingExpense.expense.totalAmount)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Status</label>
+                  <Badge variant={getStatusBadgeVariant(viewingExpense.expense.approvalStatus)}>
+                    {viewingExpense.expense.approvalStatus.charAt(0).toUpperCase() + viewingExpense.expense.approvalStatus.slice(1)}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Description and Notes */}
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Description</label>
+                  <p className="mt-1">{viewingExpense.expense.description || '-'}</p>
+                </div>
+                {viewingExpense.expense.notes && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Notes</label>
+                    <p className="mt-1 text-sm text-gray-600">{viewingExpense.expense.notes}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Payment Method</label>
+                  <p>{viewingExpense.expense.paymentMethod}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Payment Reference</label>
+                  <p>{viewingExpense.expense.paymentReference || '-'}</p>
+                </div>
+                {viewingExpense.expense.receiptNumber && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Receipt Number</label>
+                    <p>{viewingExpense.expense.receiptNumber}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Created By and Dates */}
+              <div className="border-t pt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Created By</label>
+                    <p>{viewingExpense.creator?.name || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Created At</label>
+                    <p>{formatDate(viewingExpense.expense.createdAt)}</p>
+                  </div>
+                  {viewingExpense.expense.approvedBy && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Approved By</label>
+                        <p>Admin User</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Approved At</label>
+                        <p>{formatDate(viewingExpense.expense.approvedAt)}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       </div>
     </AppLayout>
   );
