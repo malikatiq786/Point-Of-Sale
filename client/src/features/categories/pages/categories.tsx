@@ -203,9 +203,30 @@ export default function Categories() {
   const hierarchicalCategories = buildCategoryHierarchy(categories as any[]);
   const flatCategories = flattenHierarchy(hierarchicalCategories);
   
-  const filteredCategories = flatCategories.filter((category: any) =>
-    category.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCategories = flatCategories.filter((category: any) => {
+    const searchLower = searchQuery.toLowerCase();
+    
+    // Include if category name matches
+    if (category.name?.toLowerCase().includes(searchLower)) {
+      return true;
+    }
+    
+    // Include if parent category name matches (show children when parent is searched)
+    if (category.parentId) {
+      const parent = (categories as any[]).find(cat => cat.id === category.parentId);
+      if (parent && parent.name?.toLowerCase().includes(searchLower)) {
+        return true;
+      }
+    }
+    
+    // Include if any child category name matches (show parent when child is searched)
+    const hasMatchingChild = (categories as any[]).some(cat => 
+      cat.parentId === category.id && 
+      cat.name?.toLowerCase().includes(searchLower)
+    );
+    
+    return hasMatchingChild;
+  });
 
   return (
     <AppLayout>
