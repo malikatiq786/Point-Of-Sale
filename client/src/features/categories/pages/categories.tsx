@@ -185,11 +185,14 @@ export default function Categories() {
 
   // Bulk selection handlers
   const handleSelectCategory = (categoryId: number) => {
-    setSelectedCategories(prev => 
-      prev.includes(categoryId) 
+    console.log('Frontend: Selecting category with ID:', categoryId, 'Type:', typeof categoryId);
+    setSelectedCategories(prev => {
+      const newSelection = prev.includes(categoryId) 
         ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
-    );
+        : [...prev, categoryId];
+      console.log('Frontend: Updated selectedCategories:', newSelection);
+      return newSelection;
+    });
   };
 
   const handleSelectAll = () => {
@@ -207,7 +210,18 @@ export default function Categories() {
   };
 
   const confirmBulkDelete = () => {
-    bulkDeleteMutation.mutate(selectedCategories);
+    console.log('Frontend: About to delete categories. selectedCategories:', selectedCategories);
+    console.log('Frontend: selectedCategories types:', selectedCategories.map(id => ({ id, type: typeof id, isNaN: isNaN(id) })));
+    
+    // Filter out any invalid IDs
+    const validIds = selectedCategories.filter(id => typeof id === 'number' && !isNaN(id) && id > 0);
+    console.log('Frontend: After filtering, valid IDs:', validIds);
+    
+    if (validIds.length !== selectedCategories.length) {
+      console.warn('Frontend: Some invalid IDs were filtered out!');
+    }
+    
+    bulkDeleteMutation.mutate(validIds);
   };
 
   // Helper functions for hierarchy
