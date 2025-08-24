@@ -325,10 +325,10 @@ export default function ExpensesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatCurrency(dashboardStats.summary?.totalExpenses || 0)}
+                {formatCurrency(dashboardStats?.summary?.totalExpenses || 0)}
               </div>
               <p className="text-xs text-muted-foreground">
-                {dashboardStats.summary?.totalCount || 0} expenses this month
+                {dashboardStats?.summary?.totalCount || 0} expenses this month
               </p>
             </CardContent>
           </Card>
@@ -340,7 +340,7 @@ export default function ExpensesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {dashboardStats.statusBreakdown?.find((s: any) => s.status === 'pending')?.count || 0}
+                {dashboardStats?.statusBreakdown?.find((s: any) => s.status === 'pending')?.count || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 Awaiting approval
@@ -355,7 +355,7 @@ export default function ExpensesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {dashboardStats.topCategories?.length || 0}
+                {dashboardStats?.topCategories?.length || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 Active categories
@@ -370,7 +370,7 @@ export default function ExpensesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatCurrency(dashboardStats.summary?.totalExpenses || 0)}
+                {formatCurrency(dashboardStats?.summary?.totalExpenses || 0)}
               </div>
               <p className="text-xs text-muted-foreground">
                 vs last month
@@ -401,7 +401,7 @@ export default function ExpensesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All categories</SelectItem>
-                    {categories?.map((category: any) => (
+                    {(categories || []).map((category: any) => (
                       <SelectItem key={category.id} value={category.id.toString()}>
                         {category.name}
                       </SelectItem>
@@ -423,7 +423,7 @@ export default function ExpensesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All vendors</SelectItem>
-                    {vendors?.map((vendor: any) => (
+                    {(vendors || []).map((vendor: any) => (
                       <SelectItem key={vendor.id} value={vendor.id.toString()}>
                         {vendor.name}
                       </SelectItem>
