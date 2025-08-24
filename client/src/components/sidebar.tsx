@@ -140,6 +140,7 @@ export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) 
         { name: "Business Profile", href: "/business-profile", icon: Store, roles: ["Super Admin", "Admin/Owner"] },
         { name: "Branches", href: "/branches", icon: Store, roles: ["Super Admin", "Admin/Owner"] },
         { name: "Registers", href: "/registers", icon: ShoppingCart, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Register Sessions", href: "/register-sessions", icon: DollarSign, roles: ["Super Admin", "Admin/Owner", "Manager", "Cashier"] },
       ]
     },
     {

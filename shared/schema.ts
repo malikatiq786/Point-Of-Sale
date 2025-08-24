@@ -103,6 +103,95 @@ export const registers = pgTable("registers", {
 });
 
 // =========================================
+// 💰 Register Session & Denomination Management
+// =========================================
+
+export const denominationTypes = pgTable("denomination_types", {
+  id: serial("id").primaryKey(),
+  value: numeric("value", { precision: 10, scale: 2 }).notNull(), // 10, 20, 50, 100, 500, 1000, 5000
+  type: varchar("type", { length: 20 }).notNull(), // 'note' or 'coin'
+  name: varchar("name", { length: 50 }).notNull(), // '10 PKR Note', '5000 PKR Note'
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const registerSessions = pgTable("register_sessions", {
+  id: serial("id").primaryKey(),
+  registerId: integer("register_id").references(() => registers.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  branchId: integer("branch_id").references(() => branches.id).notNull(),
+  sessionNumber: varchar("session_number", { length: 50 }).unique().notNull(),
+  declaredOpeningBalance: numeric("declared_opening_balance", { precision: 12, scale: 2 }).notNull(),
+  calculatedOpeningBalance: numeric("calculated_opening_balance", { precision: 12, scale: 2 }).notNull(),
+  declaredClosingBalance: numeric("declared_closing_balance", { precision: 12, scale: 2 }),
+  calculatedClosingBalance: numeric("calculated_closing_balance", { precision: 12, scale: 2 }),
+  systemExpectedBalance: numeric("system_expected_balance", { precision: 12, scale: 2 }),
+  discrepancyAmount: numeric("discrepancy_amount", { precision: 12, scale: 2 }).default("0"),
+  status: varchar("status", { length: 20 }).default("open"), // open, closed, suspended
+  openedAt: timestamp("opened_at").defaultNow(),
+  closedAt: timestamp("closed_at"),
+  openedBy: varchar("opened_by").references(() => users.id).notNull(),
+  closedBy: varchar("closed_by").references(() => users.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const registerSessionDenominations = pgTable("register_session_denominations", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").references(() => registerSessions.id, { onDelete: "cascade" }).notNull(),
+  denominationId: integer("denomination_id").references(() => denominationTypes.id).notNull(),
+  openingQuantity: integer("opening_quantity").default(0),
+  openingAmount: numeric("opening_amount", { precision: 12, scale: 2 }).default("0"),
+  closingQuantity: integer("closing_quantity").default(0),
+  closingAmount: numeric("closing_amount", { precision: 12, scale: 2 }).default("0"),
+  type: varchar("type", { length: 10 }).notNull(), // 'opening' or 'closing'
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  sessionDenominationUnique: {
+    unique: [table.sessionId, table.denominationId, table.type],
+  },
+}));
+
+export const cashReconciliationReports = pgTable("cash_reconciliation_reports", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").references(() => registerSessions.id).notNull(),
+  registerId: integer("register_id").references(() => registers.id).notNull(),
+  branchId: integer("branch_id").references(() => branches.id).notNull(),
+  reportDate: timestamp("report_date").defaultNow(),
+  totalSales: numeric("total_sales", { precision: 12, scale: 2 }).default("0"),
+  totalCashSales: numeric("total_cash_sales", { precision: 12, scale: 2 }).default("0"),
+  totalExpenses: numeric("total_expenses", { precision: 12, scale: 2 }).default("0"),
+  expectedBalance: numeric("expected_balance", { precision: 12, scale: 2 }).default("0"),
+  actualBalance: numeric("actual_balance", { precision: 12, scale: 2 }).default("0"),
+  discrepancy: numeric("discrepancy", { precision: 12, scale: 2 }).default("0"),
+  discrepancyPercentage: numeric("discrepancy_percentage", { precision: 5, scale: 2 }).default("0"),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, reviewed, approved
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const registerAuditLogs = pgTable("register_audit_logs", {
+  id: serial("id").primaryKey(),
+  registerId: integer("register_id").references(() => registers.id),
+  sessionId: integer("session_id").references(() => registerSessions.id),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  branchId: integer("branch_id").references(() => branches.id),
+  action: varchar("action", { length: 100 }).notNull(), // 'session_opened', 'session_closed', 'balance_updated', 'discrepancy_found'
+  description: text("description").notNull(),
+  oldValue: jsonb("old_value"),
+  newValue: jsonb("new_value"),
+  amount: numeric("amount", { precision: 12, scale: 2 }),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  metadata: jsonb("metadata"), // Additional data like denomination breakdown, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// =========================================
 // 📦 Product & Inventory Management
 // =========================================
 
@@ -881,3 +970,41 @@ export type InsertOnlineCustomer = z.infer<typeof insertOnlineCustomerSchema>;
 export type InsertDeliveryRider = z.infer<typeof insertDeliveryRiderSchema>;
 export type InsertRiderAssignment = z.infer<typeof insertRiderAssignmentSchema>;
 export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
+
+// =========================================
+// Register Session & Denomination Types
+// =========================================
+
+export type DenominationType = typeof denominationTypes.$inferSelect;
+export type RegisterSession = typeof registerSessions.$inferSelect;
+export type RegisterSessionDenomination = typeof registerSessionDenominations.$inferSelect;
+export type CashReconciliationReport = typeof cashReconciliationReports.$inferSelect;
+export type RegisterAuditLog = typeof registerAuditLogs.$inferSelect;
+
+export const insertDenominationTypeSchema = createInsertSchema(denominationTypes).omit({
+  id: true,
+  createdAt: true,
+});
+export const insertRegisterSessionSchema = createInsertSchema(registerSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertRegisterSessionDenominationSchema = createInsertSchema(registerSessionDenominations).omit({
+  id: true,
+  createdAt: true,
+});
+export const insertCashReconciliationReportSchema = createInsertSchema(cashReconciliationReports).omit({
+  id: true,
+  createdAt: true,
+});
+export const insertRegisterAuditLogSchema = createInsertSchema(registerAuditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDenominationType = z.infer<typeof insertDenominationTypeSchema>;
+export type InsertRegisterSession = z.infer<typeof insertRegisterSessionSchema>;
+export type InsertRegisterSessionDenomination = z.infer<typeof insertRegisterSessionDenominationSchema>;
+export type InsertCashReconciliationReport = z.infer<typeof insertCashReconciliationReportSchema>;
+export type InsertRegisterAuditLog = z.infer<typeof insertRegisterAuditLogSchema>;

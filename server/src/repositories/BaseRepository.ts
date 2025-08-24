@@ -45,7 +45,7 @@ export abstract class BaseRepository<TTable, TInsert, TSelect> {
     try {
       const results = await this.db.select()
         .from(this.table)
-        .where(eq(this.table.id, id))
+        .where(sql`id = ${id}`)
         .limit(1);
       
       return results[0] || null;
@@ -74,7 +74,7 @@ export abstract class BaseRepository<TTable, TInsert, TSelect> {
     try {
       const results = await this.db.update(this.table)
         .set(data)
-        .where(eq(this.table.id, id))
+        .where(sql`id = ${id}`)
         .returning();
       
       return results[0] || null;
@@ -88,7 +88,7 @@ export abstract class BaseRepository<TTable, TInsert, TSelect> {
   async delete(id: number): Promise<boolean> {
     try {
       const results = await this.db.delete(this.table)
-        .where(eq(this.table.id, id))
+        .where(sql`id = ${id}`)
         .returning();
       
       return results.length > 0;
@@ -101,14 +101,14 @@ export abstract class BaseRepository<TTable, TInsert, TSelect> {
   // Generic count
   async count(conditions?: any): Promise<number> {
     try {
-      let query = this.db.select({ count: sql`count(*)::text` }).from(this.table);
+      let query = this.db.select({ count: sql`count(*)` }).from(this.table);
       
       if (conditions) {
         query = query.where(conditions);
       }
       
       const results = await query;
-      return parseInt(results[0]?.count || '0');
+      return Number(results[0]?.count || 0);
     } catch (error) {
       console.error(`Error counting:`, error);
       throw error;

@@ -170,4 +170,21 @@ export class ProductRepository {
       throw error;
     }
   }
+
+  // Count products
+  async count(conditions?: any): Promise<number> {
+    try {
+      let query = db.select({ count: sql`count(*)` }).from(schema.products);
+      
+      if (conditions) {
+        query = query.where(conditions);
+      }
+      
+      const results = await query;
+      return Number(results[0]?.count || 0);
+    } catch (error) {
+      console.error('Error counting products:', error);
+      throw error;
+    }
+  }
 }

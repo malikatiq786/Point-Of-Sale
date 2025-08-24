@@ -35,6 +35,7 @@ import CustomerLedgers from "@/features/customers/pages/customer-ledgers";
 import SupplierLedgers from "@/features/suppliers/pages/supplier-ledgers";
 import KitchenPOS from "@/features/kitchen/pages/kitchen-pos";
 import RestaurantApp from "@/pages/restaurant";
+import RegisterSessions from "@/pages/register-sessions";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -115,6 +116,7 @@ function Router() {
           <Route path="/business-profile" component={BusinessProfile} />
           <Route path="/branches" component={Branches} />
           <Route path="/registers" component={Registers} />
+          <Route path="/register-sessions" component={RegisterSessions} />
           <Route path="/restaurant-management" component={RestaurantManagement} />
           <Route path="/settings" component={Settings} />
         </>
