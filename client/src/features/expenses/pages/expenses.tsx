@@ -616,7 +616,7 @@ export default function ExpensesPage() {
                   {viewingExpense?.expense?.expenseNumber}
                 </DialogDescription>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 mr-6">
                 <Badge 
                   variant={getStatusBadgeVariant(viewingExpense?.expense?.approvalStatus)} 
                   className="text-sm px-3 py-1"
