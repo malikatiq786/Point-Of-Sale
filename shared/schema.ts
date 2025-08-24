@@ -378,21 +378,148 @@ export const transactions = pgTable("transactions", {
 });
 
 // =========================================
-// 💸 Expenses
+// 💸 Enterprise Expenses Management
 // =========================================
 
 export const expenseCategories = pgTable("expense_categories", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  parentId: integer("parent_id").references(() => expenseCategories.id), // For subcategories
+  isActive: boolean("is_active").default(true),
+  color: varchar("color", { length: 7 }), // Hex color for UI
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const expenseVendors = pgTable("expense_vendors", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 150 }).notNull(),
+  email: varchar("email", { length: 150 }),
+  phone: varchar("phone", { length: 20 }),
+  address: text("address"),
+  taxId: varchar("tax_id", { length: 50 }),
+  paymentTerms: varchar("payment_terms", { length: 100 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const expenseBudgets = pgTable("expense_budgets", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id").references(() => expenseCategories.id),
+  branchId: integer("branch_id").references(() => branches.id),
+  budgetAmount: numeric("budget_amount", { precision: 12, scale: 2 }).notNull(),
+  period: varchar("period", { length: 20 }).notNull(), // monthly, quarterly, yearly
+  year: integer("year").notNull(),
+  month: integer("month"), // for monthly budgets
+  quarter: integer("quarter"), // for quarterly budgets
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const expenseApprovalWorkflows = pgTable("expense_approval_workflows", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  minAmount: numeric("min_amount", { precision: 12, scale: 2 }).default("0"),
+  maxAmount: numeric("max_amount", { precision: 12, scale: 2 }),
+  requiredApprovers: integer("required_approvers").default(1),
+  approverRoleIds: integer("approver_role_ids").array(), // Array of role IDs
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
+  expenseNumber: varchar("expense_number", { length: 50 }).unique(),
   categoryId: integer("category_id").references(() => expenseCategories.id),
-  amount: numeric("amount", { precision: 12, scale: 2 }),
-  note: text("note"),
-  expenseDate: timestamp("expense_date"),
-  createdBy: varchar("created_by").references(() => users.id),
+  subcategoryId: integer("subcategory_id").references(() => expenseCategories.id),
+  vendorId: integer("vendor_id").references(() => expenseVendors.id),
+  branchId: integer("branch_id").references(() => branches.id),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  taxAmount: numeric("tax_amount", { precision: 12, scale: 2 }).default("0"),
+  totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).default("USD"),
+  exchangeRate: numeric("exchange_rate", { precision: 10, scale: 6 }).default("1"),
+  description: text("description"),
+  notes: text("notes"),
+  receiptNumber: varchar("receipt_number", { length: 100 }),
+  paymentMethod: varchar("payment_method", { length: 50 }).notNull(), // cash, bank, credit_card, digital_wallet
+  paymentReference: varchar("payment_reference", { length: 100 }),
+  expenseDate: timestamp("expense_date").notNull(),
+  dueDate: timestamp("due_date"),
+  paidDate: timestamp("paid_date"),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected, paid
+  approvalStatus: varchar("approval_status", { length: 20 }).default("pending"), // pending, approved, rejected
+  isRecurring: boolean("is_recurring").default(false),
+  recurringPattern: varchar("recurring_pattern", { length: 50 }), // daily, weekly, monthly, yearly
+  recurringEndDate: timestamp("recurring_end_date"),
+  nextRecurringDate: timestamp("next_recurring_date"),
+  parentExpenseId: integer("parent_expense_id").references(() => expenses.id), // For recurring expenses
+  isPettyCash: boolean("is_petty_cash").default(false),
+  projectId: integer("project_id"), // For project-based expenses
+  costCenter: varchar("cost_center", { length: 100 }),
+  taxType: varchar("tax_type", { length: 50 }), // VAT, GST, withholding
+  taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).default("0"),
+  isReimbursable: boolean("is_reimbursable").default(false),
+  reimbursedAmount: numeric("reimbursed_amount", { precision: 12, scale: 2 }).default("0"),
+  attachmentUrls: text("attachment_urls").array(), // Array of file URLs
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const expenseApprovals = pgTable("expense_approvals", {
+  id: serial("id").primaryKey(),
+  expenseId: integer("expense_id").references(() => expenses.id, { onDelete: "cascade" }).notNull(),
+  workflowId: integer("workflow_id").references(() => expenseApprovalWorkflows.id),
+  approverId: varchar("approver_id").references(() => users.id).notNull(),
+  status: varchar("status", { length: 20 }).notNull(), // pending, approved, rejected
+  comments: text("comments"),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const expenseAuditLogs = pgTable("expense_audit_logs", {
+  id: serial("id").primaryKey(),
+  expenseId: integer("expense_id").references(() => expenses.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  action: varchar("action", { length: 50 }).notNull(), // created, updated, deleted, approved, rejected
+  fieldChanged: varchar("field_changed", { length: 100 }),
+  oldValue: text("old_value"),
+  newValue: text("new_value"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const pettyCashAccounts = pgTable("petty_cash_accounts", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  branchId: integer("branch_id").references(() => branches.id),
+  initialAmount: numeric("initial_amount", { precision: 12, scale: 2 }).notNull(),
+  currentBalance: numeric("current_balance", { precision: 12, scale: 2 }).notNull(),
+  custodianId: varchar("custodian_id").references(() => users.id),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const expenseNotifications = pgTable("expense_notifications", {
+  id: serial("id").primaryKey(),
+  expenseId: integer("expense_id").references(() => expenses.id),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // approval_required, due_reminder, budget_exceeded, approved, rejected
+  title: varchar("title", { length: 200 }).notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const backupLogs = pgTable("backup_logs", {
@@ -681,7 +808,41 @@ export const insertCustomerSchema = createInsertSchema(customers);
 export const insertSupplierSchema = createInsertSchema(suppliers);
 export const insertPurchaseSchema = createInsertSchema(purchases);
 export const insertEmployeeSchema = createInsertSchema(employees);
-export const insertExpenseSchema = createInsertSchema(expenses);
+export const insertExpenseSchema = createInsertSchema(expenses).omit({
+  id: true,
+  expenseNumber: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertExpenseCategorySchema = createInsertSchema(expenseCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertExpenseVendorSchema = createInsertSchema(expenseVendors).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertExpenseBudgetSchema = createInsertSchema(expenseBudgets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertExpenseWorkflowSchema = createInsertSchema(expenseApprovalWorkflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertExpenseApprovalSchema = createInsertSchema(expenseApprovals).omit({
+  id: true,
+  createdAt: true,
+});
+export const insertPettyCashAccountSchema = createInsertSchema(pettyCashAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 export const insertCurrencySchema = createInsertSchema(currencies);
 export const insertDeliveryRiderSchema = createInsertSchema(deliveryRiders).omit({
   id: true,
@@ -702,6 +863,19 @@ export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+export type SelectExpense = typeof expenses.$inferSelect;
+export type InsertExpenseCategory = z.infer<typeof insertExpenseCategorySchema>;
+export type SelectExpenseCategory = typeof expenseCategories.$inferSelect;
+export type InsertExpenseVendor = z.infer<typeof insertExpenseVendorSchema>;
+export type SelectExpenseVendor = typeof expenseVendors.$inferSelect;
+export type InsertExpenseBudget = z.infer<typeof insertExpenseBudgetSchema>;
+export type SelectExpenseBudget = typeof expenseBudgets.$inferSelect;
+export type InsertExpenseWorkflow = z.infer<typeof insertExpenseWorkflowSchema>;
+export type SelectExpenseWorkflow = typeof expenseApprovalWorkflows.$inferSelect;
+export type InsertExpenseApproval = z.infer<typeof insertExpenseApprovalSchema>;
+export type SelectExpenseApproval = typeof expenseApprovals.$inferSelect;
+export type InsertPettyCashAccount = z.infer<typeof insertPettyCashAccountSchema>;
+export type SelectPettyCashAccount = typeof pettyCashAccounts.$inferSelect;
 export type InsertCurrency = z.infer<typeof insertCurrencySchema>;
 export type InsertOnlineCustomer = z.infer<typeof insertOnlineCustomerSchema>;
 export type InsertDeliveryRider = z.infer<typeof insertDeliveryRiderSchema>;

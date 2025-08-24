@@ -6,6 +6,7 @@ import { UserController } from '../controllers/UserController';
 import { InventoryController } from '../controllers/InventoryController';
 import { CustomerController } from '../controllers/CustomerController';
 import { SupplierController } from '../controllers/SupplierController';
+import { ExpenseController } from '../controllers/ExpenseController';
 import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
@@ -20,6 +21,7 @@ const userController = new UserController();
 const inventoryController = new InventoryController();
 const customerController = new CustomerController();
 const supplierController = new SupplierController();
+const expenseController = new ExpenseController();
 
 // Create router
 const router = Router();
@@ -773,5 +775,38 @@ router.put('/customers/:id', isAuthenticated, customerController.updateCustomer 
 router.delete('/customers/bulk-delete', isAuthenticated, customerController.bulkDeleteCustomers as any);
 router.delete('/customers/:id', isAuthenticated, customerController.deleteCustomer as any);
 
+// =========================================
+// 💸 EXPENSE MANAGEMENT ROUTES
+// =========================================
+
+// Expense CRUD operations
+router.get('/expenses', isAuthenticated, expenseController.getExpenses);
+router.get('/expenses/:id', isAuthenticated, expenseController.getExpenseById);
+router.post('/expenses', isAuthenticated, expenseController.createExpense);
+router.put('/expenses/:id', isAuthenticated, expenseController.updateExpense);
+router.delete('/expenses/:id', isAuthenticated, expenseController.deleteExpense);
+router.post('/expenses/bulk-delete', isAuthenticated, expenseController.bulkDeleteExpenses);
+
+// Expense Categories
+router.get('/expense-categories', isAuthenticated, expenseController.getCategories);
+router.post('/expense-categories', isAuthenticated, expenseController.createCategory);
+router.put('/expense-categories/:id', isAuthenticated, expenseController.updateCategory);
+router.delete('/expense-categories/:id', isAuthenticated, expenseController.deleteCategory);
+
+// Expense Vendors
+router.get('/expense-vendors', isAuthenticated, expenseController.getVendors);
+router.post('/expense-vendors', isAuthenticated, expenseController.createVendor);
+
+// Expense Budgets
+router.get('/expense-budgets', isAuthenticated, expenseController.getBudgets);
+router.post('/expense-budgets', isAuthenticated, expenseController.createBudget);
+
+// Expense Approvals
+router.post('/expenses/:id/approve', isAuthenticated, expenseController.approveExpense);
+router.post('/expenses/:id/reject', isAuthenticated, expenseController.rejectExpense);
+
+// Expense Reports
+router.get('/expense-reports/:reportType', isAuthenticated, expenseController.getExpenseReports);
+router.get('/expense-dashboard/stats', isAuthenticated, expenseController.getDashboardStats);
 
 export { router as apiRoutes };
