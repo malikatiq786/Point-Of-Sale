@@ -2039,11 +2039,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Category IDs array is required" });
       }
 
-      // Validate all IDs are numbers
-      const validIds = categoryIds.filter(id => !isNaN(parseInt(id))).map(id => parseInt(id));
+      // Validate all IDs are numbers and filter out invalid ones
+      const validIds = categoryIds
+        .filter(id => id !== null && id !== undefined && id !== '')
+        .map(id => {
+          const parsed = parseInt(id);
+          return isNaN(parsed) ? null : parsed;
+        })
+        .filter(id => id !== null);
+        
       if (validIds.length === 0) {
         return res.status(400).json({ message: "No valid category IDs provided" });
       }
+      
+      console.log('Original categoryIds:', categoryIds);
+      console.log('Valid parsed IDs:', validIds);
 
       console.log(`Attempting to delete ${validIds.length} categories:`, validIds);
       
