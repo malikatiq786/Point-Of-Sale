@@ -147,4 +147,66 @@ export class SupplierController {
       });
     }
   };
+
+  // Bulk delete suppliers
+  bulkDeleteSuppliers = async (req: Request, res: Response) => {
+    try {
+      console.log('=== BULK DELETE SUPPLIERS START ===');
+      console.log('Full request body:', JSON.stringify(req.body, null, 2));
+      
+      const { supplierIds } = req.body;
+      console.log('Received bulk delete request with body:', req.body);
+      console.log('SupplierIds type:', typeof supplierIds, 'Value:', supplierIds);
+      console.log('SupplierIds as JSON:', JSON.stringify(supplierIds));
+
+      if (!supplierIds || !Array.isArray(supplierIds) || supplierIds.length === 0) {
+        console.log('Invalid supplierIds array');
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: 'Supplier IDs array is required and cannot be empty'
+        });
+      }
+
+      // Validate and parse supplier IDs
+      const validIds: number[] = [];
+      for (let i = 0; i < supplierIds.length; i++) {
+        const id = supplierIds[i];
+        console.log(`Processing ID at index ${i}: ${id} Type: ${typeof id}`);
+        
+        const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+        console.log(`Parsed value: ${parsedId} isNaN: ${isNaN(parsedId)} isFinite: ${isFinite(parsedId)}`);
+        
+        if (isNaN(parsedId) || !isFinite(parsedId) || parsedId <= 0) {
+          console.log(`Invalid supplier ID: ${id} (parsed: ${parsedId})`);
+          return res.status(HTTP_STATUS.BAD_REQUEST).json({
+            message: `Invalid supplier ID: ${id}`
+          });
+        }
+        
+        validIds.push(parsedId);
+        console.log(`Added valid ID: ${parsedId}`);
+      }
+
+      console.log('Original supplierIds:', supplierIds);
+      console.log('Valid parsed IDs:', validIds);
+
+      const result = await this.supplierService.bulkDeleteSuppliers(validIds);
+
+      if (result.success) {
+        console.log('=== BULK DELETE SUPPLIERS END ===');
+        res.status(HTTP_STATUS.OK).json({
+          message: `Successfully deleted ${result.deletedCount} supplier(s)`
+        });
+      } else {
+        console.log('Bulk delete failed:', result.error);
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: result.error || ERROR_MESSAGES.INVALID_INPUT
+        });
+      }
+    } catch (error) {
+      console.error('SupplierController: Error in bulkDeleteSuppliers:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
 }

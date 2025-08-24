@@ -105,4 +105,46 @@ export class SupplierService {
       return { success: false, error: 'Failed to search suppliers' };
     }
   }
+
+  async bulkDeleteSuppliers(supplierIds: number[]) {
+    try {
+      console.log(`Attempting to delete ${supplierIds.length} suppliers:`, supplierIds);
+      
+      let deletedCount = 0;
+      const failedIds: number[] = [];
+
+      for (const supplierId of supplierIds) {
+        console.log(`Deleting supplier ${supplierId} (type: ${typeof supplierId})`);
+        try {
+          const success = await this.supplierRepository.delete(supplierId);
+          if (success) {
+            console.log(`Successfully deleted supplier ${supplierId}`);
+            deletedCount++;
+          } else {
+            console.log(`Failed to delete supplier ${supplierId} - not found`);
+            failedIds.push(supplierId);
+          }
+        } catch (error) {
+          console.error(`Error deleting supplier ${supplierId}:`, error);
+          failedIds.push(supplierId);
+        }
+      }
+
+      console.log(`Successfully deleted ${deletedCount} out of ${supplierIds.length} suppliers`);
+      
+      if (failedIds.length > 0) {
+        console.log('Failed to delete suppliers:', failedIds);
+        return { 
+          success: false, 
+          error: `Failed to delete suppliers with IDs: ${failedIds.join(', ')}`,
+          deletedCount 
+        };
+      }
+
+      return { success: true, deletedCount };
+    } catch (error) {
+      console.error('SupplierService: Error in bulk delete:', error);
+      return { success: false, error: 'Failed to perform bulk delete operation' };
+    }
+  }
 }

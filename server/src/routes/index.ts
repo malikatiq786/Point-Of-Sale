@@ -504,6 +504,7 @@ router.get('/suppliers', isAuthenticated, supplierController.getSuppliers as any
 router.post('/suppliers', isAuthenticated, supplierController.createSupplier as any);
 router.get('/suppliers/:id', isAuthenticated, supplierController.getSupplierById as any);
 router.put('/suppliers/:id', isAuthenticated, supplierController.updateSupplier as any);
+router.delete('/suppliers/bulk-delete', isAuthenticated, supplierController.bulkDeleteSuppliers as any);
 router.delete('/suppliers/:id', isAuthenticated, supplierController.deleteSupplier as any);
 router.get('/suppliers/search', isAuthenticated, supplierController.searchSuppliers as any);
 

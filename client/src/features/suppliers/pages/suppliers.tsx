@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Edit, Trash2, Truck, Eye, Phone, Mail, MapPin } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Suppliers() {
   const { user } = useAuth();
@@ -35,6 +36,8 @@ export default function Suppliers() {
     phone: "",
     address: ""
   });
+  const [selectedSuppliers, setSelectedSuppliers] = useState<number[]>([]);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
   // Fetch suppliers
   const { data: suppliers = [], isLoading } = useQuery({
@@ -106,6 +109,26 @@ export default function Suppliers() {
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (supplierIds: number[]) => apiRequest("DELETE", "/api/suppliers/bulk-delete", { supplierIds }),
+    onSuccess: (data: any) => {
+      toast({
+        title: "Success",
+        description: data.message || "Suppliers deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      setSelectedSuppliers([]);
+      setShowBulkDeleteDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete suppliers",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateSupplier = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSupplier.name) {
@@ -154,6 +177,41 @@ export default function Suppliers() {
     }
   };
 
+  const handleSelectSupplier = (supplierId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedSuppliers(prev => [...prev, supplierId]);
+    } else {
+      setSelectedSuppliers(prev => prev.filter(id => id !== supplierId));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedSuppliers(filteredSuppliers.map((supplier: any) => supplier.id));
+    } else {
+      setSelectedSuppliers([]);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedSuppliers.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one supplier to delete",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowBulkDeleteDialog(true);
+  };
+
+  const confirmBulkDelete = () => {
+    bulkDeleteMutation.mutate(selectedSuppliers);
+  };
+
+  const isAllSelected = selectedSuppliers.length > 0 && selectedSuppliers.length === filteredSuppliers.length;
+  const isIndeterminate = selectedSuppliers.length > 0 && selectedSuppliers.length < filteredSuppliers.length;
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar user={user} />
@@ -178,6 +236,34 @@ export default function Suppliers() {
                 />
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               </div>
+              
+              {/* Bulk delete controls */}
+              {filteredSuppliers.length > 0 && (
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={isAllSelected}
+                      indeterminate={isIndeterminate}
+                      onCheckedChange={handleSelectAll}
+                      data-testid="checkbox-select-all-suppliers"
+                    />
+                    <span className="text-sm text-gray-600">Select All</span>
+                  </div>
+                  
+                  {selectedSuppliers.length > 0 && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleBulkDelete}
+                      disabled={bulkDeleteMutation.isPending}
+                      data-testid="button-bulk-delete-suppliers"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Selected ({selectedSuppliers.length})
+                    </Button>
+                  )}
+                </div>
+              )}
               
               <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                 <DialogTrigger asChild>
@@ -409,10 +495,19 @@ export default function Suppliers() {
               filteredSuppliers.map((supplier: any) => (
                 <Card key={supplier.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
-                    <CardTitle className="text-lg">{supplier.name}</CardTitle>
-                    <Badge variant="secondary" className="text-xs w-fit">
-                      Supplier ID: {supplier.id}
-                    </Badge>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg">{supplier.name}</CardTitle>
+                        <Badge variant="secondary" className="text-xs w-fit">
+                          Supplier ID: {supplier.id}
+                        </Badge>
+                      </div>
+                      <Checkbox
+                        checked={selectedSuppliers.includes(supplier.id)}
+                        onCheckedChange={(checked) => handleSelectSupplier(supplier.id, checked as boolean)}
+                        data-testid={`checkbox-supplier-${supplier.id}`}
+                      />
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -461,6 +556,40 @@ export default function Suppliers() {
           </div>
         </main>
       </div>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Bulk Delete</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete {selectedSuppliers.length} selected supplier{selectedSuppliers.length > 1 ? 's' : ''}?
+            </p>
+            <p className="text-sm text-red-600 mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkDeleteDialog(false)}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              data-testid="button-confirm-bulk-delete-suppliers"
+            >
+              {bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete Suppliers'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
