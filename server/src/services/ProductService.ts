@@ -88,6 +88,10 @@ export class ProductService {
         brandId: productData.brandId || null,
         unitId: productData.unitId || null,
         price: productData.price || 0,
+        purchasePrice: productData.purchasePrice || 0,
+        salePrice: productData.salePrice || 0,
+        wholesalePrice: productData.wholesalePrice || 0,
+        retailPrice: productData.retailPrice || 0,
         stock: productData.stock || 0,
         lowStockAlert: productData.lowStockAlert || 0,
         image: productData.image || null

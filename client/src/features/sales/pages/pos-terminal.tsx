@@ -596,7 +596,8 @@ export default function POSTerminal() {
   const { data: products = [], isLoading } = useQuery<any[]>({
     queryKey: ["pos-products"],
     queryFn: async () => {
-      const response = await fetch("/api/products", {
+      // Fetch with a large page size to get all products
+      const response = await fetch("/api/products/1/1000", {
         credentials: 'include'
       });
       
