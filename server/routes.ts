@@ -2030,6 +2030,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk delete categories
+  app.delete("/api/categories/bulk-delete", isAuthenticated, async (req: any, res) => {
+    try {
+      const { categoryIds } = req.body;
+      
+      if (!categoryIds || !Array.isArray(categoryIds) || categoryIds.length === 0) {
+        return res.status(400).json({ message: "Category IDs array is required" });
+      }
+
+      // Validate all IDs are numbers
+      const validIds = categoryIds.filter(id => !isNaN(parseInt(id))).map(id => parseInt(id));
+      if (validIds.length === 0) {
+        return res.status(400).json({ message: "No valid category IDs provided" });
+      }
+
+      console.log(`Attempting to delete ${validIds.length} categories:`, validIds);
+      
+      let deletedCount = 0;
+      const errors = [];
+
+      // Delete each category
+      for (const categoryId of validIds) {
+        try {
+          console.log(`Deleting category ${categoryId}`);
+          await storage.deleteCategory(categoryId);
+          deletedCount++;
+        } catch (error) {
+          console.error(`Error deleting category ${categoryId}:`, error);
+          
+          // Handle foreign key constraint errors more gracefully
+          if (error.code === '23503') {
+            errors.push({ 
+              categoryId, 
+              error: "Category is being used by products" 
+            });
+          } else {
+            errors.push({ categoryId, error: error.message });
+          }
+        }
+      }
+      
+      // Log activity for successful deletions
+      if (deletedCount > 0) {
+        const userId = req.user?.claims?.sub || req.user?.id || "system";
+        await storage.logActivity(
+          userId,
+          `Bulk deleted ${deletedCount} categories`,
+          req.ip
+        );
+      }
+      
+      console.log(`Successfully deleted ${deletedCount} out of ${validIds.length} categories`);
+      
+      res.json({ 
+        message: `Successfully deleted ${deletedCount} out of ${validIds.length} categories`,
+        deletedCount,
+        totalRequested: validIds.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Error in bulk delete categories:", error);
+      res.status(500).json({ message: "Failed to delete categories", error: error.message });
+    }
+  });
+
   // Get categories that can be safely deleted (no products associated)
   app.get("/api/categories/deletable", isAuthenticated, async (req, res) => {
     try {

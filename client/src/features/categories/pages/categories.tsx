@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Search, Edit, Trash2, Tags, Eye, CheckCircle, Info, ChevronRight } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Tags, Eye, CheckCircle, Info, ChevronRight, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { categorySchema, CategoryFormData } from "@/features/categories/validations";
 
@@ -20,6 +21,8 @@ export default function Categories() {
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [showDeletableDialog, setShowDeletableDialog] = useState(false);
   const [viewingCategory, setViewingCategory] = useState<any>(null);
+  const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -116,6 +119,35 @@ export default function Categories() {
     },
   });
 
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (categoryIds: number[]) => {
+      const response = await fetch('/api/categories/bulk-delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categoryIds }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete categories');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      setSelectedCategories([]);
+      setShowBulkDeleteDialog(false);
+      toast({
+        title: "Success",
+        description: `${data.deletedCount} categories deleted successfully`,
+      });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.message || "Failed to delete categories";
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
+    },
+  });
+
   const onSubmit = (data: CategoryFormData) => {
     if (editingCategory) {
       updateCategoryMutation.mutate({ ...data, id: editingCategory.id });
@@ -146,6 +178,33 @@ export default function Categories() {
   const handleCheckDeletable = async () => {
     setShowDeletableDialog(true);
     await refetchDeletable();
+  };
+
+  // Bulk selection handlers
+  const handleSelectCategory = (categoryId: number) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedCategories.length === filteredCategories.length) {
+      setSelectedCategories([]);
+    } else {
+      setSelectedCategories(filteredCategories.map((category: any) => category.id));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedCategories.length > 0) {
+      setShowBulkDeleteDialog(true);
+    }
+  };
+
+  const confirmBulkDelete = () => {
+    bulkDeleteMutation.mutate(selectedCategories);
   };
 
   // Helper functions for hierarchy
@@ -248,6 +307,35 @@ export default function Categories() {
         </div>
         
         <div className="flex gap-2">
+          {/* Select All Checkbox */}
+          {filteredCategories.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="select-all"
+                checked={selectedCategories.length === filteredCategories.length && filteredCategories.length > 0}
+                onCheckedChange={handleSelectAll}
+              />
+              <label
+                htmlFor="select-all"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Select All
+              </label>
+            </div>
+          )}
+
+          {/* Bulk Delete Button */}
+          {selectedCategories.length > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              <Trash className="w-4 h-4 mr-2" />
+              Delete Selected ({selectedCategories.length})
+            </Button>
+          )}
+
           <Dialog open={isAddDialogOpen || !!editingCategory} onOpenChange={(open) => {
             if (!open) {
               setIsAddDialogOpen(false);
@@ -488,6 +576,13 @@ export default function Categories() {
             <Card key={category.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-center">
+                  {/* Selection checkbox */}
+                  <Checkbox
+                    checked={selectedCategories.includes(category.id)}
+                    onCheckedChange={() => handleSelectCategory(category.id)}
+                    className="mr-3"
+                  />
+                  
                   {/* Hierarchy indentation */}
                   {category.level > 0 && (
                     <div className="flex items-center mr-2 text-gray-400">
@@ -639,6 +734,67 @@ export default function Categories() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Trash className="w-5 h-5 mr-2 text-red-600" />
+              Delete Selected Categories
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Are you sure you want to delete the following {selectedCategories.length} categories? 
+              This action cannot be undone.
+            </p>
+            
+            <div className="max-h-48 overflow-y-auto space-y-2">
+              {selectedCategories.map(categoryId => {
+                const category = (categories as any[]).find((cat: any) => cat.id === categoryId);
+                return category ? (
+                  <div key={categoryId} className="flex items-center p-2 bg-red-50 rounded border">
+                    <Trash2 className="w-4 h-4 text-red-600 mr-2" />
+                    <span className="font-medium">{category.name}</span>
+                    {category.description && (
+                      <span className="text-sm text-gray-500 ml-2">• {category.description}</span>
+                    )}
+                  </div>
+                ) : null;
+              })}
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowBulkDeleteDialog(false)}
+                disabled={bulkDeleteMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={confirmBulkDelete}
+                disabled={bulkDeleteMutation.isPending}
+              >
+                {bulkDeleteMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash className="w-4 h-4 mr-2" />
+                    Delete Categories
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </AppLayout>
