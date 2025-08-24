@@ -2001,36 +2001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/categories/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const categoryId = parseInt(req.params.id);
-      
-      await storage.deleteCategory(categoryId);
-      
-      // Log activity - handle both user formats
-      const userId = req.user?.claims?.sub || req.user?.id || "system";
-      await storage.logActivity(
-        userId,
-        `Deleted category with ID: ${categoryId}`,
-        req.ip
-      );
-      
-      res.json({ message: "Category deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting category:", error);
-      
-      // Check if it's a foreign key constraint error
-      if (error.code === '23503') {
-        return res.status(400).json({ 
-          message: "Cannot delete category. It is being used by one or more products. Please remove or change the category of those products first." 
-        });
-      }
-      
-      res.status(500).json({ message: "Failed to delete category" });
-    }
-  });
-
-  // Bulk delete categories
+  // Bulk delete categories (must come BEFORE the :id route)
   app.delete("/api/categories/bulk-delete", isAuthenticated, async (req: any, res) => {
     console.log('=== BULK DELETE START ===');
     console.log('Full request body:', JSON.stringify(req.body, null, 2));
@@ -2152,6 +2123,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error in bulk delete categories:", error);
       res.status(500).json({ message: "Failed to delete categories", error: error.message || 'Unknown error' });
+    }
+  });
+
+  // Single category delete (must come AFTER the bulk-delete route)
+  app.delete("/api/categories/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      
+      // Validate the parsed ID
+      if (isNaN(categoryId) || !isFinite(categoryId) || categoryId <= 0 || !Number.isInteger(categoryId)) {
+        console.error("Invalid category ID received:", req.params.id, "Parsed as:", categoryId);
+        return res.status(400).json({ 
+          message: "Invalid category ID provided" 
+        });
+      }
+      
+      await storage.deleteCategory(categoryId);
+      
+      // Log activity - handle both user formats
+      const userId = req.user?.claims?.sub || req.user?.id || "system";
+      await storage.logActivity(
+        userId,
+        `Deleted category with ID: ${categoryId}`,
+        req.ip
+      );
+      
+      res.json({ message: "Category deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      
+      // Check if it's a foreign key constraint error
+      if (error.code === '23503') {
+        return res.status(400).json({ 
+          message: "Cannot delete category. It is being used by one or more products. Please remove or change the category of those products first." 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to delete category" });
     }
   });
 
