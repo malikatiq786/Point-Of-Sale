@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { FileText, Download, TrendingUp, TrendingDown, DollarSign, Calendar, BarChart3 } from "lucide-react";
+import { FileText, Download, TrendingUp, TrendingDown, DollarSign, Calendar, BarChart3, Loader2 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 
 export default function Reports() {
@@ -16,40 +17,57 @@ export default function Reports() {
   const [period, setPeriod] = useState("monthly");
   const { formatCurrencyValue } = useCurrency();
 
-  // Fetch report data
-  const { data: reportData = {}, isLoading } = useQuery({
-    queryKey: ["/api/reports", reportType, dateFrom, dateTo, period],
+  // Fetch dashboard summary
+  const { data: dashboardSummary, isLoading: isLoadingSummary } = useQuery({
+    queryKey: ["/api/reports/dashboard/summary", dateFrom, dateTo, period],
     retry: false,
   });
 
-  // Sample chart colors
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+  // Fetch profit & loss data
+  const { data: profitLossData = [], isLoading: isLoadingProfitLoss } = useQuery({
+    queryKey: ["/api/reports/profit-loss", period, dateFrom, dateTo],
+    retry: false,
+  });
 
-  const profitLossData = [
-    { month: 'Jan', income: 12000, expenses: 8000, profit: 4000 },
-    { month: 'Feb', income: 15000, expenses: 9000, profit: 6000 },
-    { month: 'Mar', income: 18000, expenses: 11000, profit: 7000 },
-    { month: 'Apr', income: 16000, expenses: 12000, profit: 4000 },
-    { month: 'May', income: 20000, expenses: 13000, profit: 7000 },
-    { month: 'Jun', income: 22000, expenses: 14000, profit: 8000 },
-  ];
+  // Fetch expense breakdown
+  const { data: expenseBreakdown = [], isLoading: isLoadingExpenseBreakdown } = useQuery({
+    queryKey: ["/api/reports/expense-breakdown", period, dateFrom, dateTo],
+    retry: false,
+  });
 
-  const expenseBreakdown = [
-    { name: 'Rent', value: 3000, color: '#0088FE' },
-    { name: 'Utilities', value: 800, color: '#00C49F' },
-    { name: 'Supplies', value: 1200, color: '#FFBB28' },
-    { name: 'Marketing', value: 1500, color: '#FF8042' },
-    { name: 'Other', value: 900, color: '#8884D8' },
-  ];
+  // Fetch detailed report data
+  const { data: reportData = {}, isLoading } = useQuery({
+    queryKey: ["/api/reports", reportType, dateFrom, dateTo, period],
+    enabled: reportType !== 'profit_loss', // Skip if we're showing profit_loss (already loaded above)
+    retry: false,
+  });
+
+  // Chart colors
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d', '#ffc658'];
 
   const generateReport = () => {
-    // This would trigger the report generation
-    console.log('Generating report:', { reportType, dateFrom, dateTo, period });
+    // Trigger data refresh by invalidating queries
+    queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/reports/dashboard/summary"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/reports/profit-loss"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/reports/expense-breakdown"] });
   };
 
   const exportReport = (format: string) => {
-    console.log('Exporting report as:', format);
-    // This would trigger the export functionality
+    // Implement export functionality
+    const reportDataToExport = {
+      reportType,
+      dateFrom,
+      dateTo,
+      period,
+      dashboardSummary,
+      profitLossData,
+      expenseBreakdown,
+      reportData
+    };
+    
+    console.log('Exporting report as:', format, reportDataToExport);
+    // TODO: Implement actual export logic (PDF, CSV, etc.)
   };
 
   return (
@@ -143,8 +161,21 @@ export default function Reports() {
               <TrendingUp className="w-8 h-8 text-green-500" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-green-600">$125,400</p>
-                <p className="text-xs text-green-500">+12% from last month</p>
+                {isLoadingSummary ? (
+                  <div className="flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <p className="text-sm text-gray-500">Loading...</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-green-600">
+                      {formatCurrencyValue(dashboardSummary?.totalRevenue || 0)}
+                    </p>
+                    <p className="text-xs text-green-500">
+                      +{dashboardSummary?.revenueGrowth || 0}% from last month
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </CardContent>
@@ -156,8 +187,21 @@ export default function Reports() {
               <TrendingDown className="w-8 h-8 text-red-500" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Expenses</p>
-                <p className="text-2xl font-bold text-red-600">$67,200</p>
-                <p className="text-xs text-red-500">+5% from last month</p>
+                {isLoadingSummary ? (
+                  <div className="flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <p className="text-sm text-gray-500">Loading...</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-red-600">
+                      {formatCurrencyValue(dashboardSummary?.totalExpenses || 0)}
+                    </p>
+                    <p className="text-xs text-red-500">
+                      +{dashboardSummary?.expenseGrowth || 0}% from last month
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </CardContent>
@@ -169,8 +213,22 @@ export default function Reports() {
               <DollarSign className="w-8 h-8 text-blue-500" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Net Profit</p>
-                <p className="text-2xl font-bold text-blue-600">$58,200</p>
-                <p className="text-xs text-green-500">+18% from last month</p>
+                {isLoadingSummary ? (
+                  <div className="flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <p className="text-sm text-gray-500">Loading...</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {formatCurrencyValue(dashboardSummary?.netProfit || 0)}
+                    </p>
+                    <p className="text-xs text-green-500">
+                      {(dashboardSummary?.netProfit || 0) >= 0 ? '+' : ''}
+                      {((dashboardSummary?.revenueGrowth || 0) - (dashboardSummary?.expenseGrowth || 0)).toFixed(1)}% from last month
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </CardContent>
@@ -182,8 +240,21 @@ export default function Reports() {
               <BarChart3 className="w-8 h-8 text-purple-500" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Profit Margin</p>
-                <p className="text-2xl font-bold text-purple-600">46.4%</p>
-                <p className="text-xs text-green-500">+2.1% from last month</p>
+                {isLoadingSummary ? (
+                  <div className="flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <p className="text-sm text-gray-500">Loading...</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-purple-600">
+                      {(dashboardSummary?.profitMargin || 0).toFixed(1)}%
+                    </p>
+                    <p className="text-xs text-green-500">
+                      Margin based on revenue
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </CardContent>
@@ -198,17 +269,24 @@ export default function Reports() {
             <CardTitle>Profit & Loss Trend</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={profitLossData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="income" fill="#10B981" name="Income" />
-                <Bar dataKey="expenses" fill="#EF4444" name="Expenses" />
-                <Bar dataKey="profit" fill="#3B82F6" name="Profit" />
-              </BarChart>
-            </ResponsiveContainer>
+            {isLoadingProfitLoss ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <span className="ml-2">Loading profit & loss data...</span>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={profitLossData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="period" />
+                  <YAxis tickFormatter={(value) => formatCurrencyValue(value)} />
+                  <Tooltip formatter={(value) => [formatCurrencyValue(value), '']} />
+                  <Bar dataKey="income" fill="#10B981" name="Income" />
+                  <Bar dataKey="expenses" fill="#EF4444" name="Expenses" />
+                  <Bar dataKey="profit" fill="#3B82F6" name="Profit" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -218,25 +296,36 @@ export default function Reports() {
             <CardTitle>Expense Breakdown</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={expenseBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {expenseBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            {isLoadingExpenseBreakdown ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <span className="ml-2">Loading expense breakdown...</span>
+              </div>
+            ) : expenseBreakdown.length === 0 ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <p className="text-gray-500">No expense data available for the selected period</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={expenseBreakdown}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {expenseBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [formatCurrencyValue(value), '']} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>

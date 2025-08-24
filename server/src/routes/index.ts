@@ -7,6 +7,7 @@ import { InventoryController } from '../controllers/InventoryController';
 import { CustomerController } from '../controllers/CustomerController';
 import { SupplierController } from '../controllers/SupplierController';
 import { ExpenseController } from '../controllers/ExpenseController';
+import { FinancialReportController } from '../controllers/FinancialReportController';
 import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
@@ -22,6 +23,7 @@ const inventoryController = new InventoryController();
 const customerController = new CustomerController();
 const supplierController = new SupplierController();
 const expenseController = new ExpenseController();
+const financialReportController = new FinancialReportController();
 
 // Create router
 const router = Router();
@@ -808,5 +810,15 @@ router.post('/expenses/:id/reject', isAuthenticated, expenseController.rejectExp
 // Expense Reports
 router.get('/expense-reports/:reportType', isAuthenticated, expenseController.getExpenseReports);
 router.get('/expense-dashboard/stats', isAuthenticated, expenseController.getDashboardStats);
+
+// =========================================
+// 📊 FINANCIAL REPORTS ROUTES
+// =========================================
+
+// Financial Reports
+router.get('/reports/:reportType', isAuthenticated, financialReportController.getFinancialReport);
+router.get('/reports/dashboard/summary', isAuthenticated, financialReportController.getDashboardSummary);
+router.get('/reports/profit-loss', isAuthenticated, financialReportController.getProfitLossData);
+router.get('/reports/expense-breakdown', isAuthenticated, financialReportController.getExpenseBreakdown);
 
 export { router as apiRoutes };
