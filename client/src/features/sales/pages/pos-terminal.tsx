@@ -825,7 +825,12 @@ export default function POSTerminal() {
       setTimeout(() => {
         setEditingItem(product.id);
         setEditQuantity((existingItem.quantity + 1).toString());
-      }, 50);
+        // Focus the quantity input
+        const quantityInput = quantityInputRefs.current[product.id];
+        if (quantityInput) {
+          quantityInput.focus();
+        }
+      }, 100);
     } else {
       // Set default price based on product category
       const defaultPrice = parseFloat(product.price) || 0;
@@ -847,7 +852,12 @@ export default function POSTerminal() {
       setTimeout(() => {
         setEditingItem(product.id);
         setEditQuantity('1');
-      }, 50);
+        // Focus the quantity input
+        const quantityInput = quantityInputRefs.current[product.id];
+        if (quantityInput) {
+          quantityInput.focus();
+        }
+      }, 100);
     }
   };
 
