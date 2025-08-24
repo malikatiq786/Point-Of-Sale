@@ -16,6 +16,8 @@ export default function Returns() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [selectedReturn, setSelectedReturn] = useState<any>(null);
   const [returnData, setReturnData] = useState({
     saleId: "",
     reason: "",
@@ -213,7 +215,15 @@ export default function Returns() {
                     </div>
                     
                     <div className="flex items-center space-x-2 ml-4">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedReturn(returnItem);
+                          setShowViewDialog(true);
+                        }}
+                        data-testid={`button-view-details-${returnItem.id}`}
+                      >
                         View Details
                       </Button>
                     </div>
@@ -286,6 +296,77 @@ export default function Returns() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Details Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Return Details</DialogTitle>
+          </DialogHeader>
+          {selectedReturn && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Return ID</Label>
+                  <p className="text-sm"># {selectedReturn.id}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Sale ID</Label>
+                  <p className="text-sm"># {selectedReturn.saleId}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Customer</Label>
+                  <p className="text-sm">{selectedReturn.customerName || 'Walk-in Customer'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Status</Label>
+                  <Badge className={getReturnStatus(selectedReturn.status).color}>
+                    {getReturnStatus(selectedReturn.status).label}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Return Amount</Label>
+                  <p className="text-sm">${parseFloat(selectedReturn.totalAmount || '0').toFixed(2)}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Date</Label>
+                  <p className="text-sm">{new Date(selectedReturn.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700">Return Reason</Label>
+                <p className="text-sm bg-gray-50 p-3 rounded-lg">{selectedReturn.reason}</p>
+              </div>
+              
+              {selectedReturn.items && selectedReturn.items.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Return Items</Label>
+                  <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+                    {selectedReturn.items.map((item: any, index: number) => (
+                      <div key={index} className="flex justify-between items-center">
+                        <span className="text-sm">Product ID: {item.productId}</span>
+                        <span className="text-sm">Qty: {item.quantity}</span>
+                        <span className="text-sm capitalize">{item.returnType}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex justify-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowViewDialog(false)}
+                  data-testid="button-close-return-details"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </AppLayout>
