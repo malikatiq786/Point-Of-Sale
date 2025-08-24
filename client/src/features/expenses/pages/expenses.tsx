@@ -201,11 +201,15 @@ export default function ExpensesPage() {
   });
 
   const expenses = expensesData?.data || [];
+  const expenseList = Array.isArray(expenses) ? expenses : [];
   const summary = expensesData?.summary || {};
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedExpenses(expenses.map((expense: Expense) => expense.id));
+      setSelectedExpenses(expenseList.map((expenseItem: any) => {
+        const expense = expenseItem.expense || expenseItem;
+        return expense.id;
+      }));
     } else {
       setSelectedExpenses([]);
     }
@@ -234,14 +238,19 @@ export default function ExpensesPage() {
   };
 
   const formatCurrency = (amount: string | number) => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(numAmount)) return '$0.00';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(Number(amount));
+    }).format(numAmount);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
+    return date.toLocaleDateString();
   };
 
   if (isLoadingExpenses) {
@@ -495,7 +504,7 @@ export default function ExpensesPage() {
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
-                checked={selectedExpenses.length === expenses.length && expenses.length > 0}
+                checked={selectedExpenses.length === expenseList.length && expenseList.length > 0}
                 onCheckedChange={handleSelectAll}
                 data-testid="checkbox-select-all"
               />
@@ -521,7 +530,9 @@ export default function ExpensesPage() {
                 </tr>
               </thead>
               <tbody>
-                {expenses.map((expense: Expense) => (
+                {expenseList.map((expenseItem: any) => {
+                  const expense = expenseItem.expense || expenseItem;
+                  return (
                   <tr key={expense.id} className="border-b hover:bg-muted/50">
                     <td className="p-2">
                       <Checkbox
@@ -591,11 +602,12 @@ export default function ExpensesPage() {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
 
-            {expenses.length === 0 && (
+            {expenseList.length === 0 && (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">No expenses found</p>
                 <p className="text-sm text-muted-foreground mt-1">
