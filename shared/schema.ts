@@ -145,7 +145,11 @@ export const products = pgTable("products", {
   unitId: integer("unit_id").references(() => units.id),
   description: text("description"),
   barcode: varchar("barcode", { length: 255 }),
-  price: numeric("price", { precision: 10, scale: 2 }).default("0"),
+  price: numeric("price", { precision: 10, scale: 2 }).default("0"), // Main price (sale price)
+  purchasePrice: numeric("purchase_price", { precision: 10, scale: 2 }).default("0"),
+  salePrice: numeric("sale_price", { precision: 10, scale: 2 }).default("0"),
+  wholesalePrice: numeric("wholesale_price", { precision: 10, scale: 2 }).default("0"),
+  retailPrice: numeric("retail_price", { precision: 10, scale: 2 }).default("0"),
   stock: integer("stock").default(0),
   lowStockAlert: integer("low_stock_alert").default(0),
   image: text("image"),

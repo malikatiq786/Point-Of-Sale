@@ -25,7 +25,10 @@ export default function AddProduct() {
     categoryId: "",
     brandId: "",
     unitId: "",
-    price: "",
+    purchasePrice: "",
+    salePrice: "",
+    wholesalePrice: "",
+    retailPrice: "",
     stock: "",
     lowStockAlert: "",
     image: ""
@@ -66,7 +69,10 @@ export default function AddProduct() {
         categoryId: "",
         brandId: "",
         unitId: "",
-        price: "",
+        purchasePrice: "",
+        salePrice: "",
+        wholesalePrice: "",
+        retailPrice: "",
         stock: "",
         lowStockAlert: "",
         image: ""
@@ -105,7 +111,11 @@ export default function AddProduct() {
       categoryId: formData.categoryId ? parseInt(formData.categoryId) : null,
       brandId: formData.brandId ? parseInt(formData.brandId) : null,
       unitId: formData.unitId ? parseInt(formData.unitId) : null,
-      price: formData.price ? parseFloat(formData.price) : 0,
+      price: formData.salePrice ? parseFloat(formData.salePrice) : 0, // Use sale price as main price
+      purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : 0,
+      salePrice: formData.salePrice ? parseFloat(formData.salePrice) : 0,
+      wholesalePrice: formData.wholesalePrice ? parseFloat(formData.wholesalePrice) : 0,
+      retailPrice: formData.retailPrice ? parseFloat(formData.retailPrice) : 0,
       stock: formData.stock ? parseInt(formData.stock) : 0,
       lowStockAlert: formData.lowStockAlert ? parseInt(formData.lowStockAlert) : 0,
     };
@@ -236,14 +246,53 @@ export default function AddProduct() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="price">Price ($)</Label>
+                  <Label htmlFor="purchasePrice">Purchase Price ($) *</Label>
                   <Input
-                    id="price"
+                    id="purchasePrice"
                     type="number"
                     step="0.01"
                     min="0"
-                    value={formData.price}
-                    onChange={(e) => handleInputChange('price', e.target.value)}
+                    value={formData.purchasePrice}
+                    onChange={(e) => handleInputChange('purchasePrice', e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="salePrice">Sale Price ($) *</Label>
+                  <Input
+                    id="salePrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.salePrice}
+                    onChange={(e) => handleInputChange('salePrice', e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="wholesalePrice">Wholesale Qty Price ($)</Label>
+                  <Input
+                    id="wholesalePrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.wholesalePrice}
+                    onChange={(e) => handleInputChange('wholesalePrice', e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="retailPrice">Single Piece Shopkeeper Price ($)</Label>
+                  <Input
+                    id="retailPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.retailPrice}
+                    onChange={(e) => handleInputChange('retailPrice', e.target.value)}
                     placeholder="0.00"
                   />
                 </div>
