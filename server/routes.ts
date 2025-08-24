@@ -2035,18 +2035,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { categoryIds } = req.body;
       
+      console.log('Received bulk delete request with body:', req.body);
+      console.log('CategoryIds type:', typeof categoryIds, 'Value:', categoryIds);
+      
       if (!categoryIds || !Array.isArray(categoryIds) || categoryIds.length === 0) {
         return res.status(400).json({ message: "Category IDs array is required" });
       }
 
       // Validate all IDs are numbers and filter out invalid ones
-      const validIds = categoryIds
-        .filter(id => id !== null && id !== undefined && id !== '')
-        .map(id => {
-          const parsed = parseInt(id);
-          return isNaN(parsed) ? null : parsed;
-        })
-        .filter(id => id !== null);
+      const validIds = [];
+      for (let i = 0; i < categoryIds.length; i++) {
+        const id = categoryIds[i];
+        console.log(`Processing ID at index ${i}:`, id, 'Type:', typeof id);
+        
+        if (id !== null && id !== undefined && id !== '') {
+          const parsed = typeof id === 'number' ? id : parseInt(String(id), 10);
+          console.log('Parsed value:', parsed, 'isNaN:', isNaN(parsed));
+          
+          if (!isNaN(parsed) && parsed > 0) {
+            validIds.push(parsed);
+          }
+        }
+      }
         
       if (validIds.length === 0) {
         return res.status(400).json({ message: "No valid category IDs provided" });

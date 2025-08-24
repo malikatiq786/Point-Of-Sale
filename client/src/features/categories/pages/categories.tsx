@@ -122,6 +122,9 @@ export default function Categories() {
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: async (categoryIds: number[]) => {
+      console.log('Frontend: Sending bulk delete with categoryIds:', categoryIds);
+      console.log('Frontend: CategoryIds types:', categoryIds.map(id => ({ id, type: typeof id })));
+      
       const response = await fetch('/api/categories/bulk-delete', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
