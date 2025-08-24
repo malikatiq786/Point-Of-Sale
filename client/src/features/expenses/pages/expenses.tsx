@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { AppLayout } from "@/layouts";
 import { Plus, Filter, Download, Calendar, DollarSign, Users, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -267,16 +268,17 @@ export default function ExpensesPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Expense Management</h1>
-          <p className="text-muted-foreground">
-            Manage and track all business expenses
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <AppLayout>
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Expense Management</h1>
+            <p className="text-muted-foreground">
+              Manage and track all business expenses
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
@@ -590,6 +592,7 @@ export default function ExpensesPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
