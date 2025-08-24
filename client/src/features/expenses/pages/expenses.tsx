@@ -474,23 +474,6 @@ export default function ExpensesPage() {
         </Card>
       )}
 
-      {/* Bulk Actions */}
-      {selectedExpenses.length > 0 && (
-        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-          <span className="text-sm font-medium">
-            {selectedExpenses.length} expense(s) selected
-          </span>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleBulkDelete}
-            disabled={bulkDeleteMutation.isPending}
-            data-testid="button-bulk-delete"
-          >
-            {bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete Selected'}
-          </Button>
-        </div>
-      )}
 
       {/* Expenses Table */}
       <Card>
@@ -502,14 +485,6 @@ export default function ExpensesPage() {
                 {summary.count || 0} total expenses, {formatCurrency(summary.total || 0)} total amount
               </CardDescription>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                checked={selectedExpenses.length === expenseList.length && expenseList.length > 0}
-                onCheckedChange={handleSelectAll}
-                data-testid="checkbox-select-all"
-              />
-              <span className="text-sm font-medium">Select All</span>
-            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -517,17 +492,15 @@ export default function ExpensesPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-2">Select</th>
-                  <th className="text-left p-2">Expense #</th>
-                  <th className="text-left p-2">Date</th>
-                  <th className="text-left p-2">Category</th>
-                  <th className="text-left p-2">Vendor</th>
-                  <th className="text-left p-2">Amount</th>
-                  <th className="text-left p-2">Status</th>
-                  <th className="text-left p-2">Payment Method</th>
-                  <th className="text-left p-2">Created By</th>
+                  <th className="text-left p-3">Expense #</th>
+                  <th className="text-left p-3">Date</th>
+                  <th className="text-left p-3">Description</th>
+                  <th className="text-left p-3">Category</th>
+                  <th className="text-left p-3">Vendor</th>
+                  <th className="text-left p-3">Amount</th>
+                  <th className="text-left p-3">Status</th>
                   {filters.approvalStatus === 'pending' && (
-                    <th className="text-left p-2">Actions</th>
+                    <th className="text-left p-3">Actions</th>
                   )}
                 </tr>
               </thead>
@@ -536,43 +509,36 @@ export default function ExpensesPage() {
                   const expense = expenseItem.expense || expenseItem;
                   return (
                   <tr key={expense.id} className="border-b hover:bg-muted/50">
-                    <td className="p-2">
-                      <Checkbox
-                        checked={selectedExpenses.includes(expense.id)}
-                        onCheckedChange={(checked) => 
-                          handleSelectExpense(expense.id, checked as boolean)
-                        }
-                        data-testid={`checkbox-expense-${expense.id}`}
-                      />
-                    </td>
-                    <td className="p-2 font-medium" data-testid={`text-expense-number-${expense.id}`}>
+                    <td className="p-3 font-medium text-sm" data-testid={`text-expense-number-${expense.id}`}>
                       {expense.expenseNumber}
                     </td>
-                    <td className="p-2" data-testid={`text-expense-date-${expense.id}`}>
+                    <td className="p-3 text-sm" data-testid={`text-expense-date-${expense.id}`}>
                       {formatDate(expense.expenseDate)}
                     </td>
-                    <td className="p-2" data-testid={`text-category-${expense.id}`}>
+                    <td className="p-3 text-sm" data-testid={`text-description-${expense.id}`}>
+                      <div className="max-w-xs">
+                        <div className="font-medium">{expense.description || '-'}</div>
+                        {expense.notes && (
+                          <div className="text-xs text-muted-foreground mt-1">{expense.notes}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3 text-sm" data-testid={`text-category-${expense.id}`}>
                       {expense.category?.name || '-'}
                     </td>
-                    <td className="p-2" data-testid={`text-vendor-${expense.id}`}>
+                    <td className="p-3 text-sm" data-testid={`text-vendor-${expense.id}`}>
                       {expense.vendor?.name || '-'}
                     </td>
-                    <td className="p-2 font-medium" data-testid={`text-amount-${expense.id}`}>
+                    <td className="p-3 font-semibold text-sm" data-testid={`text-amount-${expense.id}`}>
                       {formatCurrency(expense.totalAmount)}
                     </td>
-                    <td className="p-2" data-testid={`status-${expense.id}`}>
-                      <Badge variant={getStatusBadgeVariant(expense.approvalStatus)}>
-                        {expense.approvalStatus}
+                    <td className="p-3" data-testid={`status-${expense.id}`}>
+                      <Badge variant={getStatusBadgeVariant(expense.approvalStatus)} className="text-xs">
+                        {expense.approvalStatus.charAt(0).toUpperCase() + expense.approvalStatus.slice(1)}
                       </Badge>
                     </td>
-                    <td className="p-2" data-testid={`text-payment-method-${expense.id}`}>
-                      {expense.paymentMethod}
-                    </td>
-                    <td className="p-2" data-testid={`text-creator-${expense.id}`}>
-                      {expense.creator?.name || '-'}
-                    </td>
                     {filters.approvalStatus === 'pending' && (
-                      <td className="p-2">
+                      <td className="p-3">
                         {expense.approvalStatus === 'pending' ? (
                           <div className="flex items-center gap-2">
                             <Button
@@ -581,9 +547,9 @@ export default function ExpensesPage() {
                               onClick={() => approveExpenseMutation.mutate(expense.id)}
                               disabled={approveExpenseMutation.isPending}
                               data-testid={`button-approve-${expense.id}`}
-                              className="text-green-600 border-green-600 hover:bg-green-50"
+                              className="text-green-600 border-green-600 hover:bg-green-50 text-xs px-2 py-1"
                             >
-                              <CheckCircle className="h-4 w-4 mr-1" />
+                              <CheckCircle className="h-3 w-3 mr-1" />
                               Approve
                             </Button>
                             <Button
@@ -592,14 +558,14 @@ export default function ExpensesPage() {
                               onClick={() => rejectExpenseMutation.mutate(expense.id)}
                               disabled={rejectExpenseMutation.isPending}
                               data-testid={`button-reject-${expense.id}`}
-                              className="text-red-600 border-red-600 hover:bg-red-50"
+                              className="text-red-600 border-red-600 hover:bg-red-50 text-xs px-2 py-1"
                             >
-                              <XCircle className="h-4 w-4 mr-1" />
+                              <XCircle className="h-3 w-3 mr-1" />
                               Reject
                             </Button>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground text-sm">
+                          <span className="text-muted-foreground text-xs">
                             {expense.approvalStatus === 'approved' ? 'Approved' : 'Rejected'}
                           </span>
                         )}
