@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Search, Plus, Edit, Trash2, Package } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Package, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const brandSchema = z.object({
@@ -24,6 +25,8 @@ export default function Brands() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<any>(null);
+  const [selectedBrands, setSelectedBrands] = useState<number[]>([]);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -112,6 +115,38 @@ export default function Brands() {
     },
   });
 
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (brandIds: number[]) => {
+      console.log('Frontend: Sending bulk delete with brandIds:', brandIds);
+      console.log('Frontend: BrandIds types:', brandIds.map(id => ({ id, type: typeof id })));
+      
+      const response = await fetch('/api/brands/bulk-delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandIds }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete brands');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/brands'] });
+      setSelectedBrands([]);
+      setShowBulkDeleteDialog(false);
+      toast({
+        title: "Success",
+        description: `${data.deletedCount} brands deleted successfully`,
+      });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.message || "Failed to delete brands";
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
+    },
+  });
+
   const onSubmit = (data: BrandFormData) => {
     if (editingBrand) {
       updateBrandMutation.mutate({ ...data, id: editingBrand.id });
@@ -132,6 +167,47 @@ export default function Brands() {
     if (confirm('Are you sure you want to delete this brand?')) {
       deleteBrandMutation.mutate(id);
     }
+  };
+
+  // Bulk selection handlers
+  const handleSelectBrand = (brandId: number) => {
+    console.log('Frontend: Selecting brand with ID:', brandId, 'Type:', typeof brandId);
+    setSelectedBrands(prev => {
+      const newSelection = prev.includes(brandId) 
+        ? prev.filter(id => id !== brandId)
+        : [...prev, brandId];
+      console.log('Frontend: Updated selectedBrands:', newSelection);
+      return newSelection;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedBrands.length === filteredBrands.length) {
+      setSelectedBrands([]);
+    } else {
+      setSelectedBrands(filteredBrands.map((brand: any) => brand.id));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedBrands.length > 0) {
+      setShowBulkDeleteDialog(true);
+    }
+  };
+
+  const confirmBulkDelete = () => {
+    console.log('Frontend: About to delete brands. selectedBrands:', selectedBrands);
+    console.log('Frontend: selectedBrands types:', selectedBrands.map(id => ({ id, type: typeof id, isNaN: isNaN(id) })));
+    
+    // Filter out any invalid IDs
+    const validIds = selectedBrands.filter(id => typeof id === 'number' && !isNaN(id) && id > 0);
+    console.log('Frontend: After filtering, valid IDs:', validIds);
+    
+    if (validIds.length !== selectedBrands.length) {
+      console.warn('Frontend: Some invalid IDs were filtered out!');
+    }
+    
+    bulkDeleteMutation.mutate(validIds);
   };
 
   const filteredBrands = brands.filter((brand: any) =>
@@ -156,23 +232,54 @@ export default function Brands() {
           />
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
         </div>
-
-        <Dialog open={isAddDialogOpen || !!editingBrand} onOpenChange={(open) => {
-          if (!open) {
-            setIsAddDialogOpen(false);
-            setEditingBrand(null);
-            form.reset();
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={() => setIsAddDialogOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+        
+        <div className="flex gap-2">
+          {/* Select All Checkbox */}
+          {filteredBrands.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="select-all"
+                checked={selectedBrands.length === filteredBrands.length && filteredBrands.length > 0}
+                onCheckedChange={handleSelectAll}
+              />
+              <label
+                htmlFor="select-all"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Select All
+              </label>
+            </div>
+          )}
+          
+          {/* Bulk Delete Button */}
+          {selectedBrands.length > 0 && (
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              data-testid="button-bulk-delete"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Brand
+              <Trash className="w-4 h-4 mr-2" />
+              Delete Selected ({selectedBrands.length})
             </Button>
-          </DialogTrigger>
+          )}
+
+          <Dialog open={isAddDialogOpen || !!editingBrand} onOpenChange={(open) => {
+            if (!open) {
+              setIsAddDialogOpen(false);
+              setEditingBrand(null);
+              form.reset();
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button 
+                onClick={() => setIsAddDialogOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Brand
+              </Button>
+            </DialogTrigger>
           
           <DialogContent>
             <DialogHeader>
@@ -232,6 +339,7 @@ export default function Brands() {
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
@@ -256,6 +364,11 @@ export default function Brands() {
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
+                    <Checkbox
+                      checked={selectedBrands.includes(brand.id)}
+                      onCheckedChange={() => handleSelectBrand(brand.id)}
+                      data-testid={`checkbox-brand-${brand.id}`}
+                    />
                     <div className="p-2 bg-blue-100 rounded-lg">
                       <Package className="w-5 h-5 text-blue-600" />
                     </div>
@@ -319,6 +432,40 @@ export default function Brands() {
           </CardContent>
         </Card>
       )}
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Bulk Delete</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete {selectedBrands.length} selected brand{selectedBrands.length > 1 ? 's' : ''}?
+            </p>
+            <p className="text-sm text-red-600 mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkDeleteDialog(false)}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              data-testid="button-confirm-bulk-delete"
+            >
+              {bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete Brands'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

@@ -2273,13 +2273,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk delete brands (must come BEFORE the :id route)
+  app.delete("/api/brands/bulk-delete", isAuthenticated, async (req: any, res) => {
+    console.log('=== BULK DELETE BRANDS START ===');
+    console.log('Full request body:', JSON.stringify(req.body, null, 2));
+    
+    try {
+      const { brandIds } = req.body;
+      
+      console.log('Received bulk delete request with body:', req.body);
+      console.log('BrandIds type:', typeof brandIds, 'Value:', brandIds);
+      console.log('BrandIds as JSON:', JSON.stringify(brandIds));
+      
+      if (!brandIds || !Array.isArray(brandIds) || brandIds.length === 0) {
+        return res.status(400).json({ message: "Brand IDs array is required" });
+      }
+
+      // Validate all IDs are numbers and filter out invalid ones
+      const validIds: number[] = [];
+      for (let i = 0; i < brandIds.length; i++) {
+        const id = brandIds[i];
+        console.log(`Processing ID at index ${i}:`, id, 'Type:', typeof id);
+        
+        // More robust validation
+        if (id !== null && id !== undefined && id !== '' && id !== 'NaN') {
+          let parsed: number;
+          
+          if (typeof id === 'number') {
+            parsed = id;
+          } else if (typeof id === 'string') {
+            // Trim whitespace and check if it's a valid number string
+            const trimmed = id.trim();
+            if (trimmed === '' || trimmed === 'NaN' || trimmed === 'undefined' || trimmed === 'null') {
+              console.log(`Skipping invalid ID: "${trimmed}"`);
+              continue;
+            }
+            parsed = parseInt(trimmed, 10);
+          } else {
+            console.log(`Skipping non-numeric ID of type ${typeof id}:`, id);
+            continue;
+          }
+          
+          console.log('Parsed value:', parsed, 'isNaN:', isNaN(parsed), 'isFinite:', isFinite(parsed));
+          
+          // Ensure it's a positive integer
+          if (!isNaN(parsed) && isFinite(parsed) && parsed > 0 && Number.isInteger(parsed)) {
+            validIds.push(parsed);
+            console.log(`Added valid ID: ${parsed}`);
+          } else {
+            console.log(`Rejected invalid ID: ${parsed} (original: ${id})`);
+          }
+        } else {
+          console.log(`Skipping null/undefined/empty ID at index ${i}:`, id);
+        }
+      }
+        
+      if (validIds.length === 0) {
+        console.log('No valid IDs found after validation');
+        return res.status(400).json({ message: "No valid brand IDs provided" });
+      }
+      
+      console.log('Original brandIds:', brandIds);
+      console.log('Valid parsed IDs:', validIds);
+
+      console.log(`Attempting to delete ${validIds.length} brands:`, validIds);
+      
+      let deletedCount = 0;
+      const errors: any[] = [];
+
+      // Delete each brand individually with additional validation
+      for (const brandId of validIds) {
+        try {
+          // Double-check that brandId is still valid before deletion
+          if (!Number.isInteger(brandId) || brandId <= 0) {
+            console.error(`Invalid brand ID detected before deletion: ${brandId}`);
+            errors.push({ 
+              brandId, 
+              error: "Invalid brand ID format" 
+            });
+            continue;
+          }
+          
+          console.log(`Deleting brand ${brandId} (type: ${typeof brandId})`);
+          await storage.deleteBrand(brandId);
+          deletedCount++;
+          console.log(`Successfully deleted brand ${brandId}`);
+        } catch (error: any) {
+          console.error(`Error deleting brand ${brandId}:`, error);
+          
+          // Handle foreign key constraint errors more gracefully
+          if (error.code === '23503') {
+            errors.push({ 
+              brandId, 
+              error: "Brand is being used by products" 
+            });
+          } else {
+            errors.push({ brandId, error: error.message || 'Unknown error' });
+          }
+        }
+      }
+      
+      // Log activity for successful deletions
+      if (deletedCount > 0) {
+        const userId = req.user?.claims?.sub || req.user?.id || "system";
+        await storage.logActivity(
+          userId,
+          `Bulk deleted ${deletedCount} brands`,
+          req.ip
+        );
+      }
+      
+      console.log(`Successfully deleted ${deletedCount} out of ${validIds.length} brands`);
+      console.log('=== BULK DELETE BRANDS END ===');
+      
+      res.json({ 
+        message: `Successfully deleted ${deletedCount} out of ${validIds.length} brands`,
+        deletedCount,
+        totalRequested: validIds.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      console.error("Error in bulk delete brands:", error);
+      res.status(500).json({ message: "Failed to delete brands", error: error.message || 'Unknown error' });
+    }
+  });
+
+  // Single brand delete (must come AFTER the bulk-delete route)
   app.delete("/api/brands/:id", isAuthenticated, async (req, res) => {
     try {
-      const { id } = req.params;
-      await storage.deleteBrand(parseInt(id));
+      const brandId = parseInt(req.params.id);
+      
+      // Validate the parsed ID
+      if (isNaN(brandId) || !isFinite(brandId) || brandId <= 0 || !Number.isInteger(brandId)) {
+        console.error("Invalid brand ID received:", req.params.id, "Parsed as:", brandId);
+        return res.status(400).json({ 
+          message: "Invalid brand ID provided" 
+        });
+      }
+      
+      await storage.deleteBrand(brandId);
       res.json({ message: "Brand deleted successfully" });
     } catch (error) {
       console.error("Error deleting brand:", error);
+      
+      // Check if it's a foreign key constraint error
+      if (error.code === '23503') {
+        return res.status(400).json({ 
+          message: "Cannot delete brand. It is being used by one or more products. Please remove or change the brand of those products first." 
+        });
+      }
+      
       res.status(500).json({ message: "Failed to delete brand" });
     }
   });
