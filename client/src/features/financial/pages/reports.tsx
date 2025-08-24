@@ -53,21 +53,214 @@ export default function Reports() {
     queryClient.invalidateQueries({ queryKey: ["/api/reports/expense-breakdown"] });
   };
 
-  const exportReport = (format: string) => {
-    // Implement export functionality
+  const exportToCSV = (data: any[], filename: string) => {
+    const csvContent = convertToCSV(data);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const convertToCSV = (data: any[]) => {
+    if (!data || data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data.map(row => 
+      Object.values(row).map((value: any) => 
+        typeof value === 'string' && value.includes(',') ? `"${value}"` : value
+      ).join(',')
+    );
+    
+    return [headers, ...rows].join('\n');
+  };
+
+  const exportToPDF = (reportData: any, filename: string) => {
+    // Simple HTML to PDF export using browser's print functionality
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const htmlContent = generatePDFContent(reportData);
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  const generatePDFContent = (data: any) => {
+    const currentDate = new Date().toLocaleDateString();
+    const reportTitle = getReportTitle(reportType);
+    
+    return `
+      <html>
+        <head>
+          <title>${reportTitle}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+            .section { margin: 20px 0; }
+            .stats { display: flex; justify-content: space-around; margin: 20px 0; }
+            .stat-box { text-align: center; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .footer { margin-top: 30px; text-align: center; color: #666; border-top: 1px solid #ddd; padding-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>${reportTitle}</h1>
+            <p>Period: ${dateFrom || 'All time'} to ${dateTo || 'Present'}</p>
+            <p>Generated on: ${currentDate}</p>
+          </div>
+          
+          <div class="section">
+            <h2>Summary Statistics</h2>
+            <div class="stats">
+              <div class="stat-box">
+                <h3>Total Revenue</h3>
+                <p>${formatCurrencyValue(dashboardSummary?.totalRevenue || 0)}</p>
+              </div>
+              <div class="stat-box">
+                <h3>Total Expenses</h3>
+                <p>${formatCurrencyValue(dashboardSummary?.totalExpenses || 0)}</p>
+              </div>
+              <div class="stat-box">
+                <h3>Net Profit</h3>
+                <p>${formatCurrencyValue(dashboardSummary?.netProfit || 0)}</p>
+              </div>
+              <div class="stat-box">
+                <h3>Profit Margin</h3>
+                <p>${(dashboardSummary?.profitMargin || 0).toFixed(1)}%</p>
+              </div>
+            </div>
+          </div>
+          
+          ${profitLossData && profitLossData.length > 0 ? `
+          <div class="section">
+            <h2>Profit & Loss Data</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Period</th>
+                  <th>Income</th>
+                  <th>Expenses</th>
+                  <th>Profit</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${profitLossData.map((item: any) => `
+                  <tr>
+                    <td>${item.period}</td>
+                    <td>${formatCurrencyValue(item.income || 0)}</td>
+                    <td>${formatCurrencyValue(item.expenses || 0)}</td>
+                    <td>${formatCurrencyValue(item.profit || 0)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+          
+          ${expenseBreakdown && expenseBreakdown.length > 0 ? `
+          <div class="section">
+            <h2>Expense Breakdown</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Amount</th>
+                  <th>Percentage</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${expenseBreakdown.map((item: any) => `
+                  <tr>
+                    <td>${item.name}</td>
+                    <td>${formatCurrencyValue(item.value || 0)}</td>
+                    <td>${((item.value / expenseBreakdown.reduce((sum: number, exp: any) => sum + exp.value, 0)) * 100).toFixed(1)}%</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+          
+          <div class="footer">
+            <p>Generated by Universal POS System - ${currentDate}</p>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
+  const getReportTitle = (type: string) => {
+    const titles: Record<string, string> = {
+      'profit_loss': 'Profit & Loss Report',
+      'sales_summary': 'Sales Summary Report',
+      'expense_report': 'Expense Report',
+      'cashflow': 'Cash Flow Report',
+      'balance_sheet': 'Balance Sheet Report'
+    };
+    return titles[type] || 'Financial Report';
+  };
+
+  const exportReport = (format: string, quickReportName?: string) => {
+    const reportTitle = quickReportName || getReportTitle(reportType);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    
     const reportDataToExport = {
-      reportType,
+      reportType: quickReportName ? quickReportName.toLowerCase().replace(/\s+/g, '_') : reportType,
       dateFrom,
       dateTo,
       period,
       dashboardSummary,
       profitLossData,
       expenseBreakdown,
-      reportData
+      reportData,
+      generatedAt: new Date().toISOString()
     };
-    
-    console.log('Exporting report as:', format, reportDataToExport);
-    // TODO: Implement actual export logic (PDF, CSV, etc.)
+
+    if (format === 'csv') {
+      // Export different data based on report type
+      let dataToExport: any[] = [];
+      let filename = '';
+
+      if (profitLossData && profitLossData.length > 0) {
+        dataToExport = profitLossData;
+        filename = `profit-loss-${dateStr}.csv`;
+      } else if (expenseBreakdown && expenseBreakdown.length > 0) {
+        dataToExport = expenseBreakdown.map((item: any) => ({
+          category: item.name,
+          amount: item.value,
+          percentage: ((item.value / expenseBreakdown.reduce((sum: number, exp: any) => sum + exp.value, 0)) * 100).toFixed(1) + '%'
+        }));
+        filename = `expense-breakdown-${dateStr}.csv`;
+      } else {
+        // Export summary data
+        dataToExport = [{
+          report_type: reportTitle,
+          date_from: dateFrom,
+          date_to: dateTo,
+          total_revenue: dashboardSummary?.totalRevenue || 0,
+          total_expenses: dashboardSummary?.totalExpenses || 0,
+          net_profit: dashboardSummary?.netProfit || 0,
+          profit_margin: (dashboardSummary?.profitMargin || 0).toFixed(1) + '%'
+        }];
+        filename = `${reportTitle.toLowerCase().replace(/\s+/g, '-')}-${dateStr}.csv`;
+      }
+
+      exportToCSV(dataToExport, filename);
+    } else {
+      // PDF export
+      const filename = `${reportTitle.toLowerCase().replace(/\s+/g, '-')}-${dateStr}.pdf`;
+      exportToPDF(reportDataToExport, filename);
+    }
   };
 
   const handleQuickReport = (quickReportType: string) => {
@@ -128,7 +321,7 @@ export default function Reports() {
   const handleQuickReportExport = (quickReportType: string, format: string) => {
     handleQuickReport(quickReportType);
     setTimeout(() => {
-      exportReport(format);
+      exportReport(format, quickReportType);
     }, 1000); // Allow time for report generation
   };
 
