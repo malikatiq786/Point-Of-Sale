@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Trash2, Users, Eye, Phone, Mail, MapPin } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Customers() {
   const { user } = useAuth();
@@ -22,6 +23,8 @@ export default function Customers() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedCustomers, setSelectedCustomers] = useState<number[]>([]);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     email: "",
@@ -106,6 +109,26 @@ export default function Customers() {
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (customerIds: number[]) => apiRequest("DELETE", "/api/customers/bulk-delete", { customerIds }),
+    onSuccess: (data: any) => {
+      toast({
+        title: "Success",
+        description: data.message || "Customers deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      setSelectedCustomers([]);
+      setShowBulkDeleteDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete customers",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateCustomer = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCustomer.name) {
@@ -152,6 +175,38 @@ export default function Customers() {
     if (confirm(`Are you sure you want to delete ${customer.name}?`)) {
       deleteCustomerMutation.mutate(customer.id);
     }
+  };
+
+  const handleSelectCustomer = (customerId: number) => {
+    setSelectedCustomers(prev => 
+      prev.includes(customerId) 
+        ? prev.filter(id => id !== customerId)
+        : [...prev, customerId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedCustomers.length === filteredCustomers.length) {
+      setSelectedCustomers([]);
+    } else {
+      setSelectedCustomers(filteredCustomers.map((customer: any) => customer.id));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedCustomers.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select customers to delete",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowBulkDeleteDialog(true);
+  };
+
+  const confirmBulkDelete = () => {
+    bulkDeleteMutation.mutate(selectedCustomers);
   };
 
   return (
@@ -373,6 +428,38 @@ export default function Customers() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-6">
+          {/* Bulk Actions */}
+          {filteredCustomers.length > 0 && (
+            <div className="flex items-center justify-between mb-6 p-4 bg-white rounded-lg border border-gray-200">
+              <div className="flex items-center space-x-4">
+                <Checkbox
+                  checked={selectedCustomers.length === filteredCustomers.length && filteredCustomers.length > 0}
+                  onCheckedChange={handleSelectAll}
+                  data-testid="checkbox-select-all-customers"
+                />
+                <span className="text-sm text-gray-600">
+                  {selectedCustomers.length > 0 
+                    ? `${selectedCustomers.length} of ${filteredCustomers.length} customers selected` 
+                    : `Select all ${filteredCustomers.length} customers`
+                  }
+                </span>
+              </div>
+              
+              {selectedCustomers.length > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleteMutation.isPending}
+                  data-testid="button-delete-selected-customers"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Selected ({selectedCustomers.length})
+                </Button>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {isLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
@@ -409,10 +496,21 @@ export default function Customers() {
               filteredCustomers.map((customer: any) => (
                 <Card key={customer.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
-                    <CardTitle className="text-lg">{customer.name}</CardTitle>
-                    <Badge variant="secondary" className="text-xs w-fit">
-                      Customer ID: {customer.id}
-                    </Badge>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          checked={selectedCustomers.includes(customer.id)}
+                          onCheckedChange={() => handleSelectCustomer(customer.id)}
+                          data-testid={`checkbox-customer-${customer.id}`}
+                        />
+                        <div>
+                          <CardTitle className="text-lg">{customer.name}</CardTitle>
+                          <Badge variant="secondary" className="text-xs w-fit">
+                            Customer ID: {customer.id}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -461,6 +559,40 @@ export default function Customers() {
           </div>
         </main>
       </div>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Bulk Delete</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete {selectedCustomers.length} selected customer{selectedCustomers.length > 1 ? 's' : ''}?
+            </p>
+            <p className="text-sm text-red-600 mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkDeleteDialog(false)}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              data-testid="button-confirm-bulk-delete-customers"
+            >
+              {bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete Customers'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

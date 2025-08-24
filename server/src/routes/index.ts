@@ -769,6 +769,7 @@ router.get('/customers/search', isAuthenticated, customerController.searchCustom
 router.get('/customers/:id', isAuthenticated, customerController.getCustomerById as any);
 router.post('/customers', isAuthenticated, customerController.createCustomer as any);
 router.put('/customers/:id', isAuthenticated, customerController.updateCustomer as any);
+router.delete('/customers/bulk-delete', isAuthenticated, customerController.bulkDeleteCustomers as any);
 router.delete('/customers/:id', isAuthenticated, customerController.deleteCustomer as any);
 
 

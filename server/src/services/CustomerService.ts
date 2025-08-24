@@ -105,4 +105,46 @@ export class CustomerService {
       return { success: false, error: 'Failed to search customers' };
     }
   }
+
+  async bulkDeleteCustomers(customerIds: number[]) {
+    try {
+      console.log(`Attempting to delete ${customerIds.length} customers:`, customerIds);
+      
+      let deletedCount = 0;
+      const failedIds: number[] = [];
+
+      for (const customerId of customerIds) {
+        console.log(`Deleting customer ${customerId} (type: ${typeof customerId})`);
+        try {
+          const success = await this.customerRepository.delete(customerId);
+          if (success) {
+            console.log(`Successfully deleted customer ${customerId}`);
+            deletedCount++;
+          } else {
+            console.log(`Failed to delete customer ${customerId} - not found`);
+            failedIds.push(customerId);
+          }
+        } catch (error) {
+          console.error(`Error deleting customer ${customerId}:`, error);
+          failedIds.push(customerId);
+        }
+      }
+
+      console.log(`Successfully deleted ${deletedCount} out of ${customerIds.length} customers`);
+      
+      if (failedIds.length > 0) {
+        console.log('Failed to delete customers:', failedIds);
+        return { 
+          success: false, 
+          error: `Failed to delete customers with IDs: ${failedIds.join(', ')}`,
+          deletedCount 
+        };
+      }
+
+      return { success: true, deletedCount };
+    } catch (error) {
+      console.error('CustomerService: Error in bulk delete:', error);
+      return { success: false, error: 'Failed to perform bulk delete operation' };
+    }
+  }
 }

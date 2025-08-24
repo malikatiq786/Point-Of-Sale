@@ -147,4 +147,66 @@ export class CustomerController {
       });
     }
   };
+
+  // Bulk delete customers
+  bulkDeleteCustomers = async (req: Request, res: Response) => {
+    try {
+      console.log('=== BULK DELETE CUSTOMERS START ===');
+      console.log('Full request body:', JSON.stringify(req.body, null, 2));
+      
+      const { customerIds } = req.body;
+      console.log('Received bulk delete request with body:', req.body);
+      console.log('CustomerIds type:', typeof customerIds, 'Value:', customerIds);
+      console.log('CustomerIds as JSON:', JSON.stringify(customerIds));
+
+      if (!customerIds || !Array.isArray(customerIds) || customerIds.length === 0) {
+        console.log('Invalid customerIds array');
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: 'Customer IDs array is required and cannot be empty'
+        });
+      }
+
+      // Validate and parse customer IDs
+      const validIds: number[] = [];
+      for (let i = 0; i < customerIds.length; i++) {
+        const id = customerIds[i];
+        console.log(`Processing ID at index ${i}: ${id} Type: ${typeof id}`);
+        
+        const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+        console.log(`Parsed value: ${parsedId} isNaN: ${isNaN(parsedId)} isFinite: ${isFinite(parsedId)}`);
+        
+        if (isNaN(parsedId) || !isFinite(parsedId) || parsedId <= 0) {
+          console.log(`Invalid customer ID: ${id} (parsed: ${parsedId})`);
+          return res.status(HTTP_STATUS.BAD_REQUEST).json({
+            message: `Invalid customer ID: ${id}`
+          });
+        }
+        
+        validIds.push(parsedId);
+        console.log(`Added valid ID: ${parsedId}`);
+      }
+
+      console.log('Original customerIds:', customerIds);
+      console.log('Valid parsed IDs:', validIds);
+
+      const result = await this.customerService.bulkDeleteCustomers(validIds);
+
+      if (result.success) {
+        console.log('=== BULK DELETE CUSTOMERS END ===');
+        res.status(HTTP_STATUS.OK).json({
+          message: `Successfully deleted ${result.deletedCount} customer(s)`
+        });
+      } else {
+        console.log('Bulk delete failed:', result.error);
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: result.error || ERROR_MESSAGES.INVALID_INPUT
+        });
+      }
+    } catch (error) {
+      console.error('CustomerController: Error in bulkDeleteCustomers:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
 }
