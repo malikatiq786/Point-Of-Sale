@@ -4,19 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Search, Edit, Trash2, Tags, Eye, CheckCircle, Info } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Tags, Eye, CheckCircle, Info, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const categorySchema = z.object({
-  name: z.string().min(1, "Category name is required"),
-});
-
-type CategoryFormData = z.infer<typeof categorySchema>;
+import { categorySchema, CategoryFormData } from "@/features/categories/validations";
 
 export default function Categories() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,6 +27,8 @@ export default function Categories() {
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: "",
+      description: "",
+      parentId: undefined,
     },
   });
 
@@ -130,6 +128,8 @@ export default function Categories() {
     setEditingCategory(category);
     form.reset({
       name: category.name,
+      description: category.description || "",
+      parentId: category.parentId || undefined,
     });
   };
 
@@ -148,7 +148,62 @@ export default function Categories() {
     await refetchDeletable();
   };
 
-  const filteredCategories = (categories as any[]).filter((category: any) =>
+  // Helper functions for hierarchy
+  const buildCategoryHierarchy = (categories: any[]) => {
+    const categoryMap = new Map();
+    const rootCategories: any[] = [];
+    
+    // First, create a map of all categories
+    categories.forEach(category => {
+      categoryMap.set(category.id, { ...category, children: [] });
+    });
+    
+    // Then, build the hierarchy
+    categories.forEach(category => {
+      if (category.parentId) {
+        const parent = categoryMap.get(category.parentId);
+        if (parent) {
+          parent.children.push(categoryMap.get(category.id));
+        } else {
+          // Parent doesn't exist, treat as root
+          rootCategories.push(categoryMap.get(category.id));
+        }
+      } else {
+        rootCategories.push(categoryMap.get(category.id));
+      }
+    });
+    
+    return rootCategories;
+  };
+
+  const flattenHierarchy = (hierarchicalCategories: any[], level = 0): any[] => {
+    const result: any[] = [];
+    
+    hierarchicalCategories.forEach(category => {
+      result.push({ ...category, level });
+      if (category.children && category.children.length > 0) {
+        result.push(...flattenHierarchy(category.children, level + 1));
+      }
+    });
+    
+    return result;
+  };
+
+  const getParentPath = (categoryId: number, categories: any[]): string => {
+    const category = categories.find(cat => cat.id === categoryId);
+    if (!category || !category.parentId) return '';
+    
+    const parent = categories.find(cat => cat.id === category.parentId);
+    if (!parent) return '';
+    
+    const parentPath = getParentPath(parent.id, categories);
+    return parentPath ? `${parentPath} > ${parent.name}` : parent.name;
+  };
+
+  const hierarchicalCategories = buildCategoryHierarchy(categories as any[]);
+  const flatCategories = flattenHierarchy(hierarchicalCategories);
+  
+  const filteredCategories = flatCategories.filter((category: any) =>
     category.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -205,6 +260,54 @@ export default function Categories() {
                         <FormControl>
                           <Input placeholder="Enter category name" {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter category description" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="parentId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Parent Category (Optional)</FormLabel>
+                        <Select 
+                          onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                          value={field.value?.toString() || ""}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select parent category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">None (Root Category)</SelectItem>
+                            {(categories as any[])
+                              .filter((category: any) => 
+                                // Don't show the category being edited as a potential parent (prevent circular reference)
+                                !editingCategory || category.id !== editingCategory.id
+                              )
+                              .map((category: any) => (
+                                <SelectItem key={category.id} value={category.id.toString()}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -363,16 +466,39 @@ export default function Categories() {
           filteredCategories.map((category: any) => (
             <Card key={category.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
-                <CardTitle className="text-lg">{category.name}</CardTitle>
+                <div className="flex items-center">
+                  {/* Hierarchy indentation */}
+                  {category.level > 0 && (
+                    <div className="flex items-center mr-2 text-gray-400">
+                      {Array.from({ length: category.level }).map((_, i) => (
+                        <ChevronRight key={i} className="w-3 h-3" />
+                      ))}
+                    </div>
+                  )}
+                  <CardTitle className="text-lg">{category.name}</CardTitle>
+                </div>
+                {/* Show parent path */}
+                {category.parentId && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {getParentPath(category.id, categories as any[])} &gt; <span className="font-medium">{category.name}</span>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-center h-20 bg-gray-100 rounded-lg mb-4">
                   <Tags className="w-8 h-8 text-gray-400" />
                 </div>
                 
+                {/* Show description if available */}
+                {category.description && (
+                  <div className="text-sm text-gray-600 mb-3 p-2 bg-gray-50 rounded">
+                    {category.description}
+                  </div>
+                )}
+                
                 <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                   <div className="text-sm text-gray-500">
-                    ID: {category.id}
+                    ID: {category.id} {category.level > 0 && <span className="text-xs">• Level {category.level + 1}</span>}
                   </div>
                   <div className="flex items-center space-x-2">
                     <Button 
@@ -429,15 +555,48 @@ export default function Categories() {
                 </div>
               </div>
               
+              {viewingCategory.description && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Description</label>
+                  <p className="text-lg">{viewingCategory.description}</p>
+                </div>
+              )}
+              
               <div>
                 <label className="text-sm font-medium text-gray-500">Parent Category</label>
                 <p className="text-lg">
                   {viewingCategory.parentId ? 
-                    categories.find((cat: any) => cat.id === viewingCategory.parentId)?.name || 'Unknown' 
+                    (categories as any[]).find((cat: any) => cat.id === viewingCategory.parentId)?.name || 'Unknown' 
                     : 'None (Root Category)'
                   }
                 </p>
+                {viewingCategory.parentId && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Full path: {getParentPath(viewingCategory.id, categories as any[])} &gt; {viewingCategory.name}
+                  </p>
+                )}
               </div>
+
+              {/* Show child categories */}
+              {(() => {
+                const children = (categories as any[]).filter((cat: any) => cat.parentId === viewingCategory.id);
+                return children.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Child Categories ({children.length})</label>
+                    <div className="mt-2 space-y-1">
+                      {children.map((child: any) => (
+                        <div key={child.id} className="flex items-center p-2 bg-gray-50 rounded">
+                          <ChevronRight className="w-4 h-4 text-gray-400 mr-2" />
+                          <span className="font-medium">{child.name}</span>
+                          {child.description && (
+                            <span className="text-sm text-gray-500 ml-2">• {child.description}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="flex justify-center pt-4">
                 <div className="flex items-center justify-center h-20 w-20 bg-gray-100 rounded-lg">
