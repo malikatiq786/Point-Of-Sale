@@ -1671,6 +1671,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Product BULK DELETE endpoint
+  app.delete("/api/products/bulk", isAuthenticated, async (req, res) => {
+    console.log("=== BULK DELETE PRODUCTS ENDPOINT CALLED ===");
+    
+    try {
+      const { productIds } = req.body;
+      console.log(`Raw product IDs from body:`, productIds);
+      
+      if (!Array.isArray(productIds) || productIds.length === 0) {
+        console.log("Invalid product IDs - not an array or empty");
+        return res.status(400).json({ message: "Invalid product IDs. Must be a non-empty array." });
+      }
+
+      // Validate all IDs are numbers
+      const validIds = productIds.filter(id => !isNaN(parseInt(id))).map(id => parseInt(id));
+      if (validIds.length === 0) {
+        console.log("No valid product IDs found");
+        return res.status(400).json({ message: "No valid product IDs provided" });
+      }
+
+      console.log(`ROUTE: Attempting to delete ${validIds.length} products:`, validIds);
+      
+      // Check count before deletion
+      const productsBeforeDelete = await storage.getProductsCount();
+      console.log(`ROUTE: Total products before bulk delete: ${productsBeforeDelete}`);
+      
+      let deletedCount = 0;
+      const errors = [];
+
+      // Delete each product
+      for (const productId of validIds) {
+        try {
+          console.log(`ROUTE: Deleting product ${productId}`);
+          await storage.deleteProduct(productId);
+          deletedCount++;
+        } catch (error) {
+          console.error(`ROUTE: Error deleting product ${productId}:`, error);
+          errors.push({ productId, error: error.message });
+        }
+      }
+      
+      // Check count after deletion
+      const productsAfterDelete = await storage.getProductsCount();
+      console.log(`ROUTE: Total products after bulk delete: ${productsAfterDelete}`);
+      console.log(`ROUTE: Successfully deleted ${deletedCount} out of ${validIds.length} products`);
+      
+      res.json({ 
+        message: `Successfully deleted ${deletedCount} out of ${validIds.length} products`,
+        deletedCount,
+        totalRequested: validIds.length,
+        beforeCount: productsBeforeDelete,
+        afterCount: productsAfterDelete,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("ROUTE: Error in bulk delete products:", error);
+      res.status(500).json({ message: "Failed to delete products", error: error.message });
+    }
+  });
+
   // Customer routes - DISABLED (using simple in-memory version above)
   // app.get("/api/customers", isAuthenticated, async (req, res) => {
   //   try {

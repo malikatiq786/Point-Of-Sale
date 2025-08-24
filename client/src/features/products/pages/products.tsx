@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, Package, Eye, Filter, X, ChevronLeft, ChevronRight, Settings, Warehouse } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, Eye, Filter, X, ChevronLeft, ChevronRight, Settings, Warehouse, Check } from "lucide-react";
 import { Link } from "wouter";
 import { useCurrency } from "@/hooks/useCurrency";
 
@@ -31,6 +32,7 @@ export default function Products() {
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [adjustment, setAdjustment] = useState({ type: "increase", quantity: "", reason: "" });
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const { formatCurrencyValue } = useCurrency();
 
   // Delete product mutation
@@ -60,6 +62,38 @@ export default function Products() {
         variant: "destructive",
       });
       console.error('Delete product error:', error);
+    },
+  });
+
+  // Bulk delete product mutation
+  const bulkDeleteProductMutation = useMutation({
+    mutationFn: async (productIds: number[]) => {
+      const response = await apiRequest('DELETE', '/api/products/bulk', { productIds });
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Products deleted",
+        description: `Successfully deleted ${data.deletedCount} out of ${data.totalRequested} products.`,
+      });
+      // Clear selected products
+      setSelectedProducts([]);
+      // Force immediate refetch of current page data
+      queryClient.refetchQueries({ queryKey: [`products-${currentPage}-${itemsPerPage}`] });
+      // Invalidate all product-related queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ["pos-products"] });
+      // Invalidate any cached product queries with different pagination
+      queryClient.invalidateQueries({ predicate: (query) => 
+        query.queryKey[0]?.toString().startsWith('products-') || false
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete products. Please try again.",
+        variant: "destructive",
+      });
+      console.error('Bulk delete products error:', error);
     },
   });
 
@@ -143,6 +177,40 @@ export default function Products() {
     });
   };
 
+  // Selection handlers
+  const handleSelectProduct = (productId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(prev => [...prev, productId]);
+    } else {
+      setSelectedProducts(prev => prev.filter(id => id !== productId));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allProductIds = filteredProducts.map((product: any) => product.id);
+      setSelectedProducts(allProductIds);
+    } else {
+      setSelectedProducts([]);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedProducts.length === 0) {
+      toast({
+        title: "No products selected",
+        description: "Please select products to delete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to delete ${selectedProducts.length} selected products? This action cannot be undone.`)) {
+      bulkDeleteProductMutation.mutate(selectedProducts);
+    }
+  };
+
+
   // Fetch products with pagination
   const { data: productsResponse, isLoading, error } = useQuery({
     queryKey: [`products-${currentPage}-${itemsPerPage}`],
@@ -220,6 +288,11 @@ export default function Products() {
 
     return matchesSearch && matchesCategory && matchesBrand && matchesStock && matchesPrice;
   });
+
+  // Check if all visible products are selected
+  const isAllSelected = filteredProducts.length > 0 && 
+    filteredProducts.every((product: any) => selectedProducts.includes(product.id));
+  const isIndeterminate = selectedProducts.length > 0 && !isAllSelected;
 
   // Clear all filters
   const clearFilters = () => {
@@ -421,10 +494,40 @@ export default function Products() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Package className="mr-2 h-5 w-5" />
-            Products ({filteredProducts.length})
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center">
+              <Package className="mr-2 h-5 w-5" />
+              Products ({filteredProducts.length})
+            </CardTitle>
+            
+            {/* Bulk Actions */}
+            {selectedProducts.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">
+                  {selectedProducts.length} selected
+                </span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleteProductMutation.isPending}
+                  data-testid="button-bulk-delete"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  {bulkDeleteProductMutation.isPending ? 'Deleting...' : `Delete ${selectedProducts.length}`}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedProducts([])}
+                  data-testid="button-clear-selection"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Clear
+                </Button>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -441,6 +544,13 @@ export default function Products() {
               <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={isAllSelected}
+                      onCheckedChange={handleSelectAll}
+                      data-testid="checkbox-select-all"
+                    />
+                  </TableHead>
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Product Name</TableHead>
                   <TableHead>Category</TableHead>
@@ -454,6 +564,13 @@ export default function Products() {
               <TableBody>
                 {filteredProducts.map((product: any, index: number) => (
                   <TableRow key={product.id} className="hover:bg-gray-50">
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedProducts.includes(product.id)}
+                        onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
+                        data-testid={`checkbox-product-${product.id}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium text-gray-500">
                       {index + 1}
                     </TableCell>
