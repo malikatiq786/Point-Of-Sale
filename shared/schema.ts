@@ -385,7 +385,7 @@ export const expenseCategories = pgTable("expense_categories", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
-  parentId: integer("parent_id").references(() => expenseCategories.id), // For subcategories
+  parentId: integer("parent_id"), // For subcategories
   isActive: boolean("is_active").default(true),
   color: varchar("color", { length: 7 }), // Hex color for UI
   createdAt: timestamp("created_at").defaultNow(),
@@ -458,7 +458,7 @@ export const expenses = pgTable("expenses", {
   recurringPattern: varchar("recurring_pattern", { length: 50 }), // daily, weekly, monthly, yearly
   recurringEndDate: timestamp("recurring_end_date"),
   nextRecurringDate: timestamp("next_recurring_date"),
-  parentExpenseId: integer("parent_expense_id").references(() => expenses.id), // For recurring expenses
+  parentExpenseId: integer("parent_expense_id"), // For recurring expenses
   isPettyCash: boolean("is_petty_cash").default(false),
   projectId: integer("project_id"), // For project-based expenses
   costCenter: varchar("cost_center", { length: 100 }),
