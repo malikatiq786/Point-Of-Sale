@@ -825,12 +825,15 @@ export default function POSTerminal() {
       setTimeout(() => {
         setEditingItem(product.id);
         setEditQuantity((existingItem.quantity + 1).toString());
-        // Focus the quantity input
-        const quantityInput = quantityInputRefs.current[product.id];
-        if (quantityInput) {
-          quantityInput.focus();
-        }
-      }, 100);
+        // Force a re-render then focus
+        setTimeout(() => {
+          const quantityInput = quantityInputRefs.current[product.id];
+          if (quantityInput) {
+            quantityInput.focus();
+            quantityInput.select();
+          }
+        }, 50);
+      }, 150);
     } else {
       // Set default price based on product category
       const defaultPrice = parseFloat(product.price) || 0;
@@ -852,12 +855,15 @@ export default function POSTerminal() {
       setTimeout(() => {
         setEditingItem(product.id);
         setEditQuantity('1');
-        // Focus the quantity input
-        const quantityInput = quantityInputRefs.current[product.id];
-        if (quantityInput) {
-          quantityInput.focus();
-        }
-      }, 100);
+        // Force a re-render then focus
+        setTimeout(() => {
+          const quantityInput = quantityInputRefs.current[product.id];
+          if (quantityInput) {
+            quantityInput.focus();
+            quantityInput.select();
+          }
+        }, 50);
+      }, 150);
     }
   };
 
@@ -2070,15 +2076,16 @@ export default function POSTerminal() {
                                       e.stopPropagation();
                                       const newQty = parseInt(editQuantity) || 1;
                                       updateQuantity(item.id, newQty - item.quantity);
-                                      // Move to price editing
+                                      // Move to price editing - keep editing the same item
                                       setEditPrice(item.price.toString());
+                                      // Force re-render then focus price input
                                       setTimeout(() => {
                                         const priceInput = priceInputRefs.current[item.id];
                                         if (priceInput) {
                                           priceInput.focus();
                                           priceInput.select();
                                         }
-                                      }, 100);
+                                      }, 150);
                                     } else if (e.key === 'Tab' && !e.shiftKey) {
                                       e.preventDefault();
                                       e.stopPropagation();
@@ -2638,13 +2645,14 @@ export default function POSTerminal() {
                                         const newQty = parseInt(editQuantity) || 1;
                                         updateQuantity(item.id, newQty - item.quantity);
                                         setEditPrice(item.price.toString());
+                                        // Force re-render then focus price input
                                         setTimeout(() => {
                                           const priceInput = priceInputRefs.current[item.id];
                                           if (priceInput) {
                                             priceInput.focus();
                                             priceInput.select();
                                           }
-                                        }, 100);
+                                        }, 150);
                                       }
                                     }}
                                     className="w-16 h-6 text-center text-sm rounded-lg"
