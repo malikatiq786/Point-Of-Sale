@@ -2032,11 +2032,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Bulk delete categories
   app.delete("/api/categories/bulk-delete", isAuthenticated, async (req: any, res) => {
+    console.log('=== BULK DELETE START ===');
+    console.log('Full request body:', JSON.stringify(req.body, null, 2));
+    
     try {
       const { categoryIds } = req.body;
       
       console.log('Received bulk delete request with body:', req.body);
       console.log('CategoryIds type:', typeof categoryIds, 'Value:', categoryIds);
+      console.log('CategoryIds as JSON:', JSON.stringify(categoryIds));
       
       if (!categoryIds || !Array.isArray(categoryIds) || categoryIds.length === 0) {
         return res.status(400).json({ message: "Category IDs array is required" });
