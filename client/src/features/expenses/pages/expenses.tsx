@@ -526,7 +526,9 @@ export default function ExpensesPage() {
                   <th className="text-left p-2">Status</th>
                   <th className="text-left p-2">Payment Method</th>
                   <th className="text-left p-2">Created By</th>
-                  <th className="text-left p-2">Actions</th>
+                  {filters.approvalStatus === 'pending' && (
+                    <th className="text-left p-2">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -569,38 +571,40 @@ export default function ExpensesPage() {
                     <td className="p-2" data-testid={`text-creator-${expense.id}`}>
                       {expense.creator?.name || '-'}
                     </td>
-                    <td className="p-2">
-                      {expense.approvalStatus === 'pending' ? (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => approveExpenseMutation.mutate(expense.id)}
-                            disabled={approveExpenseMutation.isPending}
-                            data-testid={`button-approve-${expense.id}`}
-                            className="text-green-600 border-green-600 hover:bg-green-50"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => rejectExpenseMutation.mutate(expense.id)}
-                            disabled={rejectExpenseMutation.isPending}
-                            data-testid={`button-reject-${expense.id}`}
-                            className="text-red-600 border-red-600 hover:bg-red-50"
-                          >
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Reject
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">
-                          {expense.approvalStatus === 'approved' ? 'Approved' : 'Rejected'}
-                        </span>
-                      )}
-                    </td>
+                    {filters.approvalStatus === 'pending' && (
+                      <td className="p-2">
+                        {expense.approvalStatus === 'pending' ? (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => approveExpenseMutation.mutate(expense.id)}
+                              disabled={approveExpenseMutation.isPending}
+                              data-testid={`button-approve-${expense.id}`}
+                              className="text-green-600 border-green-600 hover:bg-green-50"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => rejectExpenseMutation.mutate(expense.id)}
+                              disabled={rejectExpenseMutation.isPending}
+                              data-testid={`button-reject-${expense.id}`}
+                              className="text-red-600 border-red-600 hover:bg-red-50"
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reject
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            {expense.approvalStatus === 'approved' ? 'Approved' : 'Rejected'}
+                          </span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                   );
                 })}
