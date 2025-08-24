@@ -507,6 +507,8 @@ export default function ExpensesPage() {
               <tbody>
                 {expenseList.map((expenseItem: any) => {
                   const expense = expenseItem.expense || expenseItem;
+                  const category = expenseItem.category || expense.category;
+                  const vendor = expenseItem.vendor || expense.vendor;
                   return (
                   <tr key={expense.id} className="border-b hover:bg-muted/50">
                     <td className="p-3 font-medium text-sm" data-testid={`text-expense-number-${expense.id}`}>
@@ -524,10 +526,10 @@ export default function ExpensesPage() {
                       </div>
                     </td>
                     <td className="p-3 text-sm" data-testid={`text-category-${expense.id}`}>
-                      {expense.category?.name || '-'}
+                      {category?.name || '-'}
                     </td>
                     <td className="p-3 text-sm" data-testid={`text-vendor-${expense.id}`}>
-                      {expense.vendor?.name || '-'}
+                      {vendor?.name || '-'}
                     </td>
                     <td className="p-3 font-semibold text-sm" data-testid={`text-amount-${expense.id}`}>
                       {formatCurrency(expense.totalAmount)}
