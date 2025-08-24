@@ -174,76 +174,76 @@ export function RegisterDenominationBreakdown({
 
   return (
     <div className="space-y-8" data-testid="denomination-breakdown">
-      <div className="w-full max-w-7xl mx-auto bg-white rounded-3xl shadow-2xl border border-slate-200">
+      <div className="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-xl border border-slate-200">
         {/* Professional Header */}
-        <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-t-3xl px-8 py-6">
+        <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-t-2xl px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">
+              <h1 className="text-lg font-bold text-white tracking-tight">
                 {title || `${mode === 'opening' ? 'Register Opening' : 'Register Closing'} Balance`}
               </h1>
-              <p className="text-slate-300 text-sm mt-1">
+              <p className="text-slate-300 text-xs mt-1">
                 Denomination Breakdown & Balance Verification
               </p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
-              <span className="text-white font-medium text-sm uppercase tracking-wider">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1">
+              <span className="text-white font-medium text-xs uppercase tracking-wider">
                 {mode === 'opening' ? 'Opening' : 'Closing'} Session
               </span>
             </div>
           </div>
         </div>
-        <div className="px-8 py-8 space-y-8">
+        <div className="px-6 py-6 space-y-6">
           {/* Enhanced Summary Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-              <CardContent className="pt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+              <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-blue-700 uppercase tracking-wide">Declared Balance</p>
-                    <p className="text-3xl font-bold text-blue-900 mt-1" data-testid="declared-balance-display">
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Declared Balance</p>
+                    <p className="text-xl font-bold text-blue-900 mt-1" data-testid="declared-balance-display">
                       PKR {declaredBalanceNum.toLocaleString()}
                     </p>
                   </div>
-                  <div className="bg-blue-100 p-3 rounded-full">
-                    <DollarSign className="h-8 w-8 text-blue-700" />
+                  <div className="bg-blue-100 p-2 rounded-full">
+                    <DollarSign className="h-5 w-5 text-blue-700" />
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
-              <CardContent className="pt-6">
+            <Card className="border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+              <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">Calculated Total</p>
-                    <p className="text-3xl font-bold text-green-900 mt-1" data-testid="calculated-total-display">
+                    <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">Calculated Total</p>
+                    <p className="text-xl font-bold text-green-900 mt-1" data-testid="calculated-total-display">
                       PKR {calculatedTotal.toLocaleString()}
                     </p>
                   </div>
-                  <div className="bg-green-100 p-3 rounded-full">
-                    <Calculator className="h-8 w-8 text-green-700" />
+                  <div className="bg-green-100 p-2 rounded-full">
+                    <Calculator className="h-5 w-5 text-green-700" />
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className={`border-2 ${isBalanced ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50' : 'border-red-200 bg-gradient-to-br from-red-50 to-rose-50'}`}>
-              <CardContent className="pt-6">
+            <Card className={`border ${isBalanced ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50' : 'border-red-200 bg-gradient-to-br from-red-50 to-rose-50'}`}>
+              <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={`text-sm font-semibold uppercase tracking-wide ${isBalanced ? 'text-emerald-700' : 'text-red-700'}`}>
+                    <p className={`text-xs font-semibold uppercase tracking-wide ${isBalanced ? 'text-emerald-700' : 'text-red-700'}`}>
                       Balance Status
                     </p>
-                    <p className={`text-3xl font-bold mt-1 ${isBalanced ? 'text-emerald-900' : 'text-red-900'}`} data-testid="difference-display">
+                    <p className={`text-xl font-bold mt-1 ${isBalanced ? 'text-emerald-900' : 'text-red-900'}`} data-testid="difference-display">
                       {isBalanced ? '✓ Perfect!' : `Diff: PKR ${difference.toLocaleString()}`}
                     </p>
                   </div>
-                  <div className={`p-3 rounded-full ${isBalanced ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                  <div className={`p-2 rounded-full ${isBalanced ? 'bg-emerald-100' : 'bg-red-100'}`}>
                     {isBalanced ? (
-                      <CheckCircle className={`h-8 w-8 ${isBalanced ? 'text-emerald-700' : 'text-red-700'}`} />
+                      <CheckCircle className={`h-5 w-5 ${isBalanced ? 'text-emerald-700' : 'text-red-700'}`} />
                     ) : (
-                      <AlertCircle className="h-8 w-8 text-red-700" />
+                      <AlertCircle className="h-5 w-5 text-red-700" />
                     )}
                   </div>
                 </div>
@@ -288,19 +288,19 @@ export function RegisterDenominationBreakdown({
 
           {/* Notes Denomination Grid */}
           <div className="space-y-8">
-            <div className="border-l-4 border-slate-700 pl-6 py-2">
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-2">
+            <div className="border-l-4 border-slate-700 pl-4 py-1">
+              <h2 className="text-lg font-bold text-slate-900 tracking-tight mb-1">
                 Cash Notes Breakdown
               </h2>
-              <p className="text-slate-600 text-sm font-medium">
+              <p className="text-slate-600 text-xs font-medium">
                 Count each denomination carefully to ensure accurate balance calculation
               </p>
             </div>
             
             {/* Compact List View */}
-            <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden" style={{ userSelect: 'none' }}>
-              <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-4 py-3 border-b border-slate-300">
-                <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-slate-700 uppercase tracking-wide">
+            <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden" style={{ userSelect: 'none' }}>
+              <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-3 py-2 border-b border-slate-300">
+                <div className="grid grid-cols-12 gap-3 text-xs font-semibold text-slate-700 uppercase tracking-wide">
                   <div className="col-span-3">Denomination</div>
                   <div className="col-span-3">Quantity</div>
                   <div className="col-span-3">Unit Value</div>
@@ -308,7 +308,7 @@ export function RegisterDenominationBreakdown({
                 </div>
               </div>
               
-              <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-track-slate-100 scrollbar-thumb-slate-300">
+              <div className="max-h-64 overflow-y-auto scrollbar-thin scrollbar-track-slate-100 scrollbar-thumb-slate-300">
                 {denominationTypes
                   .filter(denom => denom.type === 'note')
                   .sort((a, b) => parseFloat(b.value) - parseFloat(a.value))
@@ -318,16 +318,16 @@ export function RegisterDenominationBreakdown({
                     const total = quantity * value;
                     
                     return (
-                      <div key={denom.id} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 hover:bg-white transition-colors items-center">
+                      <div key={denom.id} className="grid grid-cols-12 gap-3 p-3 border-b border-slate-100 hover:bg-white transition-colors items-center">
                         {/* Denomination Display */}
-                        <div className="col-span-3 flex items-center gap-3">
-                          <div className="w-10 h-6 bg-gradient-to-r from-slate-600 to-slate-800 rounded flex items-center justify-center">
+                        <div className="col-span-3 flex items-center gap-2">
+                          <div className="w-8 h-5 bg-gradient-to-r from-slate-600 to-slate-800 rounded flex items-center justify-center">
                             <span className="text-white font-bold text-xs">
                               {value >= 1000 ? `${value/1000}K` : value}
                             </span>
                           </div>
                           <div>
-                            <div className="font-semibold text-slate-900 text-sm">
+                            <div className="font-semibold text-slate-900 text-xs">
                               PKR {value.toLocaleString()}
                             </div>
                             <div className="text-xs text-slate-500">Note</div>
@@ -335,11 +335,11 @@ export function RegisterDenominationBreakdown({
                         </div>
 
                         {/* Quantity Controls */}
-                        <div className="col-span-3 flex items-center gap-2">
+                        <div className="col-span-3 flex items-center gap-1">
                           <button
                             type="button"
                             onClick={() => handleQuantityChange(denom.id, String(Math.max(0, quantity - 1)))}
-                            className="w-6 h-6 rounded bg-slate-100 hover:bg-red-50 border border-slate-200 hover:border-red-200 flex items-center justify-center text-slate-600 hover:text-red-600 transition-colors text-sm font-bold"
+                            className="w-5 h-5 rounded bg-slate-100 hover:bg-red-50 border border-slate-200 hover:border-red-200 flex items-center justify-center text-slate-600 hover:text-red-600 transition-colors text-xs font-bold"
                             style={{ userSelect: 'none' }}
                           >
                             −
@@ -351,13 +351,13 @@ export function RegisterDenominationBreakdown({
                             value={quantity || ''}
                             onChange={(e) => handleQuantityChange(denom.id, e.target.value)}
                             placeholder="0"
-                            className="w-16 h-8 text-center font-medium text-sm border border-slate-200 focus:border-blue-400 rounded bg-white"
+                            className="w-12 h-6 text-center font-medium text-xs border border-slate-200 focus:border-blue-400 rounded bg-white"
                             data-testid={`input-quantity-${denom.id}`}
                           />
                           <button
                             type="button"
                             onClick={() => handleQuantityChange(denom.id, String(quantity + 1))}
-                            className="w-6 h-6 rounded bg-slate-100 hover:bg-green-50 border border-slate-200 hover:border-green-200 flex items-center justify-center text-slate-600 hover:text-green-600 transition-colors text-sm font-bold"
+                            className="w-5 h-5 rounded bg-slate-100 hover:bg-green-50 border border-slate-200 hover:border-green-200 flex items-center justify-center text-slate-600 hover:text-green-600 transition-colors text-xs font-bold"
                             style={{ userSelect: 'none' }}
                           >
                             +
@@ -366,7 +366,7 @@ export function RegisterDenominationBreakdown({
 
                         {/* Unit Value */}
                         <div className="col-span-3">
-                          <div className="text-sm font-medium text-slate-700">
+                          <div className="text-xs font-medium text-slate-700">
                             PKR {value.toLocaleString()}
                           </div>
                           <div className="text-xs text-slate-500">per note</div>
@@ -374,7 +374,7 @@ export function RegisterDenominationBreakdown({
 
                         {/* Total Amount */}
                         <div className="col-span-3 text-right">
-                          <div className="font-bold text-slate-900 text-sm">
+                          <div className="font-bold text-slate-900 text-xs">
                             PKR {total.toLocaleString()}
                           </div>
                           {quantity > 0 && (
