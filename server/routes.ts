@@ -2047,22 +2047,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Validate all IDs are numbers and filter out invalid ones
-      const validIds = [];
+      const validIds: number[] = [];
       for (let i = 0; i < categoryIds.length; i++) {
         const id = categoryIds[i];
         console.log(`Processing ID at index ${i}:`, id, 'Type:', typeof id);
         
-        if (id !== null && id !== undefined && id !== '') {
-          const parsed = typeof id === 'number' ? id : parseInt(String(id), 10);
-          console.log('Parsed value:', parsed, 'isNaN:', isNaN(parsed));
+        // More robust validation
+        if (id !== null && id !== undefined && id !== '' && id !== 'NaN') {
+          let parsed: number;
           
-          if (!isNaN(parsed) && parsed > 0) {
-            validIds.push(parsed);
+          if (typeof id === 'number') {
+            parsed = id;
+          } else if (typeof id === 'string') {
+            // Trim whitespace and check if it's a valid number string
+            const trimmed = id.trim();
+            if (trimmed === '' || trimmed === 'NaN' || trimmed === 'undefined' || trimmed === 'null') {
+              console.log(`Skipping invalid ID: "${trimmed}"`);
+              continue;
+            }
+            parsed = parseInt(trimmed, 10);
+          } else {
+            console.log(`Skipping non-numeric ID of type ${typeof id}:`, id);
+            continue;
           }
+          
+          console.log('Parsed value:', parsed, 'isNaN:', isNaN(parsed), 'isFinite:', isFinite(parsed));
+          
+          // Ensure it's a positive integer
+          if (!isNaN(parsed) && isFinite(parsed) && parsed > 0 && Number.isInteger(parsed)) {
+            validIds.push(parsed);
+            console.log(`Added valid ID: ${parsed}`);
+          } else {
+            console.log(`Rejected invalid ID: ${parsed} (original: ${id})`);
+          }
+        } else {
+          console.log(`Skipping null/undefined/empty ID at index ${i}:`, id);
         }
       }
         
       if (validIds.length === 0) {
+        console.log('No valid IDs found after validation');
         return res.status(400).json({ message: "No valid category IDs provided" });
       }
       
@@ -2072,15 +2096,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Attempting to delete ${validIds.length} categories:`, validIds);
       
       let deletedCount = 0;
-      const errors = [];
+      const errors: any[] = [];
 
-      // Delete each category
+      // Delete each category individually with additional validation
       for (const categoryId of validIds) {
         try {
-          console.log(`Deleting category ${categoryId}`);
+          // Double-check that categoryId is still valid before deletion
+          if (!Number.isInteger(categoryId) || categoryId <= 0) {
+            console.error(`Invalid category ID detected before deletion: ${categoryId}`);
+            errors.push({ 
+              categoryId, 
+              error: "Invalid category ID format" 
+            });
+            continue;
+          }
+          
+          console.log(`Deleting category ${categoryId} (type: ${typeof categoryId})`);
           await storage.deleteCategory(categoryId);
           deletedCount++;
-        } catch (error) {
+          console.log(`Successfully deleted category ${categoryId}`);
+        } catch (error: any) {
           console.error(`Error deleting category ${categoryId}:`, error);
           
           // Handle foreign key constraint errors more gracefully
@@ -2090,7 +2125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               error: "Category is being used by products" 
             });
           } else {
-            errors.push({ categoryId, error: error.message });
+            errors.push({ categoryId, error: error.message || 'Unknown error' });
           }
         }
       }
@@ -2106,6 +2141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log(`Successfully deleted ${deletedCount} out of ${validIds.length} categories`);
+      console.log('=== BULK DELETE END ===');
       
       res.json({ 
         message: `Successfully deleted ${deletedCount} out of ${validIds.length} categories`,
@@ -2113,9 +2149,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalRequested: validIds.length,
         errors: errors.length > 0 ? errors : undefined
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in bulk delete categories:", error);
-      res.status(500).json({ message: "Failed to delete categories", error: error.message });
+      res.status(500).json({ message: "Failed to delete categories", error: error.message || 'Unknown error' });
     }
   });
 
