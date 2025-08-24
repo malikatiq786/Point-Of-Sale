@@ -219,7 +219,8 @@ export class ExpenseService {
 
   async getCategories() {
     try {
-      const categories = await this.categoryRepository.findAllWithHierarchy();
+      const categoryRepo = new (await import('../repositories/SimpleCategoryRepository')).SimpleCategoryRepository();
+      const categories = await categoryRepo.findAll();
       return { success: true, data: categories };
     } catch (error) {
       console.error('ExpenseService: Error getting categories:', error);
@@ -227,19 +228,14 @@ export class ExpenseService {
     }
   }
 
-  async createCategory(categoryData: InsertExpenseCategory) {
+  async createCategory(categoryData: any) {
     try {
       if (!categoryData.name) {
         return { success: false, error: 'Category name is required' };
       }
 
-      // Check if category already exists
-      const existingCategory = await this.categoryRepository.findByName(categoryData.name);
-      if (existingCategory) {
-        return { success: false, error: 'Category with this name already exists' };
-      }
-
-      const category = await this.categoryRepository.create(categoryData);
+      const categoryRepo = new (await import('../repositories/SimpleCategoryRepository')).SimpleCategoryRepository();
+      const category = await categoryRepo.create({ name: categoryData.name });
       return { success: true, data: category };
     } catch (error) {
       console.error('ExpenseService: Error creating category:', error);
@@ -285,7 +281,8 @@ export class ExpenseService {
 
   async getVendors() {
     try {
-      const vendors = await this.vendorRepository.findAll();
+      const vendorRepo = new (await import('../repositories/SimpleVendorRepository')).SimpleVendorRepository();
+      const vendors = await vendorRepo.findAll();
       return { success: true, data: vendors };
     } catch (error) {
       console.error('ExpenseService: Error getting vendors:', error);
@@ -293,21 +290,18 @@ export class ExpenseService {
     }
   }
 
-  async createVendor(vendorData: InsertExpenseVendor) {
+  async createVendor(vendorData: any) {
     try {
       if (!vendorData.name) {
         return { success: false, error: 'Vendor name is required' };
       }
 
-      // Check for duplicate email or phone
-      if (vendorData.email) {
-        const existingVendor = await this.vendorRepository.findByEmail(vendorData.email);
-        if (existingVendor) {
-          return { success: false, error: 'Vendor with this email already exists' };
-        }
-      }
-
-      const vendor = await this.vendorRepository.create(vendorData);
+      const vendorRepo = new (await import('../repositories/SimpleVendorRepository')).SimpleVendorRepository();
+      const vendor = await vendorRepo.create({
+        name: vendorData.name,
+        email: vendorData.email,
+        phone: vendorData.phone
+      });
       return { success: true, data: vendor };
     } catch (error) {
       console.error('ExpenseService: Error creating vendor:', error);

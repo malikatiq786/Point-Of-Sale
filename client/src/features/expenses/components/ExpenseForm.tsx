@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 // Comprehensive expense form schema
 const expenseFormSchema = z.object({
@@ -69,6 +70,12 @@ interface ExpenseFormProps {
 export function ExpenseForm({ expenseId, onSuccess, onCancel }: ExpenseFormProps) {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isCalculatingTax, setIsCalculatingTax] = useState(false);
+  const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
+  const [isCreateVendorOpen, setIsCreateVendorOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newVendorName, setNewVendorName] = useState('');
+  const [newVendorEmail, setNewVendorEmail] = useState('');
+  const [newVendorPhone, setNewVendorPhone] = useState('');
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -121,6 +128,52 @@ export function ExpenseForm({ expenseId, onSuccess, onCancel }: ExpenseFormProps
 
   // Get subcategories based on selected category
   const subcategories = categories.filter((cat: any) => cat.parentId === watchedCategoryId);
+
+  // Mutations for creating new categories and vendors
+  const createCategoryMutation = useMutation({
+    mutationFn: (name: string) => apiRequest('POST', '/api/expense-categories', { name }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-categories'] });
+      form.setValue('categoryId', data.id);
+      setNewCategoryName('');
+      setIsCreateCategoryOpen(false);
+      toast({
+        title: 'Success',
+        description: 'Category created successfully',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to create category',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const createVendorMutation = useMutation({
+    mutationFn: (vendorData: { name: string; email?: string; phone?: string }) => 
+      apiRequest('POST', '/api/expense-vendors', vendorData),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-vendors'] });
+      form.setValue('vendorId', data.id);
+      setNewVendorName('');
+      setNewVendorEmail('');
+      setNewVendorPhone('');
+      setIsCreateVendorOpen(false);
+      toast({
+        title: 'Success',
+        description: 'Vendor created successfully',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to create vendor',
+        variant: 'destructive',
+      });
+    },
+  });
 
   // Create/Update expense mutation
   const saveMutation = useMutation({
@@ -214,7 +267,60 @@ export function ExpenseForm({ expenseId, onSuccess, onCancel }: ExpenseFormProps
                 name="categoryId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category *</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Category *</FormLabel>
+                      <Dialog open={isCreateCategoryOpen} onOpenChange={setIsCreateCategoryOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-6 px-2"
+                            data-testid="button-create-category"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            New
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Create New Category</DialogTitle>
+                            <DialogDescription>
+                              Add a new expense category to your list
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="text-sm font-medium">Category Name</label>
+                              <Input
+                                value={newCategoryName}
+                                onChange={(e) => setNewCategoryName(e.target.value)}
+                                placeholder="Enter category name"
+                                data-testid="input-new-category-name"
+                              />
+                            </div>
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsCreateCategoryOpen(false)}
+                                data-testid="button-cancel-category"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                onClick={() => createCategoryMutation.mutate(newCategoryName)}
+                                disabled={!newCategoryName.trim() || createCategoryMutation.isPending}
+                                data-testid="button-save-category"
+                              >
+                                {createCategoryMutation.isPending ? 'Creating...' : 'Create Category'}
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                     <Select
                       onValueChange={(value) => field.onChange(Number(value))}
                       value={field.value?.toString()}
@@ -274,7 +380,82 @@ export function ExpenseForm({ expenseId, onSuccess, onCancel }: ExpenseFormProps
                 name="vendorId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Vendor/Payee</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Vendor/Payee</FormLabel>
+                      <Dialog open={isCreateVendorOpen} onOpenChange={setIsCreateVendorOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-6 px-2"
+                            data-testid="button-create-vendor"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            New
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Create New Vendor</DialogTitle>
+                            <DialogDescription>
+                              Add a new vendor/payee to your list
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="text-sm font-medium">Vendor Name *</label>
+                              <Input
+                                value={newVendorName}
+                                onChange={(e) => setNewVendorName(e.target.value)}
+                                placeholder="Enter vendor name"
+                                data-testid="input-new-vendor-name"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium">Email</label>
+                              <Input
+                                value={newVendorEmail}
+                                onChange={(e) => setNewVendorEmail(e.target.value)}
+                                placeholder="vendor@email.com"
+                                data-testid="input-new-vendor-email"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium">Phone</label>
+                              <Input
+                                value={newVendorPhone}
+                                onChange={(e) => setNewVendorPhone(e.target.value)}
+                                placeholder="Phone number"
+                                data-testid="input-new-vendor-phone"
+                              />
+                            </div>
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsCreateVendorOpen(false)}
+                                data-testid="button-cancel-vendor"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                onClick={() => createVendorMutation.mutate({
+                                  name: newVendorName,
+                                  email: newVendorEmail || undefined,
+                                  phone: newVendorPhone || undefined,
+                                })}
+                                disabled={!newVendorName.trim() || createVendorMutation.isPending}
+                                data-testid="button-save-vendor"
+                              >
+                                {createVendorMutation.isPending ? 'Creating...' : 'Create Vendor'}
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                     <Select
                       onValueChange={(value) => field.onChange(Number(value))}
                       value={field.value?.toString()}
