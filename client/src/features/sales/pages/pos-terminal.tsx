@@ -2067,24 +2067,32 @@ export default function POSTerminal() {
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                       e.preventDefault();
+                                      e.stopPropagation();
                                       const newQty = parseInt(editQuantity) || 1;
                                       updateQuantity(item.id, newQty - item.quantity);
                                       // Move to price editing
                                       setEditPrice(item.price.toString());
                                       setTimeout(() => {
                                         const priceInput = priceInputRefs.current[item.id];
-                                        if (priceInput) priceInput.focus();
-                                      }, 50);
+                                        if (priceInput) {
+                                          priceInput.focus();
+                                          priceInput.select();
+                                        }
+                                      }, 100);
                                     } else if (e.key === 'Tab' && !e.shiftKey) {
                                       e.preventDefault();
+                                      e.stopPropagation();
                                       // Save quantity and move to price editing
                                       const newQty = parseInt(editQuantity) || 1;
                                       updateQuantity(item.id, newQty - item.quantity);
                                       setEditPrice(item.price.toString());
                                       setTimeout(() => {
                                         const priceInput = priceInputRefs.current[item.id];
-                                        if (priceInput) priceInput.focus();
-                                      }, 50);
+                                        if (priceInput) {
+                                          priceInput.focus();
+                                          priceInput.select();
+                                        }
+                                      }, 100);
                                     }
                                   }}
                                   className="w-16 h-5 text-center text-xs rounded"
@@ -2611,24 +2619,32 @@ export default function POSTerminal() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault();
+                                        e.stopPropagation();
                                         const newQty = parseInt(editQuantity) || 1;
                                         updateQuantity(item.id, newQty - item.quantity);
                                         // Move to price editing
                                         setEditPrice(item.price.toString());
                                         setTimeout(() => {
                                           const priceInput = priceInputRefs.current[item.id];
-                                          if (priceInput) priceInput.focus();
-                                        }, 50);
+                                          if (priceInput) {
+                                            priceInput.focus();
+                                            priceInput.select();
+                                          }
+                                        }, 100);
                                       } else if (e.key === 'Tab' && !e.shiftKey) {
                                         e.preventDefault();
+                                        e.stopPropagation();
                                         // Save quantity and move to price editing
                                         const newQty = parseInt(editQuantity) || 1;
                                         updateQuantity(item.id, newQty - item.quantity);
                                         setEditPrice(item.price.toString());
                                         setTimeout(() => {
                                           const priceInput = priceInputRefs.current[item.id];
-                                          if (priceInput) priceInput.focus();
-                                        }, 50);
+                                          if (priceInput) {
+                                            priceInput.focus();
+                                            priceInput.select();
+                                          }
+                                        }, 100);
                                       }
                                     }}
                                     className="w-16 h-6 text-center text-sm rounded-lg"
