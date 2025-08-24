@@ -2558,6 +2558,7 @@ export default function POSTerminal() {
                                 
                                 {editingItem === item.id ? (
                                   <Input
+                                    type="text"
                                     ref={(el) => quantityInputRefs.current[item.id] = el}
                                     value={editQuantity}
                                     onChange={(e) => setEditQuantity(e.target.value)}
@@ -2568,11 +2569,15 @@ export default function POSTerminal() {
                                     }}
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
+                                        e.preventDefault();
                                         const newQty = parseInt(editQuantity) || 1;
                                         updateQuantity(item.id, newQty - item.quantity);
-                                        setEditingItem(null);
-                                        // Focus back to search input
-                                        setTimeout(() => searchInputRef.current?.focus(), 50);
+                                        // Move to price editing
+                                        setEditPrice(item.price.toString());
+                                        setTimeout(() => {
+                                          const priceInput = priceInputRefs.current[item.id];
+                                          if (priceInput) priceInput.focus();
+                                        }, 50);
                                       } else if (e.key === 'Tab' && !e.shiftKey) {
                                         e.preventDefault();
                                         // Save quantity and move to price editing
@@ -2625,11 +2630,12 @@ export default function POSTerminal() {
                                   }}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
+                                      e.preventDefault();
                                       const newPrice = parseFloat(editPrice) || item.price;
                                       updateItemPrice(item.id, newPrice);
                                       setEditingItem(null);
                                       setEditPrice('');
-                                      // Focus back to search input
+                                      // Focus back to search input for next product
                                       setTimeout(() => searchInputRef.current?.focus(), 50);
                                     } else if (e.key === 'Tab' && !e.shiftKey) {
                                       e.preventDefault();
