@@ -124,12 +124,12 @@ export default function ExpensesPage() {
   });
 
   // Fetch categories for filters
-  const { data: categories } = useQuery({
+  const { data: categories = [] } = useQuery({
     queryKey: ['/api/expense-categories'],
   });
 
   // Fetch vendors for filters
-  const { data: vendors } = useQuery({
+  const { data: vendors = [] } = useQuery({
     queryKey: ['/api/expense-vendors'],
   });
 
@@ -306,10 +306,12 @@ export default function ExpensesPage() {
                   Create a new expense record for your business
                 </DialogDescription>
               </DialogHeader>
-              <ExpenseForm
-                onSuccess={() => setIsCreateExpenseOpen(false)}
-                onCancel={() => setIsCreateExpenseOpen(false)}
-              />
+              <div>
+                <ExpenseForm
+                  onSuccess={() => setIsCreateExpenseOpen(false)}
+                  onCancel={() => setIsCreateExpenseOpen(false)}
+                />
+              </div>
             </DialogContent>
           </Dialog>
         </div>
@@ -401,7 +403,7 @@ export default function ExpensesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All categories</SelectItem>
-                    {(categories || []).map((category: any) => (
+                    {categories.map((category: any) => (
                       <SelectItem key={category.id} value={category.id.toString()}>
                         {category.name}
                       </SelectItem>
@@ -423,7 +425,7 @@ export default function ExpensesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All vendors</SelectItem>
-                    {(vendors || []).map((vendor: any) => (
+                    {vendors.map((vendor: any) => (
                       <SelectItem key={vendor.id} value={vendor.id.toString()}>
                         {vendor.name}
                       </SelectItem>
