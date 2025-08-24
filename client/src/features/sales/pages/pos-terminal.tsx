@@ -2042,18 +2042,11 @@ export default function POSTerminal() {
                           <td className="py-1 px-2 border-r border-gray-200">{item.name}</td>
                           <td className="py-1 px-2 border-r border-gray-200">No Employee</td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">
-                            <div className="flex items-center justify-center space-x-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => updateQuantity(item.id, -1)}
-                                className="w-5 h-5 p-0 rounded-full text-xs"
-                              >
-                                <Minus className="w-2 h-2" />
-                              </Button>
-                              
+                            <div className="flex items-center justify-center">
                               {editingItem === item.id ? (
                                 <Input
+                                  type="text"
+                                  ref={(el) => quantityInputRefs.current[item.id] = el}
                                   value={editQuantity}
                                   onChange={(e) => setEditQuantity(e.target.value)}
                                   onBlur={() => {
@@ -2061,19 +2054,36 @@ export default function POSTerminal() {
                                     updateQuantity(item.id, newQty - item.quantity);
                                     setEditingItem(null);
                                   }}
-                                  onKeyPress={(e) => {
+                                  onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
+                                      e.preventDefault();
                                       const newQty = parseInt(editQuantity) || 1;
                                       updateQuantity(item.id, newQty - item.quantity);
-                                      setEditingItem(null);
+                                      // Move to price editing
+                                      setEditPrice(item.price.toString());
+                                      setTimeout(() => {
+                                        const priceInput = priceInputRefs.current[item.id];
+                                        if (priceInput) priceInput.focus();
+                                      }, 50);
+                                    } else if (e.key === 'Tab' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      // Save quantity and move to price editing
+                                      const newQty = parseInt(editQuantity) || 1;
+                                      updateQuantity(item.id, newQty - item.quantity);
+                                      setEditPrice(item.price.toString());
+                                      setTimeout(() => {
+                                        const priceInput = priceInputRefs.current[item.id];
+                                        if (priceInput) priceInput.focus();
+                                      }, 50);
                                     }
                                   }}
-                                  className="w-8 h-5 text-center text-xs rounded"
+                                  className="w-16 h-5 text-center text-xs rounded"
                                   autoFocus
+                                  data-testid={`search-quantity-input-${item.id}`}
                                 />
                               ) : (
                                 <span 
-                                  className="text-xs cursor-pointer hover:bg-gray-200 rounded px-1 py-1 min-w-[20px] inline-block text-center"
+                                  className="text-xs cursor-pointer hover:bg-gray-200 rounded px-2 py-1 min-w-[32px] inline-block text-center"
                                   onClick={() => {
                                     setEditingItem(item.id);
                                     setEditQuantity(item.quantity.toString());
@@ -2082,15 +2092,6 @@ export default function POSTerminal() {
                                   {item.quantity}
                                 </span>
                               )}
-                              
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => updateQuantity(item.id, 1)}
-                                className="w-5 h-5 p-0 rounded-full text-xs"
-                              >
-                                <Plus className="w-2 h-2" />
-                              </Button>
                             </div>
                           </td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">
@@ -2135,7 +2136,46 @@ export default function POSTerminal() {
                               </span>
                             )}
                           </td>
-                          <td className="py-1 px-2 text-center border-r border-gray-200">{item.price.toFixed(2)}</td>
+                          <td className="py-1 px-2 text-center border-r border-gray-200">
+                            {editingItem === item.id && editPrice ? (
+                              <Input
+                                type="text"
+                                ref={(el) => priceInputRefs.current[item.id] = el}
+                                value={editPrice}
+                                onChange={(e) => setEditPrice(e.target.value)}
+                                onBlur={() => {
+                                  const newPrice = parseFloat(editPrice) || item.price;
+                                  updateItemPrice(item.id, newPrice);
+                                  setEditingItem(null);
+                                  setEditPrice('');
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const newPrice = parseFloat(editPrice) || item.price;
+                                    updateItemPrice(item.id, newPrice);
+                                    setEditingItem(null);
+                                    setEditPrice('');
+                                    // Focus back to search input for next product
+                                    setTimeout(() => searchInputRef.current?.focus(), 50);
+                                  } else if (e.key === 'Tab' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    // Save price and move back to search input
+                                    const newPrice = parseFloat(editPrice) || item.price;
+                                    updateItemPrice(item.id, newPrice);
+                                    setEditingItem(null);
+                                    setEditPrice('');
+                                    setTimeout(() => searchInputRef.current?.focus(), 50);
+                                  }
+                                }}
+                                className="w-16 h-5 text-xs text-center rounded"
+                                autoFocus
+                                data-testid={`search-price-input-${item.id}`}
+                              />
+                            ) : (
+                              <span className="text-xs">{item.price.toFixed(2)}</span>
+                            )}
+                          </td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">{item.total.toFixed(2)}</td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">{(item.total * 0.1).toFixed(2)}</td>
                           <td className="py-1 px-2 text-center">{(item.total + item.total * 0.1).toFixed(2)}</td>
