@@ -76,23 +76,19 @@ export function ExpenseForm({ expenseId, onSuccess, onCancel }: ExpenseFormProps
   // Fetch data for form options
   const { data: categories = [] } = useQuery({
     queryKey: ['/api/expense-categories'],
-    queryFn: () => apiRequest('/api/expense-categories'),
   });
 
   const { data: vendors = [] } = useQuery({
     queryKey: ['/api/expense-vendors'],
-    queryFn: () => apiRequest('/api/expense-vendors'),
   });
 
   const { data: branches = [] } = useQuery({
     queryKey: ['/api/branches'],
-    queryFn: () => apiRequest('/api/branches'),
   });
 
   // Fetch existing expense if editing
   const { data: existingExpense } = useQuery({
     queryKey: ['/api/expenses', expenseId],
-    queryFn: () => apiRequest(`/api/expenses/${expenseId}`),
     enabled: !!expenseId,
   });
 
@@ -140,15 +136,9 @@ export function ExpenseForm({ expenseId, onSuccess, onCancel }: ExpenseFormProps
       };
 
       if (expenseId) {
-        return apiRequest(`/api/expenses/${expenseId}`, {
-          method: 'PUT',
-          data: formData,
-        });
+        return apiRequest('PUT', `/api/expenses/${expenseId}`, formData);
       } else {
-        return apiRequest('/api/expenses', {
-          method: 'POST',
-          data: formData,
-        });
+        return apiRequest('POST', '/api/expenses', formData);
       }
     },
     onSuccess: () => {

@@ -57,34 +57,27 @@ export default function ExpensesPage() {
   // Fetch expenses
   const { data: expensesData, isLoading: isLoadingExpenses } = useQuery({
     queryKey: ['/api/expenses', filters],
-    queryFn: () => apiRequest('/api/expenses', { method: 'GET', params: filters }),
   });
 
   // Fetch categories for filters
   const { data: categories } = useQuery({
     queryKey: ['/api/expense-categories'],
-    queryFn: () => apiRequest('/api/expense-categories'),
   });
 
   // Fetch vendors for filters
   const { data: vendors } = useQuery({
     queryKey: ['/api/expense-vendors'],
-    queryFn: () => apiRequest('/api/expense-vendors'),
   });
 
   // Fetch dashboard stats
   const { data: dashboardStats } = useQuery({
     queryKey: ['/api/expense-dashboard/stats'],
-    queryFn: () => apiRequest('/api/expense-dashboard/stats'),
   });
 
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: (expenseIds: number[]) =>
-      apiRequest('/api/expenses/bulk-delete', {
-        method: 'POST',
-        data: { expenseIds },
-      }),
+      apiRequest('POST', '/api/expenses/bulk-delete', { expenseIds }),
     onSuccess: () => {
       toast({
         title: 'Success',
