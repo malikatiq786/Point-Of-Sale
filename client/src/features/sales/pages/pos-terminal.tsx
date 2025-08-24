@@ -95,6 +95,8 @@ export default function POSTerminal() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanTimeout, setScanTimeout] = useState<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const quantityInputRefs = useRef<{[key: number]: HTMLInputElement | null}>({});
+  const priceInputRefs = useRef<{[key: number]: HTMLInputElement | null}>({});
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'qr'>("cash");
@@ -819,6 +821,11 @@ export default function POSTerminal() {
     
     if (existingItem) {
       updateQuantity(product.id, 1);
+      // Focus quantity input for existing item
+      setTimeout(() => {
+        setEditingItem(product.id);
+        setEditQuantity((existingItem.quantity + 1).toString());
+      }, 50);
     } else {
       // Set default price based on product category
       const defaultPrice = parseFloat(product.price) || 0;
@@ -835,6 +842,12 @@ export default function POSTerminal() {
         category: product.category?.name || 'General'
       };
       setCart([...cart, newItem]);
+      
+      // Auto-focus quantity input for the newly added item
+      setTimeout(() => {
+        setEditingItem(product.id);
+        setEditQuantity('1');
+      }, 50);
     }
   };
 
@@ -1932,6 +1945,7 @@ export default function POSTerminal() {
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                         className={`h-7 text-xs w-64 border-gray-300 ${isScanning ? 'bg-blue-50 border-blue-300' : ''}`}
                         autoComplete="off"
+                        data-testid="pos-search-input"
                       />
                       {isScanning && (
                         <div className="absolute right-2 top-1 text-blue-600">
@@ -2544,6 +2558,7 @@ export default function POSTerminal() {
                                 
                                 {editingItem === item.id ? (
                                   <Input
+                                    ref={(el) => quantityInputRefs.current[item.id] = el}
                                     value={editQuantity}
                                     onChange={(e) => setEditQuantity(e.target.value)}
                                     onBlur={() => {
@@ -2551,15 +2566,28 @@ export default function POSTerminal() {
                                       updateQuantity(item.id, newQty - item.quantity);
                                       setEditingItem(null);
                                     }}
-                                    onKeyPress={(e) => {
+                                    onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         const newQty = parseInt(editQuantity) || 1;
                                         updateQuantity(item.id, newQty - item.quantity);
                                         setEditingItem(null);
+                                        // Focus back to search input
+                                        setTimeout(() => searchInputRef.current?.focus(), 50);
+                                      } else if (e.key === 'Tab' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        // Save quantity and move to price editing
+                                        const newQty = parseInt(editQuantity) || 1;
+                                        updateQuantity(item.id, newQty - item.quantity);
+                                        setEditPrice(item.price.toString());
+                                        setTimeout(() => {
+                                          const priceInput = priceInputRefs.current[item.id];
+                                          if (priceInput) priceInput.focus();
+                                        }, 50);
                                       }
                                     }}
                                     className="w-12 h-6 text-center text-sm rounded-lg"
                                     autoFocus
+                                    data-testid={`quantity-input-${item.id}`}
                                   />
                                 ) : (
                                   <span 
@@ -2584,24 +2612,47 @@ export default function POSTerminal() {
                               </div>
                             </td>
                             <td className="py-3 px-2 text-right">
-                              {editingItem === item.id ? (
+                              {editingItem === item.id && editPrice ? (
                                 <Input
+                                  ref={(el) => priceInputRefs.current[item.id] = el}
                                   value={editPrice}
                                   onChange={(e) => setEditPrice(e.target.value)}
                                   onBlur={() => {
                                     const newPrice = parseFloat(editPrice) || item.price;
                                     updateItemPrice(item.id, newPrice);
                                     setEditingItem(null);
+                                    setEditPrice('');
                                   }}
-                                  onKeyPress={(e) => {
+                                  onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                       const newPrice = parseFloat(editPrice) || item.price;
                                       updateItemPrice(item.id, newPrice);
                                       setEditingItem(null);
+                                      setEditPrice('');
+                                      // Focus back to search input
+                                      setTimeout(() => searchInputRef.current?.focus(), 50);
+                                    } else if (e.key === 'Tab' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      // Save price and move back to search input
+                                      const newPrice = parseFloat(editPrice) || item.price;
+                                      updateItemPrice(item.id, newPrice);
+                                      setEditingItem(null);
+                                      setEditPrice('');
+                                      setTimeout(() => searchInputRef.current?.focus(), 50);
+                                    } else if (e.key === 'Tab' && e.shiftKey) {
+                                      e.preventDefault();
+                                      // Go back to quantity input
+                                      setEditPrice('');
+                                      setEditQuantity(item.quantity.toString());
+                                      setTimeout(() => {
+                                        const quantityInput = quantityInputRefs.current[item.id];
+                                        if (quantityInput) quantityInput.focus();
+                                      }, 50);
                                     }
                                   }}
                                   className="w-20 h-6 text-xs text-right rounded"
                                   autoFocus
+                                  data-testid={`price-input-${item.id}`}
                                 />
                               ) : (
                                 <span 
