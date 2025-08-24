@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Filter, Download, Calendar, DollarSign, Users, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,43 @@ export default function ExpensesPage() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Initialize filters from URL parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialFilters: ExpenseFilters = {};
+    
+    if (urlParams.get('categoryId')) {
+      initialFilters.categoryId = parseInt(urlParams.get('categoryId')!);
+    }
+    if (urlParams.get('vendorId')) {
+      initialFilters.vendorId = parseInt(urlParams.get('vendorId')!);
+    }
+    if (urlParams.get('branchId')) {
+      initialFilters.branchId = parseInt(urlParams.get('branchId')!);
+    }
+    if (urlParams.get('status')) {
+      initialFilters.status = urlParams.get('status')!;
+    }
+    if (urlParams.get('approvalStatus')) {
+      initialFilters.approvalStatus = urlParams.get('approvalStatus')!;
+    }
+    if (urlParams.get('paymentMethod')) {
+      initialFilters.paymentMethod = urlParams.get('paymentMethod')!;
+    }
+    if (urlParams.get('startDate')) {
+      initialFilters.startDate = urlParams.get('startDate')!;
+    }
+    if (urlParams.get('endDate')) {
+      initialFilters.endDate = urlParams.get('endDate')!;
+    }
+
+    // Set filters if any URL parameters were found
+    if (Object.keys(initialFilters).length > 0) {
+      setFilters(initialFilters);
+      setShowFilters(true); // Show filters when they are applied via URL
+    }
+  }, []);
 
   // Fetch expenses
   const { data: expensesData, isLoading: isLoadingExpenses } = useQuery({

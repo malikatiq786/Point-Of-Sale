@@ -22,6 +22,7 @@ export class ExpenseController {
         branchId: req.query.branchId ? parseInt(req.query.branchId as string) : undefined,
         vendorId: req.query.vendorId ? parseInt(req.query.vendorId as string) : undefined,
         status: req.query.status as string,
+        approvalStatus: req.query.approvalStatus as string,
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
         paymentMethod: req.query.paymentMethod as string,

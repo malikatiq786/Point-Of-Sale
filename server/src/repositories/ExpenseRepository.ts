@@ -155,17 +155,13 @@ export class ExpenseRepository extends BaseRepository<typeof expenses, InsertExp
             name: users.name,
             email: users.email,
           },
-          approver: {
-            id: users.id,
-            name: users.name,
-          }
+          approver: null
         })
         .from(expenses)
         .leftJoin(expenseCategories, eq(expenses.categoryId, expenseCategories.id))
         .leftJoin(expenseVendors, eq(expenses.vendorId, expenseVendors.id))
         .leftJoin(branches, eq(expenses.branchId, branches.id))
         .leftJoin(users, eq(expenses.createdBy, users.id))
-        .leftJoin(users, eq(expenses.approvedBy, users.id))
         .where(eq(expenses.id, id));
 
       return expense;
