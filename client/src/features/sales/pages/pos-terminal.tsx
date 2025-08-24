@@ -2071,7 +2071,7 @@ export default function POSTerminal() {
                                     setEditingItem(null);
                                   }}
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
+                                    if (e.key === '+') {
                                       e.preventDefault();
                                       e.stopPropagation();
                                       const newQty = parseInt(editQuantity) || 1;
@@ -2086,20 +2086,14 @@ export default function POSTerminal() {
                                           priceInput.select();
                                         }
                                       }, 150);
-                                    } else if (e.key === 'Tab' && !e.shiftKey) {
+                                    } else if (e.key === 'Enter') {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      // Save quantity and move to price editing
+                                      // Save quantity and add product to cart
                                       const newQty = parseInt(editQuantity) || 1;
                                       updateQuantity(item.id, newQty - item.quantity);
-                                      setEditPrice(item.price.toString());
-                                      setTimeout(() => {
-                                        const priceInput = priceInputRefs.current[item.id];
-                                        if (priceInput) {
-                                          priceInput.focus();
-                                          priceInput.select();
-                                        }
-                                      }, 100);
+                                      setEditingItem(null);
+                                      setEditQuantity('');
                                     }
                                   }}
                                   className="w-16 h-5 text-center text-xs rounded"
@@ -2175,22 +2169,21 @@ export default function POSTerminal() {
                                   setEditPrice('');
                                 }}
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
+                                  if (e.key === '+') {
                                     e.preventDefault();
                                     const newPrice = parseFloat(editPrice) || item.price;
                                     updateItemPrice(item.id, newPrice);
                                     setEditingItem(null);
                                     setEditPrice('');
                                     // Focus back to search input for next product
-                                    setTimeout(() => searchInputRef.current?.focus(), 50);
-                                  } else if (e.key === 'Tab' && !e.shiftKey) {
+                                    setTimeout(() => searchInputRef.current?.focus(), 100);
+                                  } else if (e.key === 'Enter') {
                                     e.preventDefault();
-                                    // Save price and move back to search input
+                                    // Save price and add product to cart
                                     const newPrice = parseFloat(editPrice) || item.price;
                                     updateItemPrice(item.id, newPrice);
                                     setEditingItem(null);
                                     setEditPrice('');
-                                    setTimeout(() => searchInputRef.current?.focus(), 50);
                                   }
                                 }}
                                 className="w-16 h-5 text-xs text-center rounded"
@@ -2624,7 +2617,7 @@ export default function POSTerminal() {
                                       setEditingItem(null);
                                     }}
                                     onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
+                                      if (e.key === '+') {
                                         e.preventDefault();
                                         e.stopPropagation();
                                         const newQty = parseInt(editQuantity) || 1;
@@ -2637,22 +2630,15 @@ export default function POSTerminal() {
                                             priceInput.focus();
                                             priceInput.select();
                                           }
-                                        }, 100);
-                                      } else if (e.key === 'Tab' && !e.shiftKey) {
+                                        }, 150);
+                                      } else if (e.key === 'Enter') {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        // Save quantity and move to price editing
+                                        // Save quantity and add product to cart
                                         const newQty = parseInt(editQuantity) || 1;
                                         updateQuantity(item.id, newQty - item.quantity);
-                                        setEditPrice(item.price.toString());
-                                        // Force re-render then focus price input
-                                        setTimeout(() => {
-                                          const priceInput = priceInputRefs.current[item.id];
-                                          if (priceInput) {
-                                            priceInput.focus();
-                                            priceInput.select();
-                                          }
-                                        }, 150);
+                                        setEditingItem(null);
+                                        setEditQuantity('');
                                       }
                                     }}
                                     className="w-16 h-6 text-center text-sm rounded-lg"
@@ -2685,31 +2671,21 @@ export default function POSTerminal() {
                                     setEditPrice('');
                                   }}
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
+                                    if (e.key === '+') {
                                       e.preventDefault();
                                       const newPrice = parseFloat(editPrice) || item.price;
                                       updateItemPrice(item.id, newPrice);
                                       setEditingItem(null);
                                       setEditPrice('');
                                       // Focus back to search input for next product
-                                      setTimeout(() => searchInputRef.current?.focus(), 50);
-                                    } else if (e.key === 'Tab' && !e.shiftKey) {
+                                      setTimeout(() => searchInputRef.current?.focus(), 100);
+                                    } else if (e.key === 'Enter') {
                                       e.preventDefault();
-                                      // Save price and move back to search input
+                                      // Save price and add product to cart
                                       const newPrice = parseFloat(editPrice) || item.price;
                                       updateItemPrice(item.id, newPrice);
                                       setEditingItem(null);
                                       setEditPrice('');
-                                      setTimeout(() => searchInputRef.current?.focus(), 50);
-                                    } else if (e.key === 'Tab' && e.shiftKey) {
-                                      e.preventDefault();
-                                      // Go back to quantity input
-                                      setEditPrice('');
-                                      setEditQuantity(item.quantity.toString());
-                                      setTimeout(() => {
-                                        const quantityInput = quantityInputRefs.current[item.id];
-                                        if (quantityInput) quantityInput.focus();
-                                      }, 50);
                                     }
                                   }}
                                   className="w-20 h-6 text-xs text-right rounded"
