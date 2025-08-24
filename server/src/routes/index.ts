@@ -8,7 +8,6 @@ import { CustomerController } from '../controllers/CustomerController';
 import { SupplierController } from '../controllers/SupplierController';
 import { ExpenseController } from '../controllers/ExpenseController';
 import { FinancialReportController } from '../controllers/FinancialReportController';
-import * as RegisterSessionController from '../controllers/RegisterSessionController';
 import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
@@ -821,18 +820,5 @@ router.get('/reports/:reportType', isAuthenticated, financialReportController.ge
 router.get('/reports/dashboard/summary', isAuthenticated, financialReportController.getDashboardSummary);
 router.get('/reports/profit-loss', isAuthenticated, financialReportController.getProfitLossData);
 router.get('/reports/expense-breakdown', isAuthenticated, financialReportController.getExpenseBreakdown);
-
-// =========================================
-// 💰 REGISTER SESSION ROUTES (DENOMINATION BREAKDOWN)
-// =========================================
-
-// Register session management with denomination breakdown
-router.get('/register-sessions/denomination-types', isAuthenticated, RegisterSessionController.getDenominationTypes as any);
-router.post('/register-sessions/open', isAuthenticated, RegisterSessionController.openRegisterSession as any);
-router.patch('/register-sessions/:sessionId/close', isAuthenticated, RegisterSessionController.closeRegisterSession as any);
-router.get('/register-sessions/active/:registerId', isAuthenticated, RegisterSessionController.getActiveSession as any);
-router.get('/register-sessions/:sessionId/denominations', isAuthenticated, RegisterSessionController.getDenominationBreakdown as any);
-router.get('/register-sessions/history/:registerId', isAuthenticated, RegisterSessionController.getSessionHistory as any);
-router.get('/register-sessions/discrepancies/:branchId', isAuthenticated, RegisterSessionController.getDiscrepancyReports as any);
 
 export { router as apiRoutes };
