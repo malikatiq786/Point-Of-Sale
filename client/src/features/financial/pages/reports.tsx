@@ -70,6 +70,68 @@ export default function Reports() {
     // TODO: Implement actual export logic (PDF, CSV, etc.)
   };
 
+  const handleQuickReport = (quickReportType: string) => {
+    const currentDate = new Date();
+    const currentMonth = currentDate.toISOString().slice(0, 7); // YYYY-MM format
+    const currentYear = currentDate.getFullYear();
+    const yearStart = `${currentYear}-01-01`;
+    const yearEnd = `${currentYear}-12-31`;
+
+    switch (quickReportType) {
+      case "Monthly Sales Report":
+        setReportType("sales_summary");
+        setPeriod("monthly");
+        setDateFrom(`${currentMonth}-01`);
+        setDateTo(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().slice(0, 10));
+        break;
+      case "Expense Summary":
+        setReportType("expense_report");
+        setPeriod("monthly");
+        setDateFrom(`${currentMonth}-01`);
+        setDateTo(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().slice(0, 10));
+        break;
+      case "Customer Payments":
+        setReportType("cashflow");
+        setPeriod("monthly");
+        setDateFrom(`${currentMonth}-01`);
+        setDateTo(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().slice(0, 10));
+        break;
+      case "Inventory Valuation":
+        setReportType("balance_sheet");
+        setPeriod("monthly");
+        setDateFrom(`${currentMonth}-01`);
+        setDateTo(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().slice(0, 10));
+        break;
+      case "Tax Summary":
+        setReportType("profit_loss");
+        setPeriod("quarterly");
+        const currentQuarter = Math.floor((currentDate.getMonth()) / 3);
+        const quarterStart = new Date(currentYear, currentQuarter * 3, 1);
+        const quarterEnd = new Date(currentYear, (currentQuarter + 1) * 3, 0);
+        setDateFrom(quarterStart.toISOString().slice(0, 10));
+        setDateTo(quarterEnd.toISOString().slice(0, 10));
+        break;
+      case "Year-End Report":
+        setReportType("profit_loss");
+        setPeriod("yearly");
+        setDateFrom(yearStart);
+        setDateTo(yearEnd);
+        break;
+      default:
+        break;
+    }
+
+    // Trigger report generation
+    generateReport();
+  };
+
+  const handleQuickReportExport = (quickReportType: string, format: string) => {
+    handleQuickReport(quickReportType);
+    setTimeout(() => {
+      exportReport(format);
+    }, 1000); // Allow time for report generation
+  };
+
   return (
     <AppLayout>
       <div className="mb-6">
@@ -341,27 +403,88 @@ export default function Reports() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { name: "Monthly Sales Report", description: "Sales performance for current month", icon: TrendingUp },
-              { name: "Expense Summary", description: "Expense breakdown by category", icon: TrendingDown },
-              { name: "Customer Payments", description: "Outstanding and received payments", icon: DollarSign },
-              { name: "Inventory Valuation", description: "Current inventory value report", icon: BarChart3 },
-              { name: "Tax Summary", description: "Tax calculations and summaries", icon: FileText },
-              { name: "Year-End Report", description: "Annual financial summary", icon: Calendar },
+              { 
+                name: "Monthly Sales Report", 
+                description: "Sales performance for current month", 
+                icon: TrendingUp,
+                reportType: "sales_summary",
+                period: "monthly" 
+              },
+              { 
+                name: "Expense Summary", 
+                description: "Expense breakdown by category", 
+                icon: TrendingDown,
+                reportType: "expense_report", 
+                period: "monthly"
+              },
+              { 
+                name: "Customer Payments", 
+                description: "Outstanding and received payments", 
+                icon: DollarSign,
+                reportType: "cashflow",
+                period: "monthly"
+              },
+              { 
+                name: "Inventory Valuation", 
+                description: "Current inventory value report", 
+                icon: BarChart3,
+                reportType: "balance_sheet",
+                period: "monthly"
+              },
+              { 
+                name: "Tax Summary", 
+                description: "Tax calculations and summaries", 
+                icon: FileText,
+                reportType: "profit_loss",
+                period: "quarterly" 
+              },
+              { 
+                name: "Year-End Report", 
+                description: "Annual financial summary", 
+                icon: Calendar,
+                reportType: "profit_loss",
+                period: "yearly"
+              },
             ].map((report, index) => {
               const IconComponent = report.icon;
+              const isCurrentReport = reportType === report.reportType;
               return (
-                <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer">
+                <Card 
+                  key={index} 
+                  className={`hover:shadow-md transition-all duration-200 cursor-pointer ${
+                    isCurrentReport ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                  }`}
+                >
                   <CardContent className="p-4">
                     <div className="flex items-start space-x-3">
-                      <IconComponent className="w-8 h-8 text-blue-500 mt-1" />
+                      <IconComponent className={`w-8 h-8 mt-1 ${
+                        isCurrentReport ? 'text-blue-600' : 'text-blue-500'
+                      }`} />
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">{report.name}</h3>
+                        <h3 className={`font-semibold mb-1 ${
+                          isCurrentReport ? 'text-blue-900' : 'text-gray-900'
+                        }`}>
+                          {report.name}
+                        </h3>
                         <p className="text-sm text-gray-600 mb-3">{report.description}</p>
                         <div className="flex space-x-2">
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant={isCurrentReport ? "default" : "outline"}
+                            onClick={() => handleQuickReport(report.name)}
+                            data-testid={`button-view-${report.name.toLowerCase().replace(/\s+/g, '-')}`}
+                          >
+                            {isCurrentReport && isLoading ? (
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            ) : null}
                             View
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleQuickReportExport(report.name, 'pdf')}
+                            data-testid={`button-export-${report.name.toLowerCase().replace(/\s+/g, '-')}`}
+                          >
                             <Download className="w-3 h-3 mr-1" />
                             Export
                           </Button>
