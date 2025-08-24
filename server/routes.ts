@@ -2524,14 +2524,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk delete units (must come BEFORE the :id route)
+  app.delete("/api/units/bulk-delete", isAuthenticated, async (req: any, res) => {
+    console.log('=== BULK DELETE UNITS START ===');
+    console.log('Full request body:', JSON.stringify(req.body, null, 2));
+    
+    try {
+      const { unitIds } = req.body;
+      
+      console.log('Received bulk delete request with body:', req.body);
+      console.log('UnitIds type:', typeof unitIds, 'Value:', unitIds);
+      console.log('UnitIds as JSON:', JSON.stringify(unitIds));
+      
+      if (!unitIds || !Array.isArray(unitIds) || unitIds.length === 0) {
+        return res.status(400).json({ message: "Unit IDs array is required" });
+      }
+
+      // Validate all IDs are numbers and filter out invalid ones
+      const validIds: number[] = [];
+      for (let i = 0; i < unitIds.length; i++) {
+        const id = unitIds[i];
+        console.log(`Processing ID at index ${i}:`, id, 'Type:', typeof id);
+        
+        // More robust validation
+        if (id !== null && id !== undefined && id !== '' && id !== 'NaN') {
+          let parsed: number;
+          
+          if (typeof id === 'number') {
+            parsed = id;
+          } else if (typeof id === 'string') {
+            // Trim whitespace and check if it's a valid number string
+            const trimmed = id.trim();
+            if (trimmed === '' || trimmed === 'NaN' || trimmed === 'undefined' || trimmed === 'null') {
+              console.log(`Skipping invalid ID: "${trimmed}"`);
+              continue;
+            }
+            parsed = parseInt(trimmed, 10);
+          } else {
+            console.log(`Skipping non-numeric ID of type ${typeof id}:`, id);
+            continue;
+          }
+          
+          console.log('Parsed value:', parsed, 'isNaN:', isNaN(parsed), 'isFinite:', isFinite(parsed));
+          
+          // Ensure it's a positive integer
+          if (!isNaN(parsed) && isFinite(parsed) && parsed > 0 && Number.isInteger(parsed)) {
+            validIds.push(parsed);
+            console.log(`Added valid ID: ${parsed}`);
+          } else {
+            console.log(`Rejected invalid ID: ${parsed} (original: ${id})`);
+          }
+        } else {
+          console.log(`Skipping null/undefined/empty ID at index ${i}:`, id);
+        }
+      }
+        
+      if (validIds.length === 0) {
+        console.log('No valid IDs found after validation');
+        return res.status(400).json({ message: "No valid unit IDs provided" });
+      }
+      
+      console.log('Original unitIds:', unitIds);
+      console.log('Valid parsed IDs:', validIds);
+
+      console.log(`Attempting to delete ${validIds.length} units:`, validIds);
+      
+      let deletedCount = 0;
+      const errors: any[] = [];
+
+      // Delete each unit individually with additional validation
+      for (const unitId of validIds) {
+        try {
+          // Double-check that unitId is still valid before deletion
+          if (!Number.isInteger(unitId) || unitId <= 0) {
+            console.error(`Invalid unit ID detected before deletion: ${unitId}`);
+            errors.push({ 
+              unitId, 
+              error: "Invalid unit ID format" 
+            });
+            continue;
+          }
+          
+          console.log(`Deleting unit ${unitId} (type: ${typeof unitId})`);
+          await storage.deleteUnit(unitId);
+          deletedCount++;
+          console.log(`Successfully deleted unit ${unitId}`);
+        } catch (error: any) {
+          console.error(`Error deleting unit ${unitId}:`, error);
+          
+          // Handle foreign key constraint errors more gracefully
+          if (error.code === '23503') {
+            errors.push({ 
+              unitId, 
+              error: "Unit is being used by products" 
+            });
+          } else {
+            errors.push({ unitId, error: error.message || 'Unknown error' });
+          }
+        }
+      }
+      
+      // Log activity for successful deletions
+      if (deletedCount > 0) {
+        const userId = req.user?.claims?.sub || req.user?.id || "system";
+        await storage.logActivity(
+          userId,
+          `Bulk deleted ${deletedCount} units`,
+          req.ip
+        );
+      }
+      
+      console.log(`Successfully deleted ${deletedCount} out of ${validIds.length} units`);
+      console.log('=== BULK DELETE UNITS END ===');
+      
+      res.json({ 
+        message: `Successfully deleted ${deletedCount} out of ${validIds.length} units`,
+        deletedCount,
+        totalRequested: validIds.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      console.error("Error in bulk delete units:", error);
+      res.status(500).json({ message: "Failed to delete units", error: error.message || 'Unknown error' });
+    }
+  });
+
+  // Single unit delete (must come AFTER the bulk-delete route)
   app.delete("/api/units/:id", isAuthenticated, async (req, res) => {
     try {
       const unitId = parseInt(req.params.id);
+      
+      // Validate the parsed ID
+      if (isNaN(unitId) || !isFinite(unitId) || unitId <= 0 || !Number.isInteger(unitId)) {
+        console.error("Invalid unit ID received:", req.params.id, "Parsed as:", unitId);
+        return res.status(400).json({ 
+          message: "Invalid unit ID provided" 
+        });
+      }
+      
       await storage.deleteUnit(unitId);
       console.log("Unit deleted:", unitId);
       res.json({ message: "Unit deleted successfully" });
     } catch (error) {
       console.error("Error deleting unit:", error);
+      
+      // Check if it's a foreign key constraint error
+      if (error.code === '23503') {
+        return res.status(400).json({ 
+          message: "Cannot delete unit. It is being used by one or more products. Please remove or change the unit of those products first." 
+        });
+      }
+      
       res.status(500).json({ message: "Failed to delete unit" });
     }
   });

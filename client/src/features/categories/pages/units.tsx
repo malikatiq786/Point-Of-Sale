@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Search, Plus, Edit, Trash2, Scale } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Scale, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const unitSchema = z.object({
@@ -27,6 +28,8 @@ export default function Units() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<any>(null);
+  const [selectedUnits, setSelectedUnits] = useState<number[]>([]);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -116,6 +119,38 @@ export default function Units() {
     },
   });
 
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (unitIds: number[]) => {
+      console.log('Frontend: Sending bulk delete with unitIds:', unitIds);
+      console.log('Frontend: UnitIds types:', unitIds.map(id => ({ id, type: typeof id })));
+      
+      const response = await fetch('/api/units/bulk-delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unitIds }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete units');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/units'] });
+      setSelectedUnits([]);
+      setShowBulkDeleteDialog(false);
+      toast({
+        title: "Success",
+        description: `${data.deletedCount} units deleted successfully`,
+      });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.message || "Failed to delete units";
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
+    },
+  });
+
   const onSubmit = (data: UnitFormData) => {
     if (editingUnit) {
       updateUnitMutation.mutate({ ...data, id: editingUnit.id });
@@ -139,6 +174,47 @@ export default function Units() {
     if (confirm('Are you sure you want to delete this unit?')) {
       deleteUnitMutation.mutate(id);
     }
+  };
+
+  // Bulk selection handlers
+  const handleSelectUnit = (unitId: number) => {
+    console.log('Frontend: Selecting unit with ID:', unitId, 'Type:', typeof unitId);
+    setSelectedUnits(prev => {
+      const newSelection = prev.includes(unitId) 
+        ? prev.filter(id => id !== unitId)
+        : [...prev, unitId];
+      console.log('Frontend: Updated selectedUnits:', newSelection);
+      return newSelection;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedUnits.length === filteredUnits.length) {
+      setSelectedUnits([]);
+    } else {
+      setSelectedUnits(filteredUnits.map((unit: any) => unit.id));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedUnits.length > 0) {
+      setShowBulkDeleteDialog(true);
+    }
+  };
+
+  const confirmBulkDelete = () => {
+    console.log('Frontend: About to delete units. selectedUnits:', selectedUnits);
+    console.log('Frontend: selectedUnits types:', selectedUnits.map(id => ({ id, type: typeof id, isNaN: isNaN(id) })));
+    
+    // Filter out any invalid IDs
+    const validIds = selectedUnits.filter(id => typeof id === 'number' && !isNaN(id) && id > 0);
+    console.log('Frontend: After filtering, valid IDs:', validIds);
+    
+    if (validIds.length !== selectedUnits.length) {
+      console.warn('Frontend: Some invalid IDs were filtered out!');
+    }
+    
+    bulkDeleteMutation.mutate(validIds);
   };
 
   const getUnitTypeColor = (type: string) => {
@@ -175,23 +251,54 @@ export default function Units() {
           />
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
         </div>
-
-        <Dialog open={isAddDialogOpen || !!editingUnit} onOpenChange={(open) => {
-          if (!open) {
-            setIsAddDialogOpen(false);
-            setEditingUnit(null);
-            form.reset();
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={() => setIsAddDialogOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+        
+        <div className="flex gap-2">
+          {/* Select All Checkbox */}
+          {filteredUnits.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="select-all-units"
+                checked={selectedUnits.length === filteredUnits.length && filteredUnits.length > 0}
+                onCheckedChange={handleSelectAll}
+              />
+              <label
+                htmlFor="select-all-units"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Select All
+              </label>
+            </div>
+          )}
+          
+          {/* Bulk Delete Button */}
+          {selectedUnits.length > 0 && (
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              data-testid="button-bulk-delete-units"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Unit
+              <Trash className="w-4 h-4 mr-2" />
+              Delete Selected ({selectedUnits.length})
             </Button>
-          </DialogTrigger>
+          )}
+
+          <Dialog open={isAddDialogOpen || !!editingUnit} onOpenChange={(open) => {
+            if (!open) {
+              setIsAddDialogOpen(false);
+              setEditingUnit(null);
+              form.reset();
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button 
+                onClick={() => setIsAddDialogOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Unit
+              </Button>
+            </DialogTrigger>
           
           <DialogContent>
             <DialogHeader>
@@ -290,6 +397,7 @@ export default function Units() {
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
@@ -314,6 +422,11 @@ export default function Units() {
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
+                    <Checkbox
+                      checked={selectedUnits.includes(unit.id)}
+                      onCheckedChange={() => handleSelectUnit(unit.id)}
+                      data-testid={`checkbox-unit-${unit.id}`}
+                    />
                     <div className="p-2 bg-indigo-100 rounded-lg">
                       <Scale className="w-5 h-5 text-indigo-600" />
                     </div>
@@ -378,6 +491,40 @@ export default function Units() {
           </CardContent>
         </Card>
       )}
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Bulk Delete</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete {selectedUnits.length} selected unit{selectedUnits.length > 1 ? 's' : ''}?
+            </p>
+            <p className="text-sm text-red-600 mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkDeleteDialog(false)}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              data-testid="button-confirm-bulk-delete-units"
+            >
+              {bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete Units'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
