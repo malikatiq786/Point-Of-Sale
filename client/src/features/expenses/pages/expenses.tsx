@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from "@/layouts";
-import { Plus, Filter, Download, Calendar, DollarSign, Users, TrendingUp, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Plus, Filter, Download, Calendar, DollarSign, Users, TrendingUp, CheckCircle, XCircle, Eye, FileText, CreditCard, User, Clock, Hash, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -600,103 +600,214 @@ export default function ExpensesPage() {
 
       {/* View Expense Dialog */}
       <Dialog open={!!viewingExpense} onOpenChange={() => setViewingExpense(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Expense Details</DialogTitle>
-            <DialogDescription>
-              {viewingExpense?.expense?.expenseNumber}
-            </DialogDescription>
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
+          <DialogHeader className="pb-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <FileText className="h-6 w-6 text-blue-600" />
+                  </div>
+                  Expense Details
+                </DialogTitle>
+                <DialogDescription className="text-lg text-gray-600 mt-2">
+                  {viewingExpense?.expense?.expenseNumber}
+                </DialogDescription>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge 
+                  variant={getStatusBadgeVariant(viewingExpense?.expense?.approvalStatus)} 
+                  className="text-sm px-3 py-1"
+                >
+                  {viewingExpense?.expense?.approvalStatus?.charAt(0).toUpperCase() + viewingExpense?.expense?.approvalStatus?.slice(1)}
+                </Badge>
+                <div className="text-right">
+                  <div className="text-sm text-gray-500">Total Amount</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {formatCurrency(viewingExpense?.expense?.totalAmount || 0)}
+                  </div>
+                </div>
+              </div>
+            </div>
           </DialogHeader>
           
           {viewingExpense && (
-            <div className="grid gap-4">
-              {/* Basic Information */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Expense Number</label>
-                  <p className="font-medium">{viewingExpense.expense.expenseNumber}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Date</label>
-                  <p>{formatDate(viewingExpense.expense.expenseDate)}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Category</label>
-                  <p>{viewingExpense.category?.name || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Vendor</label>
-                  <p>{viewingExpense.vendor?.name || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Amount</label>
-                  <p className="font-semibold text-lg">{formatCurrency(viewingExpense.expense.totalAmount)}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Status</label>
-                  <Badge variant={getStatusBadgeVariant(viewingExpense.expense.approvalStatus)}>
-                    {viewingExpense.expense.approvalStatus.charAt(0).toUpperCase() + viewingExpense.expense.approvalStatus.slice(1)}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Description and Notes */}
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Description</label>
-                  <p className="mt-1">{viewingExpense.expense.description || '-'}</p>
-                </div>
-                {viewingExpense.expense.notes && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Notes</label>
-                    <p className="mt-1 text-sm text-gray-600">{viewingExpense.expense.notes}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Payment Information */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Payment Method</label>
-                  <p>{viewingExpense.expense.paymentMethod}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Payment Reference</label>
-                  <p>{viewingExpense.expense.paymentReference || '-'}</p>
-                </div>
-                {viewingExpense.expense.receiptNumber && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Receipt Number</label>
-                    <p>{viewingExpense.expense.receiptNumber}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Created By and Dates */}
-              <div className="border-t pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Created By</label>
-                    <p>{viewingExpense.creator?.name || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Created At</label>
-                    <p>{formatDate(viewingExpense.expense.createdAt)}</p>
-                  </div>
-                  {viewingExpense.expense.approvedBy && (
-                    <>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Approved By</label>
-                        <p>Admin User</p>
+            <div className="space-y-6">
+              {/* Basic Information Card */}
+              <Card className="shadow-sm border-gray-200">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Hash className="h-5 w-5 text-blue-600" />
+                    Basic Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                        <Hash className="h-4 w-4" />
+                        Expense Number
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Approved At</label>
-                        <p>{formatDate(viewingExpense.expense.approvedAt)}</p>
+                      <p className="font-semibold text-gray-900">{viewingExpense.expense.expenseNumber}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                        <Calendar className="h-4 w-4" />
+                        Date
                       </div>
-                    </>
+                      <p className="font-semibold text-gray-900">{formatDate(viewingExpense.expense.expenseDate)}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                        <Building2 className="h-4 w-4" />
+                        Category
+                      </div>
+                      <p className="font-semibold text-gray-900">{viewingExpense.category?.name || '-'}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                        <Building2 className="h-4 w-4" />
+                        Vendor
+                      </div>
+                      <p className="font-semibold text-gray-900">{viewingExpense.vendor?.name || '-'}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                        <DollarSign className="h-4 w-4" />
+                        Amount
+                      </div>
+                      <p className="text-2xl font-bold text-green-600">{formatCurrency(viewingExpense.expense.totalAmount)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Description Card */}
+              <Card className="shadow-sm border-gray-200">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    Description & Notes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 block mb-2">Description</label>
+                    <div className="p-4 bg-gray-50 rounded-lg border">
+                      <p className="text-gray-900">{viewingExpense.expense.description || 'No description provided'}</p>
+                    </div>
+                  </div>
+                  {viewingExpense.expense.notes && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 block mb-2">Additional Notes</label>
+                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-blue-900">{viewingExpense.expense.notes}</p>
+                      </div>
+                    </div>
                   )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
+
+              {/* Payment Information Card */}
+              <Card className="shadow-sm border-gray-200">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-blue-600" />
+                    Payment Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                        <CreditCard className="h-4 w-4" />
+                        Payment Method
+                      </div>
+                      <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        {viewingExpense.expense.paymentMethod}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                        <Hash className="h-4 w-4" />
+                        Payment Reference
+                      </div>
+                      <p className="font-semibold text-gray-900">{viewingExpense.expense.paymentReference || '-'}</p>
+                    </div>
+                    {viewingExpense.expense.receiptNumber && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                          <FileText className="h-4 w-4" />
+                          Receipt Number
+                        </div>
+                        <p className="font-semibold text-gray-900">{viewingExpense.expense.receiptNumber}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Audit Trail Card */}
+              <Card className="shadow-sm border-gray-200">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-blue-600" />
+                    Audit Trail
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="p-2 bg-blue-100 rounded-full">
+                        <User className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-gray-900">Created</h4>
+                          <span className="text-sm text-gray-500">{formatDate(viewingExpense.expense.createdAt)}</span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Created by {viewingExpense.creator?.name || 'Unknown User'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {viewingExpense.expense.approvedBy && (
+                      <div className="flex items-start gap-4 p-4 bg-green-50 rounded-lg">
+                        <div className="p-2 bg-green-100 rounded-full">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-green-900">Approved</h4>
+                            <span className="text-sm text-green-600">{formatDate(viewingExpense.expense.approvedAt)}</span>
+                          </div>
+                          <p className="text-sm text-green-700 mt-1">
+                            Approved by Admin User
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {viewingExpense.expense.approvalStatus === 'rejected' && (
+                      <div className="flex items-start gap-4 p-4 bg-red-50 rounded-lg">
+                        <div className="p-2 bg-red-100 rounded-full">
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-red-900">Rejected</h4>
+                            <span className="text-sm text-red-600">{formatDate(viewingExpense.expense.approvedAt)}</span>
+                          </div>
+                          <p className="text-sm text-red-700 mt-1">
+                            Rejected by Admin User
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </DialogContent>
