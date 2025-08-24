@@ -94,6 +94,31 @@ export default function ExpensesPage() {
   // Fetch expenses
   const { data: expensesData, isLoading: isLoadingExpenses } = useQuery({
     queryKey: ['/api/expenses', filters],
+    queryFn: async () => {
+      // Convert filters to query parameters
+      const queryParams = new URLSearchParams();
+      
+      if (filters.categoryId) queryParams.set('categoryId', filters.categoryId.toString());
+      if (filters.vendorId) queryParams.set('vendorId', filters.vendorId.toString());
+      if (filters.branchId) queryParams.set('branchId', filters.branchId.toString());
+      if (filters.status) queryParams.set('status', filters.status);
+      if (filters.approvalStatus) queryParams.set('approvalStatus', filters.approvalStatus);
+      if (filters.paymentMethod) queryParams.set('paymentMethod', filters.paymentMethod);
+      if (filters.startDate) queryParams.set('startDate', filters.startDate);
+      if (filters.endDate) queryParams.set('endDate', filters.endDate);
+      
+      const url = queryParams.toString() ? `/api/expenses?${queryParams.toString()}` : '/api/expenses';
+      
+      const res = await fetch(url, {
+        credentials: "include",
+      });
+      
+      if (!res.ok) {
+        throw new Error(`${res.status}: ${res.statusText}`);
+      }
+      
+      return await res.json();
+    },
   });
 
   // Fetch categories for filters
