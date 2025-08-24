@@ -286,8 +286,8 @@ export default function Categories() {
                       <FormItem>
                         <FormLabel>Parent Category (Optional)</FormLabel>
                         <Select 
-                          onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
-                          value={field.value?.toString() || ""}
+                          onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))}
+                          value={field.value?.toString() || "none"}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -295,7 +295,7 @@ export default function Categories() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">None (Root Category)</SelectItem>
+                            <SelectItem value="none">None (Root Category)</SelectItem>
                             {(categories as any[])
                               .filter((category: any) => 
                                 // Don't show the category being edited as a potential parent (prevent circular reference)
