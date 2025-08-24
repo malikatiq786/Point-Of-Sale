@@ -19,6 +19,7 @@ import {
   Smartphone, Percent, Calculator, Receipt, Printer, QrCode, 
   User, Edit3, X, Check, Tag, Gift, AlertCircle, CheckCircle, Settings, Package, RotateCcw
 } from "lucide-react";
+import { RegisterDenominationBreakdown } from "@/components/RegisterDenominationBreakdown";
 
 interface CartItem {
   id: number;
@@ -591,6 +592,15 @@ export default function POSTerminal() {
   const [registerStatus, setRegisterStatus] = useState<'closed' | 'opening' | 'open'>('closed');
   const [cashDrawerBalance, setCashDrawerBalance] = useState(0);
   const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(true); // Show register setup when closed
+  const [denominationData, setDenominationData] = useState<{
+    declaredBalance: string;
+    denominationBreakdown: Array<{
+      denominationId: number;
+      quantity: number;
+      amount: string;
+    }>;
+    notes?: string;
+  } | null>(null);
 
   // Fetch all products (no server-side search)
   const { data: products = [], isLoading } = useQuery<any[]>({
@@ -660,8 +670,8 @@ export default function POSTerminal() {
   const selectedRegister = registers.find((r) => r.id === selectedRegisterId);
 
   // Register opening balance validation
-  const openRegister = (registerId: number, openingBalance: number) => {
-    const register = registers.find((r) => r.id === registerId);
+  const openRegister = async () => {
+    const register = registers.find((r) => r.id === selectedRegisterId);
     if (!register) {
       toast({
         title: "Error",
@@ -671,26 +681,60 @@ export default function POSTerminal() {
       return;
     }
 
-    // Validate opening balance matches register's expected opening balance
-    const expectedBalance = parseFloat(String(register.openingBalance));
-    if (Math.abs(openingBalance - expectedBalance) > 0.01) {
+    if (!denominationData) {
       toast({
-        title: "Opening Balance Mismatch",
-        description: `Expected: ${formatCurrencyValue(expectedBalance)}, Entered: ${formatCurrencyValue(openingBalance)}`,
+        title: "Error", 
+        description: "Please complete the denomination breakdown",
         variant: "destructive",
       });
       return;
     }
 
-    setSelectedRegisterId(registerId);
-    setCashDrawerBalance(openingBalance);
-    setRegisterStatus('open');
-    setIsRegisterSetupOpen(false);
+    // Validate denomination breakdown matches register's expected opening balance
+    const expectedBalance = parseFloat(String(register.openingBalance));
+    const countedBalance = parseFloat(denominationData.declaredBalance);
     
-    toast({
-      title: "Register Opened",
-      description: `${register.name} is now open with ${formatCurrencyValue(openingBalance)}`,
-    });
+    if (Math.abs(countedBalance - expectedBalance) > 0.01) {
+      toast({
+        title: "Opening Balance Mismatch",
+        description: `Expected: ${formatCurrencyValue(expectedBalance)}, Counted: ${formatCurrencyValue(countedBalance)}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRegisterStatus('opening');
+    
+    try {
+      // Create register session with denomination breakdown
+      const sessionData = {
+        registerId: selectedRegisterId,
+        expectedBalance: expectedBalance.toString(),
+        declaredBalance: denominationData.declaredBalance,
+        denominationBreakdown: denominationData.denominationBreakdown,
+        notes: denominationData.notes || '',
+        sessionType: 'opening'
+      };
+
+      await apiRequest('POST', '/api/register-sessions', sessionData);
+      
+      setCashDrawerBalance(countedBalance);
+      setRegisterStatus('open');
+      setIsRegisterSetupOpen(false);
+      
+      toast({
+        title: "Register Opened",
+        description: `${register.name} is now open with ${formatCurrencyValue(countedBalance)}`,
+      });
+    } catch (error) {
+      console.error('Failed to open register:', error);
+      setRegisterStatus('closed');
+      toast({
+        title: "Failed to Open Register",
+        description: "Unable to create register session. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const closeRegister = () => {
@@ -3525,18 +3569,25 @@ export default function POSTerminal() {
                       <strong>Expected Opening Balance:</strong> {formatCurrencyValue(parseFloat(String(selectedRegister?.openingBalance || 0)))}
                     </div>
                     <div className="text-xs text-blue-600 mt-1">
-                      Please count the cash drawer and confirm this amount matches
+                      Please count the cash denominations and verify the total matches the expected balance
                     </div>
                   </div>
                   
                   <div className="mt-3">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Enter actual cash amount"
-                      value={cashDrawerBalance}
-                      onChange={(e) => setCashDrawerBalance(parseFloat(e.target.value) || 0)}
-                      className="text-lg font-semibold text-center"
+                    <RegisterDenominationBreakdown
+                      title="Count Cash Register"
+                      expectedBalance={parseFloat(String(selectedRegister?.openingBalance || 0))}
+                      onDataChange={(data) => {
+                        setDenominationData(data);
+                      }}
+                      initialData={{
+                        declaredBalance: denominationData?.declaredBalance || "",
+                        denominations: denominationData?.denominationBreakdown?.map(d => ({
+                          denominationId: d.denominationId,
+                          quantity: d.quantity
+                        })) || [],
+                        notes: denominationData?.notes || ""
+                      }}
                     />
                   </div>
                 </div>
@@ -3544,8 +3595,8 @@ export default function POSTerminal() {
 
               <div className="flex space-x-2">
                 <Button
-                  onClick={() => openRegister(selectedRegisterId!, cashDrawerBalance)}
-                  disabled={!selectedRegisterId || cashDrawerBalance === 0 || registerStatus === 'opening'}
+                  onClick={openRegister}
+                  disabled={!selectedRegisterId || !denominationData || registerStatus === 'opening'}
                   className="w-full bg-green-600 hover:bg-green-700 text-white"
                   size="lg"
                 >
