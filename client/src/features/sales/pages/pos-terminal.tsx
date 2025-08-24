@@ -2546,16 +2546,7 @@ export default function POSTerminal() {
                               </div>
                             </td>
                             <td className="py-3 px-2 text-center">
-                              <div className="flex items-center justify-center space-x-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => updateQuantity(item.id, -1)}
-                                  className="w-6 h-6 p-0 rounded-full"
-                                >
-                                  <Minus className="w-3 h-3" />
-                                </Button>
-                                
+                              <div className="flex items-center justify-center">
                                 {editingItem === item.id ? (
                                   <Input
                                     type="text"
@@ -2590,13 +2581,13 @@ export default function POSTerminal() {
                                         }, 50);
                                       }
                                     }}
-                                    className="w-12 h-6 text-center text-sm rounded-lg"
+                                    className="w-16 h-6 text-center text-sm rounded-lg"
                                     autoFocus
                                     data-testid={`quantity-input-${item.id}`}
                                   />
                                 ) : (
                                   <span 
-                                    className="w-8 text-center font-medium text-sm cursor-pointer hover:bg-gray-200 rounded px-1 min-w-[32px]"
+                                    className="w-16 text-center font-medium text-sm cursor-pointer hover:bg-gray-200 rounded px-2 py-1 min-w-[32px]"
                                     onClick={() => {
                                       setEditingItem(item.id);
                                       setEditQuantity(item.quantity.toString());
@@ -2605,15 +2596,6 @@ export default function POSTerminal() {
                                     {item.quantity}
                                   </span>
                                 )}
-                                
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => updateQuantity(item.id, 1)}
-                                  className="w-6 h-6 p-0 rounded-full"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                </Button>
                               </div>
                             </td>
                             <td className="py-3 px-2 text-right">
