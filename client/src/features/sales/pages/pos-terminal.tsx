@@ -1531,25 +1531,25 @@ export default function POSTerminal() {
 
   return (
     <PosLayout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-2">
-      <div className={`w-full container-fluid px-4 ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className={`max-w-7xl mx-auto ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
         {/* Stunning Modern Header */}
-        <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50 rounded-2xl shadow-xl border border-slate-200/50 p-6 mb-4 backdrop-blur-sm">
+        <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-3xl shadow-2xl border border-slate-200/50 p-8 mb-6 backdrop-blur-sm">
           {/* Top Row - Time, Title & Quick Stats */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-8">
             {/* Current Date & Time */}
-            <div className="bg-gradient-to-br from-blue-600 to-blue-700 backdrop-blur-sm rounded-xl p-4 border border-blue-500/20 shadow-lg">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/30 shadow-lg">
               <div className="text-center">
-                <div className="text-xl font-bold text-white mb-1">
+                <div className="text-2xl font-bold text-slate-800 mb-1">
                   {currentTime.toLocaleTimeString('en-US', { 
                     hour: '2-digit', 
                     minute: '2-digit',
                     hour12: true 
                   })}
                 </div>
-                <div className="text-xs font-medium text-blue-100">
+                <div className="text-sm font-medium text-slate-600">
                   {currentTime.toLocaleDateString('en-US', { 
-                    weekday: 'short',
+                    weekday: 'long',
                     month: 'short', 
                     day: 'numeric',
                     year: 'numeric' 
@@ -1718,37 +1718,22 @@ export default function POSTerminal() {
           </div>
 
           {/* Bottom Row - Quick Stats */}
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-            <div className="bg-gradient-to-r from-blue-100 to-blue-200 backdrop-blur-sm rounded-lg px-3 py-2 border border-blue-300/30 shadow-sm">
-              <span className="text-xs font-semibold text-blue-700">
-                Register: <span className="text-blue-800 font-bold text-sm">{selectedRegisterId ? registers.find(r => r.id === selectedRegisterId)?.name : 'None'}</span>
+          <div className="flex items-center justify-center space-x-6">
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
+              <span className="text-sm font-semibold text-slate-600">
+                Total: <span className="text-blue-700 font-bold">{formatCurrencyValue(getGrandTotal())}</span>
               </span>
             </div>
-            <div className="bg-gradient-to-r from-green-100 to-green-200 backdrop-blur-sm rounded-lg px-3 py-2 border border-green-300/30 shadow-sm">
-              <span className="text-xs font-semibold text-green-700">
-                Status: <span className={`font-bold text-sm ${registerStatus === 'open' ? 'text-green-800' : 'text-red-700'}`}>{registerStatus === 'open' ? 'Open' : 'Closed'}</span>
-              </span>
-            </div>
-            <div className="bg-gradient-to-r from-slate-100 to-slate-200 backdrop-blur-sm rounded-lg px-3 py-2 border border-slate-300/30 shadow-sm">
-              <span className="text-xs font-semibold text-slate-700">
-                Total: <span className="text-blue-700 font-bold text-sm">{formatCurrencyValue(getGrandTotal())}</span>
-              </span>
-            </div>
-            <div className="bg-gradient-to-r from-indigo-100 to-indigo-200 backdrop-blur-sm rounded-lg px-3 py-2 border border-indigo-300/30 shadow-sm">
-              <span className="text-xs font-semibold text-indigo-700">
-                Customer: <span className="text-indigo-800 font-bold text-sm">
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
+              <span className="text-sm font-semibold text-slate-600">
+                Customer: <span className="text-indigo-700 font-bold">
                   {selectedCustomerId ? customers?.find(c => c.id === selectedCustomerId)?.name : 'Walk-in'}
                 </span>
               </span>
             </div>
-            <div className="bg-gradient-to-r from-purple-100 to-purple-200 backdrop-blur-sm rounded-lg px-3 py-2 border border-purple-300/30 shadow-sm">
-              <span className="text-xs font-semibold text-purple-700">
-                Mode: <span className="text-purple-800 font-bold text-sm">{posLayout === 'grid' ? 'Grid View' : 'Search View'}</span>
-              </span>
-            </div>
-            <div className="bg-gradient-to-r from-amber-100 to-amber-200 backdrop-blur-sm rounded-lg px-3 py-2 border border-amber-300/30 shadow-sm">
-              <span className="text-xs font-semibold text-amber-700">
-                Items: <span className="text-amber-800 font-bold text-sm">{cart.length}</span>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
+              <span className="text-sm font-semibold text-slate-600">
+                Mode: <span className="text-purple-700 font-bold">{posLayout === 'grid' ? 'Grid View' : 'Search View'}</span>
               </span>
             </div>
           </div>
@@ -2467,13 +2452,13 @@ export default function POSTerminal() {
             </div>
           </div>
         ) : (
-          // Grid Layout with Sidebar - Full Width Fluid Container
-          <div className="grid grid-cols-1 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+          // Grid Layout with Sidebar
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Side - Product Selection */}
-            <div className="xl:col-span-3 2xl:col-span-4 space-y-4">
+            <div className="lg:col-span-2 space-y-6">
             {/* Search Bar */}
-            <Card className="rounded-xl shadow-lg border-0 bg-gradient-to-r from-white to-slate-50">
-              <CardContent className="p-4">
+            <Card className="rounded-2xl shadow-lg border-0">
+              <CardContent className="p-6">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
@@ -2483,7 +2468,7 @@ export default function POSTerminal() {
                     onChange={(e) => handleSearchChange(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
                     onKeyPress={handleSearchKeyPress}
-                    className={`pl-10 h-10 text-base rounded-lg border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isScanning ? 'bg-blue-50 border-blue-300' : ''}`}
+                    className={`pl-10 h-12 text-lg rounded-xl border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isScanning ? 'bg-blue-50 border-blue-300' : ''}`}
                     autoComplete="off"
                     autoFocus
                   />
@@ -2498,15 +2483,15 @@ export default function POSTerminal() {
 
             {/* Grid Layout - Products Grid */}
             <div>
-              <Card className="rounded-xl shadow-lg border-0 bg-gradient-to-br from-white to-slate-50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center text-base">
-                    <Tag className="w-4 h-4 mr-2" />
+              <Card className="rounded-2xl shadow-lg border-0">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center">
+                    <Tag className="w-5 h-5 mr-2" />
                     Available Products
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-2 max-h-80 overflow-y-auto">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4 max-h-96 overflow-y-auto">
                     {isLoading ? (
                       Array.from({ length: 8 }).map((_, index) => (
                         <div key={index} className="bg-gray-100 rounded-xl h-24 animate-pulse" />
@@ -2543,7 +2528,7 @@ export default function POSTerminal() {
 
 
             {/* Shopping Cart Table */}
-            <Card className="rounded-xl shadow-lg border-0 bg-gradient-to-br from-green-50 to-emerald-50">
+            <Card className="rounded-2xl shadow-lg border-0">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center justify-between">
                   <span className="flex items-center">
@@ -2747,12 +2732,12 @@ export default function POSTerminal() {
           </div>
 
           {/* Right Side - Cart & Checkout */}
-          <div className="xl:col-span-1 space-y-4">
+          <div className="space-y-6">
             {/* Customer Selection */}
-            <Card className="rounded-xl shadow-lg border-0 bg-gradient-to-br from-indigo-50 to-blue-50">
+            <Card className="rounded-2xl shadow-lg border-0">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center text-base">
-                  <User className="w-4 h-4 mr-2" />
+                <CardTitle className="flex items-center">
+                  <User className="w-5 h-5 mr-2" />
                   Customer Selection
                 </CardTitle>
               </CardHeader>
@@ -2978,7 +2963,7 @@ export default function POSTerminal() {
             </div>
 
             {/* Payment Methods */}
-            <Card className="rounded-xl shadow-lg border-0 bg-gradient-to-br from-purple-50 to-pink-50">
+            <Card className="rounded-2xl shadow-lg border-0">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center">
                   <CreditCard className="w-5 h-5 mr-2" />
