@@ -275,16 +275,16 @@ export default function ExpensesPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Category</label>
                 <Select
-                  value={filters.categoryId?.toString() || ''}
+                  value={filters.categoryId?.toString() || 'all'}
                   onValueChange={(value) => 
-                    setFilters({...filters, categoryId: value ? parseInt(value) : undefined})
+                    setFilters({...filters, categoryId: value === 'all' ? undefined : parseInt(value)})
                   }
                 >
                   <SelectTrigger data-testid="select-category">
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All categories</SelectItem>
+                    <SelectItem value="all">All categories</SelectItem>
                     {categories?.map((category: any) => (
                       <SelectItem key={category.id} value={category.id.toString()}>
                         {category.name}
@@ -297,16 +297,16 @@ export default function ExpensesPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Vendor</label>
                 <Select
-                  value={filters.vendorId?.toString() || ''}
+                  value={filters.vendorId?.toString() || 'all'}
                   onValueChange={(value) => 
-                    setFilters({...filters, vendorId: value ? parseInt(value) : undefined})
+                    setFilters({...filters, vendorId: value === 'all' ? undefined : parseInt(value)})
                   }
                 >
                   <SelectTrigger data-testid="select-vendor">
                     <SelectValue placeholder="All vendors" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All vendors</SelectItem>
+                    <SelectItem value="all">All vendors</SelectItem>
                     {vendors?.map((vendor: any) => (
                       <SelectItem key={vendor.id} value={vendor.id.toString()}>
                         {vendor.name}
@@ -319,16 +319,16 @@ export default function ExpensesPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Status</label>
                 <Select
-                  value={filters.approvalStatus || ''}
+                  value={filters.approvalStatus || 'all'}
                   onValueChange={(value) => 
-                    setFilters({...filters, approvalStatus: value || undefined})
+                    setFilters({...filters, approvalStatus: value === 'all' ? undefined : value})
                   }
                 >
                   <SelectTrigger data-testid="select-status">
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All statuses</SelectItem>
+                    <SelectItem value="all">All statuses</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
                     <SelectItem value="rejected">Rejected</SelectItem>
@@ -339,16 +339,16 @@ export default function ExpensesPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Payment Method</label>
                 <Select
-                  value={filters.paymentMethod || ''}
+                  value={filters.paymentMethod || 'all'}
                   onValueChange={(value) => 
-                    setFilters({...filters, paymentMethod: value || undefined})
+                    setFilters({...filters, paymentMethod: value === 'all' ? undefined : value})
                   }
                 >
                   <SelectTrigger data-testid="select-payment-method">
                     <SelectValue placeholder="All methods" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All methods</SelectItem>
+                    <SelectItem value="all">All methods</SelectItem>
                     <SelectItem value="cash">Cash</SelectItem>
                     <SelectItem value="bank">Bank Transfer</SelectItem>
                     <SelectItem value="credit_card">Credit Card</SelectItem>
