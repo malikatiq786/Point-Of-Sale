@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Filter, Download, Calendar, DollarSign, Users, TrendingUp } from 'lucide-react';
+import { Plus, Filter, Download, Calendar, DollarSign, Users, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -153,6 +153,48 @@ export default function ExpensesPage() {
       toast({
         title: 'Error',
         description: 'Failed to delete expenses',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Approve expense mutation
+  const approveExpenseMutation = useMutation({
+    mutationFn: (expenseId: number) =>
+      apiRequest('POST', `/api/expenses/${expenseId}/approve`, {}),
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Expense approved successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-dashboard/stats'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to approve expense',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Reject expense mutation
+  const rejectExpenseMutation = useMutation({
+    mutationFn: (expenseId: number) =>
+      apiRequest('POST', `/api/expenses/${expenseId}/reject`, {}),
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Expense rejected successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-dashboard/stats'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to reject expense',
         variant: 'destructive',
       });
     },
@@ -475,6 +517,7 @@ export default function ExpensesPage() {
                   <th className="text-left p-2">Status</th>
                   <th className="text-left p-2">Payment Method</th>
                   <th className="text-left p-2">Created By</th>
+                  <th className="text-left p-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -514,6 +557,38 @@ export default function ExpensesPage() {
                     </td>
                     <td className="p-2" data-testid={`text-creator-${expense.id}`}>
                       {expense.creator?.name || '-'}
+                    </td>
+                    <td className="p-2">
+                      {expense.approvalStatus === 'pending' ? (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => approveExpenseMutation.mutate(expense.id)}
+                            disabled={approveExpenseMutation.isPending}
+                            data-testid={`button-approve-${expense.id}`}
+                            className="text-green-600 border-green-600 hover:bg-green-50"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => rejectExpenseMutation.mutate(expense.id)}
+                            disabled={rejectExpenseMutation.isPending}
+                            data-testid={`button-reject-${expense.id}`}
+                            className="text-red-600 border-red-600 hover:bg-red-50"
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">
+                          {expense.approvalStatus === 'approved' ? 'Approved' : 'Rejected'}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
