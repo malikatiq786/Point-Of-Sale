@@ -207,7 +207,12 @@ export class FinancialReportService {
 
   private async getExpenseSummary(filters: any) {
     try {
+      console.log('FinancialReportService: Getting expense summary with filters:', filters);
+      
       const stats = await this.expenseRepository.getDashboardStatistics(filters);
+      
+      console.log('FinancialReportService: Expense stats from repository:', stats);
+      
       return {
         total: Number(stats?.summary?.totalExpenses || 0),
         growth: 5, // Mock growth for now
@@ -222,12 +227,22 @@ export class FinancialReportService {
   private async getRevenueSummary(filters: any) {
     try {
       // Get sales as revenue source
-      const salesData = await this.transactionRepository.getSalesByDateRange(
-        filters.dateFrom || new Date(new Date().getFullYear(), 0, 1).toISOString(),
-        filters.dateTo || new Date().toISOString()
-      );
-
-      const total = salesData.reduce((sum: number, sale: any) => sum + Number(sale.totalAmount || 0), 0);
+      const dateFrom = filters.dateFrom || new Date(new Date().getFullYear(), 0, 1).toISOString();
+      const dateTo = filters.dateTo || new Date().toISOString();
+      
+      console.log('FinancialReportService: Getting revenue summary with date range:', dateFrom, 'to', dateTo);
+      
+      const salesData = await this.transactionRepository.getSalesByDateRange(dateFrom, dateTo);
+      
+      console.log('FinancialReportService: Found sales records:', salesData.length);
+      
+      const total = salesData.reduce((sum: number, sale: any) => {
+        const amount = parseFloat(sale.totalAmount || '0');
+        console.log('FinancialReportService: Processing sale amount:', sale.totalAmount, '-> parsed:', amount);
+        return sum + amount;
+      }, 0);
+      
+      console.log('FinancialReportService: Calculated revenue total:', total);
 
       return {
         total,

@@ -36,17 +36,21 @@ export class TransactionRepository {
 
   async getSalesByDateRange(startDate: string, endDate: string) {
     try {
+      console.log('TransactionRepository: getSalesByDateRange called with:', { startDate, endDate });
+      
       const conditions = [];
 
       if (startDate) {
         conditions.push(gte(sales.saleDate, new Date(startDate)));
+        console.log('TransactionRepository: Added start date condition:', new Date(startDate));
       }
 
       if (endDate) {
         conditions.push(lte(sales.saleDate, new Date(endDate)));
+        console.log('TransactionRepository: Added end date condition:', new Date(endDate));
       }
 
-      return await db
+      const results = await db
         .select({
           id: sales.id,
           totalAmount: sales.totalAmount,
@@ -59,6 +63,16 @@ export class TransactionRepository {
         .from(sales)
         .where(conditions.length > 0 ? and(...conditions) : sql`true`)
         .orderBy(desc(sales.saleDate));
+        
+      console.log('TransactionRepository: getSalesByDateRange returned', results.length, 'records');
+      
+      if (results.length > 0) {
+        console.log('TransactionRepository: First few records:', results.slice(0, 3));
+        const totalSample = results.slice(0, 5).reduce((sum, r) => sum + Number(r.totalAmount || 0), 0);
+        console.log('TransactionRepository: Sample total from first 5 records:', totalSample);
+      }
+      
+      return results;
     } catch (error) {
       console.error('TransactionRepository: Error in getSalesByDateRange:', error);
       throw error;
