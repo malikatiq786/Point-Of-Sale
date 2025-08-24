@@ -97,7 +97,7 @@ export function RegisterDenominationBreakdown({
   const calculatedTotal = useMemo(() => {
     return denominationTypes.reduce((sum, denom) => {
       const quantity = quantities[denom.id] || 0;
-      return sum + (denom.value * quantity);
+      return sum + (parseFloat(denom.value) * quantity);
     }, 0);
   }, [denominationTypes, quantities]);
 
@@ -160,7 +160,7 @@ export function RegisterDenominationBreakdown({
       .map(denom => ({
         denominationId: denom.id,
         quantity: quantities[denom.id],
-        amount: (denom.value * quantities[denom.id]).toFixed(2),
+        amount: (parseFloat(denom.value) * quantities[denom.id]).toFixed(2),
       }));
 
     onSubmit({
@@ -287,7 +287,7 @@ export function RegisterDenominationBreakdown({
                           {denom.name}
                         </Badge>
                         <span className="text-sm text-gray-600">
-                          PKR {denom.value.toFixed(0)} each
+                          PKR {parseFloat(denom.value).toFixed(0)} each
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -301,7 +301,7 @@ export function RegisterDenominationBreakdown({
                           data-testid={`input-quantity-${denom.id}`}
                         />
                         <span className="text-sm font-medium min-w-[80px] text-right">
-                          = PKR {((quantities[denom.id] || 0) * denom.value).toFixed(2)}
+                          = PKR {((quantities[denom.id] || 0) * parseFloat(denom.value)).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -323,7 +323,7 @@ export function RegisterDenominationBreakdown({
                           {denom.name}
                         </Badge>
                         <span className="text-sm text-gray-600">
-                          PKR {denom.value.toFixed(0)} each
+                          PKR {parseFloat(denom.value).toFixed(0)} each
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -337,7 +337,7 @@ export function RegisterDenominationBreakdown({
                           data-testid={`input-quantity-${denom.id}`}
                         />
                         <span className="text-sm font-medium min-w-[80px] text-right">
-                          = PKR {((quantities[denom.id] || 0) * denom.value).toFixed(2)}
+                          = PKR {((quantities[denom.id] || 0) * parseFloat(denom.value)).toFixed(2)}
                         </span>
                       </div>
                     </div>
