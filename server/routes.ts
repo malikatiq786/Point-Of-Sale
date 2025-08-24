@@ -1625,53 +1625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Product DELETE endpoint
-  app.delete("/api/products/:id", isAuthenticated, async (req, res) => {
-    console.log("=== DELETE PRODUCT ENDPOINT CALLED ===");
-    
-    try {
-      const productId = parseInt(req.params.id);
-      console.log(`Raw product ID from params: ${req.params.id}, parsed: ${productId}`);
-      
-      if (isNaN(productId)) {
-        console.log("Invalid product ID - not a number");
-        return res.status(400).json({ message: "Invalid product ID" });
-      }
-
-      console.log(`ROUTE: Attempting to delete product: ${productId}`);
-      
-      // Check if product exists before deletion
-      const productsBeforeDelete = await storage.getProductsCount();
-      console.log(`ROUTE: Total products before delete: ${productsBeforeDelete}`);
-      
-      // Perform the deletion
-      console.log(`ROUTE: Calling storage.deleteProduct(${productId})`);
-      await storage.deleteProduct(productId);
-      console.log(`ROUTE: storage.deleteProduct() completed`);
-      
-      // Check count after deletion to verify it worked
-      const productsAfterDelete = await storage.getProductsCount();
-      console.log(`ROUTE: Total products after delete: ${productsAfterDelete}`);
-      
-      if (productsAfterDelete < productsBeforeDelete) {
-        console.log(`ROUTE: SUCCESS - Product ${productId} successfully deleted from database`);
-      } else {
-        console.log(`ROUTE: WARNING - Product ${productId} may not have been deleted - counts are the same`);
-      }
-      
-      res.json({ 
-        message: "Product deleted successfully",
-        productId: productId,
-        beforeCount: productsBeforeDelete,
-        afterCount: productsAfterDelete
-      });
-    } catch (error) {
-      console.error("ROUTE: Error deleting product:", error);
-      res.status(500).json({ message: "Failed to delete product", error: error.message });
-    }
-  });
-
-  // Product BULK DELETE endpoint
+  // Product BULK DELETE endpoint (must be before the single delete route)
   app.delete("/api/products/bulk", isAuthenticated, async (req, res) => {
     console.log("=== BULK DELETE PRODUCTS ENDPOINT CALLED ===");
     
@@ -1728,6 +1682,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("ROUTE: Error in bulk delete products:", error);
       res.status(500).json({ message: "Failed to delete products", error: error.message });
+    }
+  });
+
+  // Product DELETE endpoint (single product)
+  app.delete("/api/products/:id", isAuthenticated, async (req, res) => {
+    console.log("=== DELETE PRODUCT ENDPOINT CALLED ===");
+    
+    try {
+      const productId = parseInt(req.params.id);
+      console.log(`Raw product ID from params: ${req.params.id}, parsed: ${productId}`);
+      
+      if (isNaN(productId)) {
+        console.log("Invalid product ID - not a number");
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+
+      console.log(`ROUTE: Attempting to delete product: ${productId}`);
+      
+      // Check if product exists before deletion
+      const productsBeforeDelete = await storage.getProductsCount();
+      console.log(`ROUTE: Total products before delete: ${productsBeforeDelete}`);
+      
+      // Perform the deletion
+      console.log(`ROUTE: Calling storage.deleteProduct(${productId})`);
+      await storage.deleteProduct(productId);
+      console.log(`ROUTE: storage.deleteProduct() completed`);
+      
+      // Check count after deletion to verify it worked
+      const productsAfterDelete = await storage.getProductsCount();
+      console.log(`ROUTE: Total products after delete: ${productsAfterDelete}`);
+      
+      if (productsAfterDelete < productsBeforeDelete) {
+        console.log(`ROUTE: SUCCESS - Product ${productId} successfully deleted from database`);
+      } else {
+        console.log(`ROUTE: WARNING - Product ${productId} may not have been deleted - counts are the same`);
+      }
+      
+      res.json({ 
+        message: "Product deleted successfully",
+        productId: productId,
+        beforeCount: productsBeforeDelete,
+        afterCount: productsAfterDelete
+      });
+    } catch (error) {
+      console.error("ROUTE: Error deleting product:", error);
+      res.status(500).json({ message: "Failed to delete product", error: error.message });
     }
   });
 
