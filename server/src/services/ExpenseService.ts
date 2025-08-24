@@ -78,9 +78,15 @@ export class ExpenseService {
       const taxAmount = expenseData.taxAmount || 0;
       const totalAmount = Number(expenseData.amount) + Number(taxAmount);
 
+      // Convert expenseDate string to Date object if needed
+      const expenseDate = typeof expenseData.expenseDate === 'string' 
+        ? new Date(expenseData.expenseDate) 
+        : expenseData.expenseDate;
+
       // Prepare expense data
       const processedExpenseData = {
         ...expenseData,
+        expenseDate,
         expenseNumber,
         totalAmount,
         taxAmount: taxAmount || 0,
