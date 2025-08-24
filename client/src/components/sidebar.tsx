@@ -27,7 +27,10 @@ import {
   X,
   ChefHat,
   Globe,
-  Car
+  Car,
+  CheckCircle,
+  FileText,
+  AlertCircle
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
@@ -112,6 +115,15 @@ export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) 
         { name: "Accounts", href: "/accounts", icon: CreditCard, roles: ["Super Admin", "Admin/Owner", "Accountant"] },
         { name: "Transactions", href: "/transactions", icon: Receipt, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
         { name: "Reports", href: "/reports", icon: PieChart, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
+      ]
+    },
+    {
+      title: "APPROVAL MANAGEMENT",
+      items: [
+        { name: "Pending Approvals", href: "/expenses?approvalStatus=pending", icon: AlertCircle, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Approval History", href: "/expenses?approvalStatus=approved", icon: CheckCircle, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Rejected Expenses", href: "/expenses?approvalStatus=rejected", icon: X, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Approval Workflows", href: "/expense-workflows", icon: FileText, roles: ["Super Admin", "Admin/Owner"] },
       ]
     },
     {
