@@ -602,7 +602,7 @@ export default function ExpensesPage() {
 
       {/* View Expense Dialog */}
       <Dialog open={!!viewingExpense} onOpenChange={() => setViewingExpense(null)}>
-        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mt-8">
           <DialogHeader className="pb-6">
             <div className="flex items-start justify-between">
               <div>
