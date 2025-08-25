@@ -17,7 +17,6 @@ import { formatBarcodeForDisplay, validateEAN13Barcode } from "@/utils/barcode";
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 import JsBarcode from 'jsbarcode';
-import QRCode from 'qrcode';
 
 export default function BarcodeManagement() {
   const { user } = useAuth();
@@ -53,6 +52,45 @@ export default function BarcodeManagement() {
 
   const products = productsResponse?.products || [];
 
+  // Fetch product variants data
+  const { data: variantsData = [] } = useQuery({
+    queryKey: [`product-variants-barcodes`],
+    queryFn: async () => {
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/stock?_t=${timestamp}`, {
+        credentials: 'include',
+        cache: 'no-cache'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch variants: ${response.status}`);
+      }
+      
+      return response.json();
+    },
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  // Transform variants data to include product info and create separate items for each variant
+  const productVariants = variantsData.filter((variant: any) => {
+    const product = products.find((p: any) => p.id === variant.productId);
+    return product && product.barcode && product.barcode.trim() !== "";
+  }).map((variant: any) => {
+    const product = products.find((p: any) => p.id === variant.productId);
+    return {
+      ...product,
+      variantId: variant.id,
+      variantName: variant.variantName || 'Default',
+      quantity: variant.quantity || 0,
+      warehouseName: variant.warehouseName || 'N/A',
+      location: variant.location || 'N/A',
+      // Use product barcode for now - we might generate variant-specific barcodes later
+      displayName: `${product.name} - ${variant.variantName || 'Default'}`
+    };
+  });
+
   // Fetch categories for filter dropdown
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
@@ -65,43 +103,42 @@ export default function BarcodeManagement() {
     retry: false,
   });
 
-  // Filter products based on search and filters
-  const filteredProducts = products.filter((product: any) => {
+  // Filter product variants based on search and filters
+  const filteredProducts = productVariants.filter((variant: any) => {
     const matchesSearch = !searchQuery || 
-      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.barcode?.includes(searchQuery) ||
-      product.category?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.brand?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      variant.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      variant.variantName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      variant.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      variant.barcode?.includes(searchQuery) ||
+      variant.category?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      variant.brand?.name?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesCategory = !categoryFilter || categoryFilter === "all" || product.category?.id?.toString() === categoryFilter;
-    const matchesBrand = !brandFilter || brandFilter === "all" || product.brand?.id?.toString() === brandFilter;
+    const matchesCategory = !categoryFilter || categoryFilter === "all" || variant.category?.id?.toString() === categoryFilter;
+    const matchesBrand = !brandFilter || brandFilter === "all" || variant.brand?.id?.toString() === brandFilter;
 
-    // Only show products that have barcodes
-    const hasBarcode = product.barcode && product.barcode.trim() !== "";
-
-    return matchesSearch && matchesCategory && matchesBrand && hasBarcode;
+    return matchesSearch && matchesCategory && matchesBrand;
   });
 
-  // Selection handlers
-  const handleSelectProduct = (productId: number, checked: boolean) => {
+  // Selection handlers (using variantId for unique identification)
+  const handleSelectProduct = (variantId: number, checked: boolean) => {
     if (checked) {
-      setSelectedProducts(prev => [...prev, productId]);
+      setSelectedProducts(prev => [...prev, variantId]);
     } else {
-      setSelectedProducts(prev => prev.filter(id => id !== productId));
+      setSelectedProducts(prev => prev.filter(id => id !== variantId));
     }
   };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allProductIds = filteredProducts.map((product: any) => product.id);
-      setSelectedProducts(allProductIds);
+      const allVariantIds = filteredProducts.map((variant: any) => variant.variantId);
+      setSelectedProducts(allVariantIds);
     } else {
       setSelectedProducts([]);
     }
   };
 
   const isAllSelected = filteredProducts.length > 0 && 
-    filteredProducts.every((product: any) => selectedProducts.includes(product.id));
+    filteredProducts.every((variant: any) => selectedProducts.includes(variant.variantId));
 
   // Generate barcode images
   const generateBarcodeImage = async (barcodeText: string, format: string = 'CODE128'): Promise<string> => {
@@ -123,27 +160,11 @@ export default function BarcodeManagement() {
     });
   };
 
-  // Generate QR code
-  const generateQRCode = async (text: string): Promise<string> => {
-    try {
-      return await QRCode.toDataURL(text, {
-        width: 80,
-        margin: 1,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        }
-      });
-    } catch (error) {
-      console.error('Error generating QR code:', error);
-      return '';
-    }
-  };
 
   // Export to PDF function with visual barcodes
   const exportBarcodesPDF = async () => {
-    const selectedProductData = filteredProducts.filter((product: any) => 
-      selectedProducts.length === 0 ? true : selectedProducts.includes(product.id)
+    const selectedProductData = filteredProducts.filter((variant: any) => 
+      selectedProducts.length === 0 ? true : selectedProducts.includes(variant.variantId)
     );
 
     if (selectedProductData.length === 0) {
@@ -181,7 +202,7 @@ export default function BarcodeManagement() {
       
       for (let row = 0; row < rows && currentProduct < selectedProductData.length; row++) {
         for (let col = 0; col < cols && currentProduct < selectedProductData.length; col++) {
-          const product = selectedProductData[currentProduct];
+          const variant = selectedProductData[currentProduct];
           const x = startX + col * labelWidth;
           const y = startY + row * labelHeight;
           
@@ -189,15 +210,15 @@ export default function BarcodeManagement() {
           pdf.setLineWidth(0.5);
           pdf.rect(x, y, labelWidth, labelHeight);
           
-          // Product name
+          // Product name with variant
           pdf.setFontSize(10);
           pdf.setFont(undefined, 'bold');
-          const productName = product.name.length > 20 ? product.name.substring(0, 20) + '...' : product.name;
-          pdf.text(productName, x + labelWidth/2, y + 12, { align: 'center' });
+          const displayName = variant.displayName.length > 22 ? variant.displayName.substring(0, 22) + '...' : variant.displayName;
+          pdf.text(displayName, x + labelWidth/2, y + 12, { align: 'center' });
           
           // Generate and add barcode image
           try {
-            const barcodeImage = await generateBarcodeImage(product.barcode, 'CODE128');
+            const barcodeImage = await generateBarcodeImage(variant.barcode || '', 'CODE128');
             if (barcodeImage) {
               pdf.addImage(barcodeImage, 'PNG', x + 10, y + 18, labelWidth - 20, 25);
             }
@@ -208,12 +229,12 @@ export default function BarcodeManagement() {
           // Barcode number
           pdf.setFontSize(8);
           pdf.setFont(undefined, 'normal');
-          pdf.text(formatBarcodeForDisplay(product.barcode), x + labelWidth/2, y + 50, { align: 'center' });
+          pdf.text(formatBarcodeForDisplay(variant.barcode || ''), x + labelWidth/2, y + 50, { align: 'center' });
           
           // Price and category
           pdf.setFontSize(7);
-          pdf.text(`${formatCurrencyValue(parseFloat(product.price || '0'))}`, x + labelWidth/2, y + 58, { align: 'center' });
-          pdf.text(`${product.category?.name || 'N/A'}`, x + labelWidth/2, y + 65, { align: 'center' });
+          pdf.text(`${formatCurrencyValue(parseFloat(variant.price || '0'))}`, x + labelWidth/2, y + 58, { align: 'center' });
+          pdf.text(`${variant.category?.name || 'N/A'}`, x + labelWidth/2, y + 65, { align: 'center' });
           
           currentProduct++;
         }
@@ -223,15 +244,15 @@ export default function BarcodeManagement() {
     pdf.save(`barcode-labels-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
     
     toast({
-      title: "PDF Generated",
-      description: `Barcode labels generated for ${selectedProductData.length} products.`,
+      title: "PDF Generated", 
+      description: `Barcode labels generated for ${selectedProductData.length} product variants.`,
     });
   };
 
   // Print barcodes function with visual barcodes
   const printBarcodes = async () => {
-    const selectedProductData = filteredProducts.filter((product: any) => 
-      selectedProducts.length === 0 ? true : selectedProducts.includes(product.id)
+    const selectedProductData = filteredProducts.filter((variant: any) => 
+      selectedProducts.length === 0 ? true : selectedProducts.includes(variant.variantId)
     );
 
     if (selectedProductData.length === 0) {
@@ -250,14 +271,14 @@ export default function BarcodeManagement() {
       productsHTML += '<div class="barcode-row">';
       
       for (let j = 0; j < 3 && (i + j) < selectedProductData.length; j++) {
-        const product = selectedProductData[i + j];
-        const formattedBarcode = formatBarcodeForDisplay(product.barcode);
+        const variant = selectedProductData[i + j];
+        const formattedBarcode = formatBarcodeForDisplay(variant.barcode || '');
         
         // Generate barcode image as base64
         const canvas = document.createElement('canvas');
         let barcodeImageData = '';
         try {
-          JsBarcode(canvas, product.barcode, {
+          JsBarcode(canvas, variant.barcode || '', {
             format: 'CODE128',
             width: 2,
             height: 60,
@@ -269,27 +290,12 @@ export default function BarcodeManagement() {
           console.error('Error generating barcode for print:', error);
         }
         
-        // Generate QR code as base64
-        let qrCodeData = '';
-        try {
-          qrCodeData = await QRCode.toDataURL(product.barcode, {
-            width: 80,
-            margin: 1,
-            color: {
-              dark: '#000000',
-              light: '#FFFFFF'
-            }
-          });
-        } catch (error) {
-          console.error('Error generating QR code for print:', error);
-        }
-        
-        const productName = product.name.length > 18 ? product.name.substring(0, 18) + '...' : product.name;
+        const displayName = variant.displayName.length > 18 ? variant.displayName.substring(0, 18) + '...' : variant.displayName;
         
         productsHTML += `
           <div class="barcode-label">
             <div class="label-header">
-              <h4>${productName}</h4>
+              <h4>${displayName}</h4>
             </div>
             
             <div class="barcode-visual">
@@ -299,12 +305,8 @@ export default function BarcodeManagement() {
             <div class="barcode-number">${formattedBarcode}</div>
             
             <div class="product-info">
-              <div class="price">${formatCurrencyValue(parseFloat(product.price || '0'))}</div>
-              <div class="category">${product.category?.name || 'N/A'}</div>
-            </div>
-            
-            <div class="qr-section">
-              ${qrCodeData ? `<img src="${qrCodeData}" alt="QR Code" class="qr-img">` : ''}
+              <div class="price">${formatCurrencyValue(parseFloat(variant.price || '0'))}</div>
+              <div class="category">${variant.category?.name || 'N/A'}</div>
             </div>
           </div>
         `;
@@ -385,13 +387,6 @@ export default function BarcodeManagement() {
               color: #666; 
               margin-top: 2px;
             }
-            .qr-section { 
-              margin-top: 8px;
-            }
-            .qr-img { 
-              width: 40px; 
-              height: 40px;
-            }
             @media print { 
               body { margin: 0; padding: 10px; } 
               .barcode-label { page-break-inside: avoid; }
@@ -420,7 +415,7 @@ export default function BarcodeManagement() {
 
     toast({
       title: "Print Dialog Opened",
-      description: `Barcode labels prepared for ${selectedProductData.length} products.`,
+      description: `Barcode labels prepared for ${selectedProductData.length} product variants.`,
     });
   };
 
@@ -492,7 +487,7 @@ export default function BarcodeManagement() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center">
               <QrCode className="mr-2 h-5 w-5" />
-              Product Barcodes ({filteredProducts.length})
+              Product Variant Barcodes ({filteredProducts.length})
             </CardTitle>
             
             <div className="flex items-center gap-2">
@@ -538,23 +533,24 @@ export default function BarcodeManagement() {
                       />
                     </TableHead>
                     <TableHead className="w-12">#</TableHead>
-                    <TableHead>Product</TableHead>
+                    <TableHead>Product & Variant</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Brand</TableHead>
                     <TableHead>Barcode</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Price</TableHead>
-                    <TableHead>Stock</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Warehouse</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProducts.map((product: any, index: number) => (
-                    <TableRow key={product.id} className="hover:bg-gray-50">
+                  {filteredProducts.map((variant: any, index: number) => (
+                    <TableRow key={variant.variantId} className="hover:bg-gray-50">
                       <TableCell>
                         <Checkbox
-                          checked={selectedProducts.includes(product.id)}
-                          onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
-                          data-testid={`checkbox-product-${product.id}`}
+                          checked={selectedProducts.includes(variant.variantId)}
+                          onCheckedChange={(checked) => handleSelectProduct(variant.variantId, checked as boolean)}
+                          data-testid={`checkbox-variant-${variant.variantId}`}
                         />
                       </TableCell>
                       <TableCell className="font-medium text-gray-500">
@@ -566,28 +562,31 @@ export default function BarcodeManagement() {
                             <Package className="w-5 h-5 text-gray-400" />
                           </div>
                           <div>
-                            <div className="font-semibold text-gray-900">{product.name}</div>
-                            {product.description && (
+                            <div className="font-semibold text-gray-900">{variant.name}</div>
+                            <div className="text-sm text-blue-600 font-medium">
+                              {variant.variantName}
+                            </div>
+                            {variant.description && (
                               <div className="text-sm text-gray-500 truncate max-w-xs">
-                                {product.description}
+                                {variant.description}
                               </div>
                             )}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {product.category?.name ? (
+                        {variant.category?.name ? (
                           <Badge variant="secondary" className="text-xs">
-                            {product.category.name}
+                            {variant.category.name}
                           </Badge>
                         ) : (
                           <span className="text-gray-400 text-sm">No Category</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        {product.brand?.name ? (
+                        {variant.brand?.name ? (
                           <Badge variant="outline" className="text-xs">
-                            {product.brand.name}
+                            {variant.brand.name}
                           </Badge>
                         ) : (
                           <span className="text-gray-400 text-sm">No Brand</span>
@@ -595,11 +594,11 @@ export default function BarcodeManagement() {
                       </TableCell>
                       <TableCell>
                         <div className="font-mono text-sm">
-                          {formatBarcodeForDisplay(product.barcode)}
+                          {formatBarcodeForDisplay(variant.barcode || '')}
                         </div>
                       </TableCell>
                       <TableCell>
-                        {validateEAN13Barcode(product.barcode) ? (
+                        {validateEAN13Barcode(variant.barcode || '') ? (
                           <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
                             Valid
                           </Badge>
@@ -611,16 +610,21 @@ export default function BarcodeManagement() {
                       </TableCell>
                       <TableCell>
                         <span className="font-semibold text-green-600">
-                          {formatCurrencyValue(parseFloat(product.price || '0'))}
+                          {formatCurrencyValue(parseFloat(variant.price || '0'))}
                         </span>
                       </TableCell>
                       <TableCell>
                         <span className={`font-medium ${
-                          product.stock <= (product.lowStockAlert || 0) 
+                          parseFloat(variant.quantity || '0') <= 10 
                             ? 'text-red-600' 
                             : 'text-gray-900'
                         }`}>
-                          {product.stock || 0}
+                          {variant.quantity || 0}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-gray-600">
+                          {variant.warehouseName}
                         </span>
                       </TableCell>
                     </TableRow>
@@ -631,11 +635,11 @@ export default function BarcodeManagement() {
           ) : (
             <div className="text-center py-12">
               <QrCode className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No products with barcodes found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No product variants with barcodes found</h3>
               <p className="text-gray-500 mb-4">
                 {searchQuery || categoryFilter !== "all" || brandFilter !== "all" 
                   ? "Try adjusting your search or filters" 
-                  : "Add products with barcodes to get started"}
+                  : "Add products with variants and barcodes to get started"}
               </p>
               <Link href="/products/add">
                 <Button>
