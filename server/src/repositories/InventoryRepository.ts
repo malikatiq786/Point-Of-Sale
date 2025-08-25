@@ -129,7 +129,7 @@ export class InventoryRepository {
       const result = await db.execute(sql`
         UPDATE products 
         SET stock = (
-          SELECT COALESCE(SUM(s.quantity), 0)
+          SELECT COALESCE(SUM(CAST(s.quantity AS INTEGER)), 0)
           FROM product_variants pv
           LEFT JOIN stock s ON pv.id = s.product_variant_id
           WHERE pv.product_id = ${variant.productId}
