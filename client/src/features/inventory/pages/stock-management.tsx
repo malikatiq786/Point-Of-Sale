@@ -8,10 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Package, AlertTriangle, Plus, Minus, Warehouse, Edit, ChevronDown, ChevronUp, Eye } from "lucide-react";
+import { Search, Package, AlertTriangle, Plus, Minus, Warehouse, Edit, ChevronDown, ChevronUp, Eye, FileText, Printer } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function StockManagement() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,6 +28,7 @@ export default function StockManagement() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { formatCurrencyValue } = useCurrency();
 
   // Fetch stock data
   const { data: stockData = [], isLoading } = useQuery({
@@ -160,11 +165,197 @@ export default function StockManagement() {
     });
   };
 
+  // Export to PDF function
+  const exportToPDF = () => {
+    const pdf = new jsPDF();
+    let currentY = 20;
+
+    // Title
+    pdf.setFontSize(16);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('Stock Management Report', 15, currentY);
+    currentY += 10;
+
+    // Summary
+    pdf.setFontSize(10);
+    pdf.text(`Total Products: ${groupedStockArray.length}`, 15, currentY);
+    currentY += 8;
+    const totalVariants = filteredStock.length;
+    pdf.text(`Total Variants: ${totalVariants}`, 15, currentY);
+    currentY += 8;
+    const totalStockValue = filteredStock.reduce((sum: number, stock: any) => {
+      return sum + (parseFloat(stock.quantity || '0') * parseFloat(stock.unitCost || '0'));
+    }, 0);
+    pdf.text(`Total Stock Items: ${filteredStock.reduce((sum: number, stock: any) => sum + parseFloat(stock.quantity || '0'), 0)}`, 15, currentY);
+    currentY += 15;
+
+    // Process each product with its variants
+    for (const productGroup of groupedStockArray) {
+      if (currentY > 250) { // Add new page if needed
+        pdf.addPage();
+        currentY = 20;
+      }
+
+      // Product header
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`${productGroup.productName}`, 15, currentY);
+      currentY += 8;
+
+      pdf.setFontSize(10);
+      pdf.text(`Category: ${productGroup.categoryName || 'N/A'}`, 15, currentY);
+      pdf.text(`Brand: ${productGroup.brandName || 'N/A'}`, 110, currentY);
+      currentY += 6;
+      pdf.text(`Unit: ${productGroup.unitName || 'N/A'}`, 15, currentY);
+      pdf.text(`Total Stock: ${productGroup.totalStock} ${productGroup.unitShortName || 'units'}`, 110, currentY);
+      currentY += 10;
+
+      // Variants table
+      if (productGroup.variants.length > 0) {
+        const variantsData = productGroup.variants.map((variant: any) => [
+          variant.variantName || 'Default',
+          variant.warehouseName || 'N/A',
+          parseFloat(variant.quantity || '0').toString(),
+          getStockStatus(parseFloat(variant.quantity || '0')).status,
+          variant.location || 'N/A'
+        ]);
+
+        autoTable(pdf, {
+          startY: currentY,
+          head: [['Variant', 'Warehouse', 'Quantity', 'Status', 'Location']],
+          body: variantsData,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [34, 197, 94] },
+          margin: { left: 15, right: 15 },
+          tableWidth: 'auto'
+        });
+
+        currentY = (pdf as any).lastAutoTable.finalY + 15;
+      } else {
+        pdf.text('No variants found for this product', 15, currentY);
+        currentY += 10;
+      }
+    }
+
+    pdf.save(`stock-management-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
+  // Print function
+  const printReport = () => {
+    let productsHTML = '';
+    
+    for (const productGroup of groupedStockArray) {
+      productsHTML += `
+        <div class="product-section">
+          <div class="product-header">
+            <h3>${productGroup.productName}</h3>
+            <div class="product-info">
+              <div><strong>Category:</strong> ${productGroup.categoryName || 'N/A'}</div>
+              <div><strong>Brand:</strong> ${productGroup.brandName || 'N/A'}</div>
+              <div><strong>Unit:</strong> ${productGroup.unitName || 'N/A'}</div>
+              <div><strong>Total Stock:</strong> ${productGroup.totalStock} ${productGroup.unitShortName || 'units'}</div>
+            </div>
+          </div>
+          
+          ${productGroup.variants.length > 0 ? `
+            <table class="variants-table">
+              <thead>
+                <tr>
+                  <th>Variant</th>
+                  <th>Warehouse</th>
+                  <th>Quantity</th>
+                  <th>Status</th>
+                  <th>Location</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${productGroup.variants.map((variant: any) => `
+                  <tr>
+                    <td>${variant.variantName || 'Default'}</td>
+                    <td>${variant.warehouseName || 'N/A'}</td>
+                    <td>${parseFloat(variant.quantity || '0')}</td>
+                    <td><span class="status-badge ${getStockStatus(parseFloat(variant.quantity || '0')).status.toLowerCase().replace(' ', '-')}">${getStockStatus(parseFloat(variant.quantity || '0')).status}</span></td>
+                    <td>${variant.location || 'N/A'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : '<p class="no-variants">No variants found for this product</p>'}
+        </div>
+      `;
+    }
+
+    const totalVariants = filteredStock.length;
+    const totalStockItems = filteredStock.reduce((sum: number, stock: any) => sum + parseFloat(stock.quantity || '0'), 0);
+
+    const printContent = `
+      <html>
+        <head>
+          <title>Stock Management Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
+            h1 { text-align: center; color: #333; margin-bottom: 10px; }
+            .summary { text-align: center; margin-bottom: 20px; padding: 10px; background-color: #f0f9ff; border-radius: 5px; }
+            .product-section { margin-bottom: 30px; page-break-inside: avoid; }
+            .product-header { background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+            .product-header h3 { margin: 0 0 10px 0; color: #22c55e; }
+            .product-info { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+            .variants-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            .variants-table th, .variants-table td { padding: 8px; text-align: left; border: 1px solid #ddd; font-size: 11px; }
+            .variants-table th { background-color: #22c55e; color: white; font-weight: bold; }
+            .variants-table td:nth-child(3) { text-align: right; }
+            .status-badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+            .out-of-stock { background-color: #fee2e2; color: #991b1b; }
+            .low-stock { background-color: #fef3c7; color: #92400e; }
+            .medium-stock { background-color: #dbeafe; color: #1e40af; }
+            .in-stock { background-color: #dcfce7; color: #166534; }
+            .no-variants { text-align: center; color: #666; font-style: italic; }
+            @media print { 
+              body { margin: 0; } 
+              .product-section { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Stock Management Report</h1>
+          <div class="summary">
+            <strong>Total Products:</strong> ${groupedStockArray.length} | <strong>Total Variants:</strong> ${totalVariants} | <strong>Total Stock Items:</strong> ${totalStockItems}
+          </div>
+          ${productsHTML}
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+  };
+
   return (
     <AppLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Stock Management</h1>
-        <p className="text-gray-600">Monitor and manage inventory levels across all warehouses</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Stock Management</h1>
+            <p className="text-gray-600">Monitor and manage inventory levels across all warehouses</p>
+          </div>
+          
+          {/* Export Buttons */}
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={exportToPDF}>
+              <FileText className="w-4 h-4 mr-2" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={printReport}>
+              <Printer className="w-4 h-4 mr-2" />
+              Print
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
