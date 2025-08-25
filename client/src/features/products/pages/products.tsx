@@ -14,9 +14,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, Package, Eye, Filter, X, ChevronLeft, ChevronRight, Settings, Warehouse, Check } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, Eye, Filter, X, ChevronLeft, ChevronRight, Settings, Warehouse, Check, FileText, Printer } from "lucide-react";
 import { Link } from "wouter";
 import { useCurrency } from "@/hooks/useCurrency";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
 
 export default function Products() {
   const { user } = useAuth();
@@ -383,6 +386,197 @@ export default function Products() {
     setCurrentPage(1);
   };
 
+  // Export to PDF function
+  const exportToPDF = async () => {
+    const pdf = new jsPDF();
+    let currentY = 20;
+
+    // Title
+    pdf.setFontSize(16);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('Products Inventory Report', 15, currentY);
+    currentY += 10;
+
+    // Summary
+    pdf.setFontSize(10);
+    pdf.text(`Total Products: ${filteredProducts.length}`, 15, currentY);
+    currentY += 8;
+    const totalValue = filteredProducts.reduce((sum: number, product: any) => {
+      return sum + (parseFloat(product.price || '0') * parseFloat(product.stock || '0'));
+    }, 0);
+    pdf.text(`Total Inventory Value: ${formatCurrencyValue(totalValue)}`, 15, currentY);
+    currentY += 15;
+
+    // Process each product with its variants
+    for (const product of filteredProducts) {
+      // Fetch variants for each product
+      let variants = [];
+      try {
+        const response = await fetch(`/api/products/${product.id}/variants`);
+        if (response.ok) {
+          variants = await response.json();
+        }
+      } catch (error) {
+        console.error('Error fetching variants for product', product.id, error);
+      }
+
+      if (currentY > 250) { // Add new page if needed
+        pdf.addPage();
+        currentY = 20;
+      }
+
+      // Product header
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`${product.name}`, 15, currentY);
+      currentY += 8;
+
+      pdf.setFontSize(10);
+      pdf.text(`Category: ${product.category?.name || 'N/A'}`, 15, currentY);
+      pdf.text(`Brand: ${product.brand?.name || 'N/A'}`, 110, currentY);
+      currentY += 6;
+      pdf.text(`Barcode: ${product.barcode || 'N/A'}`, 15, currentY);
+      pdf.text(`Unit: ${product.unit?.name || 'N/A'}`, 110, currentY);
+      currentY += 10;
+
+      // Variants table
+      if (variants.length > 0) {
+        const variantsData = variants.map((variant: any) => [
+          variant.variantName || 'Default',
+          parseFloat(variant.stock || '0').toString(),
+          formatCurrencyValue(parseFloat(variant.purchasePrice || '0')),
+          formatCurrencyValue(parseFloat(variant.salePrice || '0')),
+          formatCurrencyValue(parseFloat(variant.wholesalePrice || '0')),
+          formatCurrencyValue(parseFloat(variant.retailPrice || '0')),
+          formatCurrencyValue(parseFloat(variant.stock || '0') * parseFloat(variant.salePrice || '0'))
+        ]);
+
+        autoTable(pdf, {
+          startY: currentY,
+          head: [['Variant', 'Stock', 'Purchase Price', 'Sale Price', 'Wholesale', 'Retail', 'Total Value']],
+          body: variantsData,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [34, 197, 94] },
+          margin: { left: 15, right: 15 },
+          tableWidth: 'auto'
+        });
+
+        currentY = (pdf as any).lastAutoTable.finalY + 15;
+      } else {
+        pdf.text('No variants found for this product', 15, currentY);
+        currentY += 10;
+      }
+    }
+
+    pdf.save(`products-inventory-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
+  // Print function
+  const printReport = async () => {
+    let productsHTML = '';
+    
+    for (const product of filteredProducts) {
+      // Fetch variants for each product
+      let variants = [];
+      try {
+        const response = await fetch(`/api/products/${product.id}/variants`);
+        if (response.ok) {
+          variants = await response.json();
+        }
+      } catch (error) {
+        console.error('Error fetching variants for product', product.id, error);
+      }
+      
+      productsHTML += `
+        <div class="product-section">
+          <div class="product-header">
+            <h3>${product.name}</h3>
+            <div class="product-info">
+              <div><strong>Category:</strong> ${product.category?.name || 'N/A'}</div>
+              <div><strong>Brand:</strong> ${product.brand?.name || 'N/A'}</div>
+              <div><strong>Barcode:</strong> ${product.barcode || 'N/A'}</div>
+              <div><strong>Unit:</strong> ${product.unit?.name || 'N/A'}</div>
+            </div>
+          </div>
+          
+          ${variants.length > 0 ? `
+            <table class="variants-table">
+              <thead>
+                <tr>
+                  <th>Variant</th>
+                  <th>Stock</th>
+                  <th>Purchase Price</th>
+                  <th>Sale Price</th>
+                  <th>Wholesale Price</th>
+                  <th>Retail Price</th>
+                  <th>Total Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${variants.map((variant: any) => `
+                  <tr>
+                    <td>${variant.variantName || 'Default'}</td>
+                    <td>${parseFloat(variant.stock || '0')}</td>
+                    <td>${formatCurrencyValue(parseFloat(variant.purchasePrice || '0'))}</td>
+                    <td>${formatCurrencyValue(parseFloat(variant.salePrice || '0'))}</td>
+                    <td>${formatCurrencyValue(parseFloat(variant.wholesalePrice || '0'))}</td>
+                    <td>${formatCurrencyValue(parseFloat(variant.retailPrice || '0'))}</td>
+                    <td>${formatCurrencyValue(parseFloat(variant.stock || '0') * parseFloat(variant.salePrice || '0'))}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : '<p class="no-variants">No variants found for this product</p>'}
+        </div>
+      `;
+    }
+
+    const totalValue = filteredProducts.reduce((sum: number, product: any) => {
+      return sum + (parseFloat(product.price || '0') * parseFloat(product.stock || '0'));
+    }, 0);
+
+    const printContent = `
+      <html>
+        <head>
+          <title>Products Inventory Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
+            h1 { text-align: center; color: #333; margin-bottom: 10px; }
+            .summary { text-align: center; margin-bottom: 20px; padding: 10px; background-color: #f0f9ff; border-radius: 5px; }
+            .product-section { margin-bottom: 30px; page-break-inside: avoid; }
+            .product-header { background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+            .product-header h3 { margin: 0 0 10px 0; color: #22c55e; }
+            .product-info { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+            .variants-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            .variants-table th, .variants-table td { padding: 8px; text-align: left; border: 1px solid #ddd; font-size: 11px; }
+            .variants-table th { background-color: #22c55e; color: white; font-weight: bold; }
+            .variants-table td:nth-child(2), .variants-table td:nth-child(3), .variants-table td:nth-child(4), .variants-table td:nth-child(5), .variants-table td:nth-child(6), .variants-table td:nth-child(7) { text-align: right; }
+            .no-variants { text-align: center; color: #666; font-style: italic; }
+            @media print { 
+              body { margin: 0; } 
+              .product-section { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Products Inventory Report</h1>
+          <div class="summary">
+            <strong>Total Products:</strong> ${filteredProducts.length} | <strong>Total Inventory Value:</strong> ${formatCurrencyValue(totalValue)}
+          </div>
+          ${productsHTML}
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+  };
+
   // Handle page change
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -572,33 +766,49 @@ export default function Products() {
               Products ({filteredProducts.length})
             </CardTitle>
             
-            {/* Bulk Actions */}
-            {selectedProducts.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">
-                  {selectedProducts.length} selected
-                </span>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleBulkDelete}
-                  disabled={bulkDeleteProductMutation.isPending}
-                  data-testid="button-bulk-delete"
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  {bulkDeleteProductMutation.isPending ? 'Deleting...' : `Delete ${selectedProducts.length}`}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedProducts([])}
-                  data-testid="button-clear-selection"
-                >
-                  <X className="w-4 h-4 mr-1" />
-                  Clear
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Export Buttons */}
+              {selectedProducts.length === 0 && (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={exportToPDF}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={printReport}>
+                    <Printer className="w-4 h-4 mr-2" />
+                    Print
+                  </Button>
+                </div>
+              )}
+              
+              {/* Bulk Actions */}
+              {selectedProducts.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">
+                    {selectedProducts.length} selected
+                  </span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={bulkDeleteProductMutation.isPending}
+                    data-testid="button-bulk-delete"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {bulkDeleteProductMutation.isPending ? 'Deleting...' : `Delete ${selectedProducts.length}`}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedProducts([])}
+                    data-testid="button-clear-selection"
+                  >
+                    <X className="w-4 h-4 mr-1" />
+                    Clear
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
