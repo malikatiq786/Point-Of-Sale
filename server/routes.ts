@@ -1297,13 +1297,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ];
 
   // Sales API endpoints
-  app.get('/api/sales', (req, res) => {
-    console.log('Fetching sales, total:', salesStorage.length);
-    const sortedSales = salesStorage.sort((a, b) => 
-      new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
-    );
-    res.json(sortedSales);
-  });
+  // DISABLED: Old mock sales route - using database-backed MVC routes instead
+  // app.get('/api/sales', (req, res) => {
+  //   console.log('Fetching sales, total:', salesStorage.length);
+  //   const sortedSales = salesStorage.sort((a, b) => 
+  //     new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
+  //   );
+  //   res.json(sortedSales);
+  // });
 
   // Customer sales history endpoint
   app.get('/api/customers/:customerId/sales', (req, res) => {
@@ -1327,6 +1328,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // DISABLED: Old mock sales POST route - using database-backed MVC routes instead  
+  /*
   app.post('/api/sales', async (req, res) => {
     try {
       console.log('SIMPLE SALES API: Received request body:', JSON.stringify(req.body, null, 2));
@@ -1441,6 +1444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to process sale' });
     }
   });
+  */
 
   // Stock Adjustments API - Working with simple product system
   app.get('/api/stock/adjustments', isAuthenticated, async (req, res) => {
