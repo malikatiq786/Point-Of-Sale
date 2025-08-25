@@ -93,7 +93,7 @@ router.get('/products', isAuthenticated, async (req: any, res: any) => {
 
     // Apply where conditions if any exist
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions));
     }
 
     const products = await query.orderBy(schema.products.name).limit(1000);
