@@ -183,19 +183,24 @@ export default function Sales() {
       // Sale items table
       if (saleItems.length > 0) {
         const itemsData = saleItems.map((item: any) => [
-          item.product?.name || 'Unknown Product',
+          (item.product?.name || 'Unknown Product') + 
+          (item.isFullyReturned ? ' [FULLY RETURNED]' : item.hasReturns ? ' [PARTIALLY RETURNED]' : ''),
           item.variant?.variantName || 'Default',
           item.product?.categoryName || 'N/A',
           item.product?.brandName || 'N/A',
           item.product?.barcode || 'N/A',
-          parseFloat(item.quantity || '0').toString(),
+          item.hasReturns ? 
+            `${parseFloat(item.netQuantity || '0')} kept (${parseFloat(item.originalQuantity || '0')} sold, ${parseFloat(item.returnedQuantity || '0')} returned)` :
+            parseFloat(item.quantity || '0').toString(),
           formatCurrencyValue(parseFloat(item.price || '0')),
-          formatCurrencyValue(parseFloat(item.quantity || '0') * parseFloat(item.price || '0'))
+          item.hasReturns ?
+            `${formatCurrencyValue(parseFloat(item.netQuantity || '0') * parseFloat(item.price || '0'))} (was ${formatCurrencyValue(parseFloat(item.originalQuantity || '0') * parseFloat(item.price || '0'))})` :
+            formatCurrencyValue(parseFloat(item.quantity || '0') * parseFloat(item.price || '0'))
         ]);
 
         autoTable(pdf, {
           startY: currentY,
-          head: [['Product', 'Variant', 'Category', 'Brand', 'Code', 'Qty', 'Price', 'Total']],
+          head: [['Product', 'Variant', 'Category', 'Brand', 'Code', 'Quantity', 'Price', 'Total']],
           body: itemsData,
           styles: { fontSize: 8 },
           headStyles: { fillColor: [34, 197, 94] },
@@ -219,7 +224,8 @@ export default function Sales() {
     // Header row
     csvRows.push([
       'Sale ID', 'Sale Date', 'Customer', 'Cashier', 'Sale Status', 'Sale Total',
-      'Product Name', 'Variant', 'Category', 'Brand', 'Product Code', 'Quantity', 'Unit Price', 'Item Total'
+      'Product Name', 'Variant', 'Category', 'Brand', 'Product Code', 'Return Status', 
+      'Original Qty', 'Returned Qty', 'Net Qty', 'Unit Price', 'Original Total', 'Net Total'
     ]);
 
     // Fetch all sale items in bulk for better performance
@@ -238,6 +244,9 @@ export default function Sales() {
 
       if (saleItems.length > 0) {
         saleItems.forEach((item: any) => {
+          const returnStatus = item.isFullyReturned ? 'Fully Returned' : 
+                              item.hasReturns ? 'Partially Returned' : 'No Returns';
+          
           csvRows.push([
             `#${sale.id}`,
             sale.saleDate ? format(new Date(sale.saleDate), 'yyyy-MM-dd HH:mm') : '',
@@ -250,9 +259,13 @@ export default function Sales() {
             item.product?.categoryName || 'N/A',
             item.product?.brandName || 'N/A',
             item.product?.barcode || 'N/A',
-            parseFloat(item.quantity || '0').toString(),
+            returnStatus,
+            parseFloat(item.originalQuantity || item.quantity || '0').toFixed(2),
+            parseFloat(item.returnedQuantity || '0').toFixed(2),
+            parseFloat(item.netQuantity || item.quantity || '0').toFixed(2),
             parseFloat(item.price || '0').toFixed(2),
-            (parseFloat(item.quantity || '0') * parseFloat(item.price || '0')).toFixed(2)
+            (parseFloat(item.originalQuantity || item.quantity || '0') * parseFloat(item.price || '0')).toFixed(2),
+            (parseFloat(item.netQuantity || item.quantity || '0') * parseFloat(item.price || '0')).toFixed(2)
           ]);
         });
       } else {
@@ -264,7 +277,7 @@ export default function Sales() {
           sale.user?.name || 'Unknown',
           sale.status || 'Unknown',
           parseFloat(sale.totalAmount || '0').toFixed(2),
-          'No items', '', '', '', '', '', '', ''
+          'No items', '', '', '', '', '', '', '', '', '', '', ''
         ]);
       }
     }
@@ -317,24 +330,41 @@ export default function Sales() {
                   <th>Category</th>
                   <th>Brand</th>
                   <th>Code</th>
-                  <th>Qty</th>
+                  <th>Return Status</th>
+                  <th>Quantity</th>
                   <th>Price</th>
                   <th>Total</th>
                 </tr>
               </thead>
               <tbody>
-                ${saleItems.map((item: any) => `
-                  <tr>
-                    <td>${item.product?.name || 'Unknown'}</td>
+                ${saleItems.map((item: any) => {
+                  const returnStatus = item.isFullyReturned ? 'Fully Returned' : 
+                                      item.hasReturns ? 'Partially Returned' : 'No Returns';
+                  const quantityDisplay = item.hasReturns ? 
+                    `${parseFloat(item.netQuantity || '0')} kept (${parseFloat(item.originalQuantity || '0')} sold, ${parseFloat(item.returnedQuantity || '0')} returned)` :
+                    parseFloat(item.quantity || '0').toString();
+                  const totalDisplay = item.hasReturns ?
+                    `${formatCurrencyValue(parseFloat(item.netQuantity || '0') * parseFloat(item.price || '0'))} <small style="text-decoration: line-through;">(was ${formatCurrencyValue(parseFloat(item.originalQuantity || '0') * parseFloat(item.price || '0'))})</small>` :
+                    formatCurrencyValue(parseFloat(item.quantity || '0') * parseFloat(item.price || '0'));
+                  
+                  return `
+                  <tr class="${item.isFullyReturned ? 'fully-returned' : item.hasReturns ? 'partially-returned' : ''}">
+                    <td>
+                      ${item.product?.name || 'Unknown'}
+                      ${item.isFullyReturned ? '<span class="return-badge fully">FULLY RETURNED</span>' : 
+                        item.hasReturns ? '<span class="return-badge partial">PARTIALLY RETURNED</span>' : ''}
+                    </td>
                     <td>${item.variant?.variantName || 'Default'}</td>
                     <td>${item.product?.categoryName || 'N/A'}</td>
                     <td>${item.product?.brandName || 'N/A'}</td>
                     <td>${item.product?.barcode || 'N/A'}</td>
-                    <td>${parseFloat(item.quantity || '0')}</td>
+                    <td class="return-status">${returnStatus}</td>
+                    <td>${quantityDisplay}</td>
                     <td>${formatCurrencyValue(parseFloat(item.price || '0'))}</td>
-                    <td>${formatCurrencyValue(parseFloat(item.quantity || '0') * parseFloat(item.price || '0'))}</td>
+                    <td>${totalDisplay}</td>
                   </tr>
-                `).join('')}
+                `;
+                }).join('')}
               </tbody>
             </table>
           ` : '<p class="no-items">No items found for this sale</p>'}
@@ -361,7 +391,13 @@ export default function Sales() {
             .items-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             .items-table th, .items-table td { padding: 8px; text-align: left; border: 1px solid #ddd; font-size: 11px; }
             .items-table th { background-color: #22c55e; color: white; font-weight: bold; }
-            .items-table td:nth-child(6), .items-table td:nth-child(7), .items-table td:nth-child(8) { text-align: right; }
+            .items-table td:nth-child(7), .items-table td:nth-child(8), .items-table td:nth-child(9) { text-align: right; }
+            .partially-returned { background-color: #fff3cd !important; }
+            .fully-returned { background-color: #f8d7da !important; }
+            .return-badge { font-size: 8px; padding: 2px 4px; border-radius: 3px; margin-left: 5px; font-weight: bold; }
+            .return-badge.partial { background-color: #ff8c00; color: white; }
+            .return-badge.fully { background-color: #dc3545; color: white; }
+            .return-status { font-weight: bold; text-align: center; }
             .no-items { text-align: center; color: #666; font-style: italic; }
             @media print { 
               body { margin: 0; } 

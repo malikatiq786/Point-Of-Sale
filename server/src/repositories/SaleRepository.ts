@@ -230,15 +230,16 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
     }
   }
 
-  // Get sale items for multiple sales in a single optimized query
+  // Get sale items for multiple sales in a single optimized query with return information
   async getBulkSaleItems(saleIds: number[]) {
     try {
-      
+      // Get all sale items with product details
       const allItems = await db.select({
         saleId: saleItems.saleId,
         id: saleItems.id,
         quantity: saleItems.quantity,
         price: saleItems.price,
+        productVariantId: saleItems.productVariantId,
         product: {
           id: products.id,
           name: products.name,
@@ -262,13 +263,54 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       .leftJoin(units, eq(products.unitId, units.id))
       .where(inArray(saleItems.saleId, saleIds));
 
-      // Group by saleId for easier consumption
+      // Get all return information for these sales
+      const returnItemsQuery = await db.execute(sql`
+        SELECT 
+          r.sale_id,
+          ri.product_variant_id,
+          SUM(ri.quantity) as total_returned
+        FROM returns r
+        JOIN return_items ri ON r.id = ri.return_id
+        WHERE r.sale_id IN (${saleIds.join(',')}) 
+          AND r.status IN ('approved', 'processed')
+        GROUP BY r.sale_id, ri.product_variant_id
+      `);
+
+      // Convert return data to a nested map for easy lookup: [saleId][variantId] = returnedQuantity
+      const returnedQuantities = new Map();
+      returnItemsQuery.rows.forEach((row: any) => {
+        const saleId = row.sale_id;
+        const variantId = row.product_variant_id;
+        const returnedQty = parseFloat(row.total_returned || '0');
+        
+        if (!returnedQuantities.has(saleId)) {
+          returnedQuantities.set(saleId, new Map());
+        }
+        returnedQuantities.get(saleId).set(variantId, returnedQty);
+      });
+
+      // Add return information to items and group by sale ID
       const groupedItems: Record<number, any[]> = {};
       allItems.forEach(item => {
+        const saleReturns = returnedQuantities.get(item.saleId) || new Map();
+        const returnedQuantity = saleReturns.get(item.productVariantId) || 0;
+        
+        const originalQuantity = parseFloat(item.quantity || '0');
+        const netQuantity = originalQuantity - returnedQuantity;
+
+        const enrichedItem = {
+          ...item,
+          originalQuantity: originalQuantity,
+          returnedQuantity: returnedQuantity,
+          netQuantity: netQuantity,
+          hasReturns: returnedQuantity > 0,
+          isFullyReturned: netQuantity <= 0,
+        };
+
         if (!groupedItems[item.saleId]) {
           groupedItems[item.saleId] = [];
         }
-        groupedItems[item.saleId].push(item);
+        groupedItems[item.saleId].push(enrichedItem);
       });
 
       return groupedItems;
