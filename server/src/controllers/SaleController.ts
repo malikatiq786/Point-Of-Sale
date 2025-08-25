@@ -40,13 +40,22 @@ export class SaleController {
     }
   };
 
-  // Get all sales
+  // Get all sales with optional date range filtering
   getSales = async (req: Request, res: Response) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
       
-      const result = await this.saleService.getSales(limit, offset);
+      let result;
+      if (startDate && endDate) {
+        // Use date range filtering
+        result = await this.saleService.getSalesByDateRange(new Date(startDate), new Date(endDate));
+      } else {
+        // Get all sales with pagination
+        result = await this.saleService.getSales(limit, offset);
+      }
 
       if (result.success) {
         res.status(HTTP_STATUS.OK).json(result.data);

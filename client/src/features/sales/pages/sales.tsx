@@ -5,20 +5,89 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Receipt, Eye, Calendar, DollarSign, User, Package, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
-import { format } from "date-fns";
+import { Search, Receipt, Eye, Calendar, DollarSign, User, Package, CreditCard, ChevronDown, ChevronUp, Download, FileText, Printer } from "lucide-react";
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, subYears } from "date-fns";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function Sales() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [dateRangeType, setDateRangeType] = useState("all");
   const [expandedSale, setExpandedSale] = useState<number | null>(null);
   const { formatCurrencyValue } = useCurrency();
 
-  // Fetch sales
+  // Handle date range presets
+  const handleDateRangeChange = (value: string) => {
+    setDateRangeType(value);
+    const today = new Date();
+    
+    switch (value) {
+      case "today":
+        const todayStr = format(today, 'yyyy-MM-dd');
+        setStartDate(todayStr);
+        setEndDate(todayStr);
+        setDateFilter("");
+        break;
+      case "thisMonth":
+        setStartDate(format(startOfMonth(today), 'yyyy-MM-dd'));
+        setEndDate(format(endOfMonth(today), 'yyyy-MM-dd'));
+        setDateFilter("");
+        break;
+      case "lastMonth":
+        const lastMonth = subMonths(today, 1);
+        setStartDate(format(startOfMonth(lastMonth), 'yyyy-MM-dd'));
+        setEndDate(format(endOfMonth(lastMonth), 'yyyy-MM-dd'));
+        setDateFilter("");
+        break;
+      case "thisYear":
+        setStartDate(format(startOfYear(today), 'yyyy-MM-dd'));
+        setEndDate(format(endOfYear(today), 'yyyy-MM-dd'));
+        setDateFilter("");
+        break;
+      case "lastYear":
+        const lastYear = subYears(today, 1);
+        setStartDate(format(startOfYear(lastYear), 'yyyy-MM-dd'));
+        setEndDate(format(endOfYear(lastYear), 'yyyy-MM-dd'));
+        setDateFilter("");
+        break;
+      case "custom":
+        setStartDate("");
+        setEndDate("");
+        setDateFilter("");
+        break;
+      default:
+        setStartDate("");
+        setEndDate("");
+        setDateFilter("");
+        break;
+    }
+  };
+
+  // Build query parameters for date filtering
+  const buildSalesQuery = () => {
+    const params = new URLSearchParams();
+    if (startDate && endDate) {
+      params.append('startDate', startDate);
+      params.append('endDate', endDate);
+    }
+    return params.toString() ? `?${params.toString()}` : '';
+  };
+
+  // Fetch sales with date range support
   const { data: sales = [], isLoading } = useQuery<any[]>({
-    queryKey: ["/api/sales"],
+    queryKey: ["/api/sales", startDate, endDate],
+    queryFn: async () => {
+      const query = buildSalesQuery();
+      const response = await fetch(`/api/sales${query}`);
+      if (!response.ok) throw new Error('Failed to fetch sales');
+      return response.json();
+    },
     retry: false,
   });
 
@@ -50,6 +119,122 @@ export default function Sales() {
     }
   };
 
+  // Export functions
+  const exportToPDF = async () => {
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.width;
+    
+    // Add title
+    pdf.setFontSize(20);
+    pdf.text('Sales History Report', pageWidth / 2, 20, { align: 'center' });
+    
+    // Add date range
+    pdf.setFontSize(12);
+    let dateRangeText = 'All Sales';
+    if (startDate && endDate) {
+      dateRangeText = `${format(new Date(startDate), 'MMM dd, yyyy')} - ${format(new Date(endDate), 'MMM dd, yyyy')}`;
+    }
+    pdf.text(dateRangeText, pageWidth / 2, 30, { align: 'center' });
+    
+    // Prepare table data
+    const tableData = filteredSales.map((sale: any) => [
+      `#${sale.id}`,
+      sale.saleDate ? format(new Date(sale.saleDate), 'MMM dd, yyyy') : 'N/A',
+      sale.customerName || sale.customer?.name || 'Walk-in',
+      sale.user?.name || 'Unknown',
+      formatCurrencyValue(parseFloat(sale.totalAmount || '0')),
+      sale.status || 'Unknown'
+    ]);
+
+    // Add table
+    (pdf as any).autoTable({
+      startY: 40,
+      head: [['Sale ID', 'Date', 'Customer', 'Cashier', 'Amount', 'Status']],
+      body: tableData,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    pdf.save(`sales-history-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
+  const exportToCSV = () => {
+    const csvContent = [
+      ['Sale ID', 'Date', 'Customer', 'Cashier', 'Amount', 'Status'],
+      ...filteredSales.map((sale: any) => [
+        `#${sale.id}`,
+        sale.saleDate ? format(new Date(sale.saleDate), 'yyyy-MM-dd HH:mm') : '',
+        sale.customerName || sale.customer?.name || 'Walk-in Customer',
+        sale.user?.name || 'Unknown',
+        parseFloat(sale.totalAmount || '0').toFixed(2),
+        sale.status || 'Unknown'
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `sales-history-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const printReport = () => {
+    const printContent = `
+      <html>
+        <head>
+          <title>Sales History Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { text-align: center; color: #333; }
+            .date-range { text-align: center; margin-bottom: 20px; color: #666; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            .amount { text-align: right; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <h1>Sales History Report</h1>
+          <div class="date-range">${startDate && endDate ? 
+            `${format(new Date(startDate), 'MMM dd, yyyy')} - ${format(new Date(endDate), 'MMM dd, yyyy')}` : 
+            'All Sales'}</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Sale ID</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Cashier</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredSales.map((sale: any) => `
+                <tr>
+                  <td>#${sale.id}</td>
+                  <td>${sale.saleDate ? format(new Date(sale.saleDate), 'MMM dd, yyyy') : 'N/A'}</td>
+                  <td>${sale.customerName || sale.customer?.name || 'Walk-in Customer'}</td>
+                  <td>${sale.user?.name || 'Unknown'}</td>
+                  <td class="amount">${formatCurrencyValue(parseFloat(sale.totalAmount || '0'))}</td>
+                  <td>${sale.status || 'Unknown'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow?.document.write(printContent);
+    printWindow?.document.close();
+    printWindow?.print();
+  };
+
   return (
     <AppLayout>
       <div className="mb-6">
@@ -57,24 +242,73 @@ export default function Sales() {
         <p className="text-gray-600">View and manage all sales transactions</p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Input 
-            type="text" 
-            placeholder="Search sales..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+      <div className="space-y-4 mb-6">
+        {/* Search and Export Row */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+          <div className="relative flex-1">
+            <Input 
+              type="text" 
+              placeholder="Search sales..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          </div>
+          
+          {/* Export Buttons */}
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={exportToPDF}>
+              <FileText className="w-4 h-4 mr-2" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportToCSV}>
+              <Download className="w-4 h-4 mr-2" />
+              CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={printReport}>
+              <Printer className="w-4 h-4 mr-2" />
+              Print
+            </Button>
+          </div>
         </div>
-        
-        <Input
-          type="date"
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="w-full sm:w-48"
-        />
+
+        {/* Date Range Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={dateRangeType} onValueChange={handleDateRangeChange}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Select date range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="thisMonth">This Month</SelectItem>
+              <SelectItem value="lastMonth">Last Month</SelectItem>
+              <SelectItem value="thisYear">This Year</SelectItem>
+              <SelectItem value="lastYear">Last Year</SelectItem>
+              <SelectItem value="custom">Custom Range</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {dateRangeType === "custom" && (
+            <>
+              <Input
+                type="date"
+                placeholder="Start Date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full sm:w-48"
+              />
+              <Input
+                type="date"
+                placeholder="End Date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full sm:w-48"
+              />
+            </>
+          )}
+        </div>
       </div>
 
       <Card>

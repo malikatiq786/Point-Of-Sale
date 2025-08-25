@@ -78,16 +78,35 @@ export class SaleRepository extends BaseRepository<typeof sales.$inferSelect> {
     }
   }
 
-  // Get sales by date range
+  // Get sales by date range with details
   async findByDateRange(startDate: Date, endDate: Date) {
     try {
-      return await db.select()
-        .from(sales)
-        .where(and(
-          gte(sales.saleDate, startDate),
-          lte(sales.saleDate, endDate)
-        ))
-        .orderBy(sales.saleDate);
+      return await db.select({
+        id: sales.id,
+        totalAmount: sales.totalAmount,
+        paidAmount: sales.paidAmount,
+        status: sales.status,
+        saleDate: sales.saleDate,
+        customerName: sales.customerName,
+        customerPhone: sales.customerPhone,
+        customer: {
+          id: customers.id,
+          name: customers.name,
+          phone: customers.phone,
+        },
+        user: {
+          id: users.id,
+          name: users.name,
+        }
+      })
+      .from(sales)
+      .leftJoin(customers, eq(sales.customerId, customers.id))
+      .leftJoin(users, eq(sales.userId, users.id))
+      .where(and(
+        gte(sales.saleDate, startDate),
+        lte(sales.saleDate, endDate)
+      ))
+      .orderBy(desc(sales.saleDate));
     } catch (error) {
       console.error('Error finding sales by date range:', error);
       throw error;
