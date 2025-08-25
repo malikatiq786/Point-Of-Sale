@@ -233,4 +233,22 @@ export class SaleService {
       };
     }
   }
+
+  // Get sale items for multiple sales in bulk (for exports/printing performance)
+  async getBulkSaleItems(saleIds: number[]): Promise<DatabaseResult> {
+    try {
+      const bulkItems = await this.saleRepository.getBulkSaleItems(saleIds);
+      
+      return {
+        success: true,
+        data: bulkItems,
+      };
+    } catch (error) {
+      console.error('SaleService: Error getting bulk sale items:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch bulk sale items',
+      };
+    }
+  }
 }

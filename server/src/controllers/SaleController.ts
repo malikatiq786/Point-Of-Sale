@@ -136,6 +136,34 @@ export class SaleController {
     }
   };
 
+  // Get items for multiple sales in bulk (for exports/printing)
+  getBulkSaleItems = async (req: Request, res: Response) => {
+    try {
+      const { saleIds } = req.body;
+      
+      if (!saleIds || !Array.isArray(saleIds)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: 'saleIds array is required'
+        });
+      }
+
+      const result = await this.saleService.getBulkSaleItems(saleIds);
+
+      if (result.success) {
+        res.status(HTTP_STATUS.OK).json(result.data);
+      } else {
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+          message: result.error || ERROR_MESSAGES.INTERNAL_ERROR
+        });
+      }
+    } catch (error) {
+      console.error('SaleController: Error in getBulkSaleItems:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
+
   // Get sales by date range
   getSalesByDateRange = async (req: Request, res: Response) => {
     try {

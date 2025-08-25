@@ -1,5 +1,5 @@
 import { BaseRepository, eq, and, gte, lte, sql } from './BaseRepository';
-import { desc } from 'drizzle-orm';
+import { desc, inArray } from 'drizzle-orm';
 import { sales, saleItems, customers, products, productVariants, categories, brands, units, users } from '../../../shared/schema';
 import { db } from './BaseRepository';
 
@@ -190,6 +190,54 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       .where(eq(saleItems.saleId, saleId));
     } catch (error) {
       console.error('Error getting sale items:', error);
+      throw error;
+    }
+  }
+
+  // Get sale items for multiple sales in a single optimized query
+  async getBulkSaleItems(saleIds: number[]) {
+    try {
+      
+      const allItems = await db.select({
+        saleId: saleItems.saleId,
+        id: saleItems.id,
+        quantity: saleItems.quantity,
+        price: saleItems.price,
+        product: {
+          id: products.id,
+          name: products.name,
+          barcode: products.barcode,
+          categoryName: categories.name,
+          brandName: brands.name,
+          unitName: units.name,
+        },
+        variant: {
+          id: productVariants.id,
+          variantName: productVariants.variantName,
+          salePrice: productVariants.salePrice,
+          purchasePrice: productVariants.purchasePrice,
+        }
+      })
+      .from(saleItems)
+      .leftJoin(productVariants, eq(saleItems.productVariantId, productVariants.id))
+      .leftJoin(products, eq(productVariants.productId, products.id))
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .leftJoin(brands, eq(products.brandId, brands.id))
+      .leftJoin(units, eq(products.unitId, units.id))
+      .where(inArray(saleItems.saleId, saleIds));
+
+      // Group by saleId for easier consumption
+      const groupedItems: Record<number, any[]> = {};
+      allItems.forEach(item => {
+        if (!groupedItems[item.saleId]) {
+          groupedItems[item.saleId] = [];
+        }
+        groupedItems[item.saleId].push(item);
+      });
+
+      return groupedItems;
+    } catch (error) {
+      console.error('Error getting bulk sale items:', error);
       throw error;
     }
   }

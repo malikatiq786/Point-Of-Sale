@@ -147,11 +147,19 @@ export default function Sales() {
     pdf.text(`Total Sales: ${totalSales} | Total Amount: ${formatCurrencyValue(totalAmount)}`, pageWidth / 2, currentY, { align: 'center' });
     currentY += 10;
 
+    // Fetch all sale items in bulk for better performance
+    const saleIds = filteredSales.map(sale => sale.id);
+    const bulkResponse = await fetch('/api/sales/bulk-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ saleIds })
+    });
+    const allSaleItems = bulkResponse.ok ? await bulkResponse.json() : {};
+
     // Process each sale with detailed items
     for (const sale of filteredSales) {
-      // Fetch sale items for this sale
-      const itemsResponse = await fetch(`/api/sales/${sale.id}/items`);
-      const saleItems = itemsResponse.ok ? await itemsResponse.json() : [];
+      // Get items from bulk response
+      const saleItems = allSaleItems[sale.id] || [];
 
       if (currentY > 250) { // Add new page if needed
         pdf.addPage();
@@ -214,10 +222,19 @@ export default function Sales() {
       'Product Name', 'Variant', 'Category', 'Brand', 'Product Code', 'Quantity', 'Unit Price', 'Item Total'
     ]);
 
+    // Fetch all sale items in bulk for better performance
+    const saleIds = filteredSales.map(sale => sale.id);
+    const bulkResponse = await fetch('/api/sales/bulk-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ saleIds })
+    });
+    const allSaleItems = bulkResponse.ok ? await bulkResponse.json() : {};
+
     // Process each sale with detailed items
     for (const sale of filteredSales) {
-      const itemsResponse = await fetch(`/api/sales/${sale.id}/items`);
-      const saleItems = itemsResponse.ok ? await itemsResponse.json() : [];
+      // Get items from bulk response
+      const saleItems = allSaleItems[sale.id] || [];
 
       if (saleItems.length > 0) {
         saleItems.forEach((item: any) => {
@@ -266,9 +283,18 @@ export default function Sales() {
     // Build detailed print content
     let salesHTML = '';
     
+    // Fetch all sale items in bulk for better performance
+    const saleIds = filteredSales.map(sale => sale.id);
+    const bulkResponse = await fetch('/api/sales/bulk-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ saleIds })
+    });
+    const allSaleItems = bulkResponse.ok ? await bulkResponse.json() : {};
+    
     for (const sale of filteredSales) {
-      const itemsResponse = await fetch(`/api/sales/${sale.id}/items`);
-      const saleItems = itemsResponse.ok ? await itemsResponse.json() : [];
+      // Get items from bulk response
+      const saleItems = allSaleItems[sale.id] || [];
       
       salesHTML += `
         <div class="sale-section">
