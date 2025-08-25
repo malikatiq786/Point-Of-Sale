@@ -128,10 +128,12 @@ export default function Sales() {
   const exportToPDF = async () => {
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.width;
+    let currentY = 20;
     
     // Add title
     pdf.setFontSize(20);
-    pdf.text('Sales History Report', pageWidth / 2, 20, { align: 'center' });
+    pdf.text('Detailed Sales History Report', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 15;
     
     // Add date range
     pdf.setFontSize(12);
@@ -139,97 +141,221 @@ export default function Sales() {
     if (startDate && endDate) {
       dateRangeText = `${format(new Date(startDate), 'MMM dd, yyyy')} - ${format(new Date(endDate), 'MMM dd, yyyy')}`;
     }
-    pdf.text(dateRangeText, pageWidth / 2, 30, { align: 'center' });
-    
-    // Prepare table data
-    const tableData = filteredSales.map((sale: any) => [
-      `#${sale.id}`,
-      sale.saleDate ? format(new Date(sale.saleDate), 'MMM dd, yyyy') : 'N/A',
-      sale.customerName || sale.customer?.name || 'Walk-in',
-      sale.user?.name || 'Unknown',
-      formatCurrencyValue(parseFloat(sale.totalAmount || '0')),
-      sale.status || 'Unknown'
-    ]);
+    pdf.text(dateRangeText, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 15;
 
-    // Add table using jspdf-autotable
-    autoTable(pdf, {
-      startY: 40,
-      head: [['Sale ID', 'Date', 'Customer', 'Cashier', 'Amount', 'Status']],
-      body: tableData,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [59, 130, 246] },
-    });
+    // Add summary
+    const totalSales = filteredSales.length;
+    const totalAmount = filteredSales.reduce((sum: number, sale: any) => sum + parseFloat(sale.totalAmount || '0'), 0);
+    pdf.setFontSize(10);
+    pdf.text(`Total Sales: ${totalSales} | Total Amount: ${formatCurrencyValue(totalAmount)}`, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 10;
 
-    pdf.save(`sales-history-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    // Process each sale with detailed items
+    for (const sale of filteredSales) {
+      // Fetch sale items for this sale
+      const itemsResponse = await fetch(`/api/sales/${sale.id}/items`);
+      const saleItems = itemsResponse.ok ? await itemsResponse.json() : [];
+
+      if (currentY > 250) { // Add new page if needed
+        pdf.addPage();
+        currentY = 20;
+      }
+
+      // Sale header
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`Sale #${sale.id} - ${sale.saleDate ? format(new Date(sale.saleDate), 'MMM dd, yyyy HH:mm') : 'N/A'}`, 15, currentY);
+      currentY += 8;
+
+      pdf.setFontSize(10);
+      pdf.text(`Customer: ${sale.customerName || sale.customer?.name || 'Walk-in Customer'}`, 15, currentY);
+      pdf.text(`Cashier: ${sale.user?.name || 'Unknown'}`, 110, currentY);
+      currentY += 6;
+      pdf.text(`Status: ${sale.status || 'Unknown'}`, 15, currentY);
+      pdf.text(`Total: ${formatCurrencyValue(parseFloat(sale.totalAmount || '0'))}`, 110, currentY);
+      currentY += 10;
+
+      // Sale items table
+      if (saleItems.length > 0) {
+        const itemsData = saleItems.map((item: any) => [
+          item.product?.name || 'Unknown Product',
+          item.variant?.variantName || 'Default',
+          item.product?.categoryName || 'N/A',
+          item.product?.brandName || 'N/A',
+          item.product?.barcode || 'N/A',
+          parseFloat(item.quantity || '0').toString(),
+          formatCurrencyValue(parseFloat(item.price || '0')),
+          formatCurrencyValue(parseFloat(item.quantity || '0') * parseFloat(item.price || '0'))
+        ]);
+
+        autoTable(pdf, {
+          startY: currentY,
+          head: [['Product', 'Variant', 'Category', 'Brand', 'Code', 'Qty', 'Price', 'Total']],
+          body: itemsData,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [34, 197, 94] },
+          margin: { left: 15, right: 15 },
+          tableWidth: 'auto'
+        });
+
+        currentY = (pdf as any).lastAutoTable.finalY + 15;
+      } else {
+        pdf.text('No items found for this sale', 15, currentY);
+        currentY += 10;
+      }
+    }
+
+    pdf.save(`detailed-sales-history-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
-  const exportToCSV = () => {
-    const csvContent = [
-      ['Sale ID', 'Date', 'Customer', 'Cashier', 'Amount', 'Status'],
-      ...filteredSales.map((sale: any) => [
-        `#${sale.id}`,
-        sale.saleDate ? format(new Date(sale.saleDate), 'yyyy-MM-dd HH:mm') : '',
-        sale.customerName || sale.customer?.name || 'Walk-in Customer',
-        sale.user?.name || 'Unknown',
-        parseFloat(sale.totalAmount || '0').toFixed(2),
-        sale.status || 'Unknown'
-      ])
-    ].map(row => row.join(',')).join('\n');
+  const exportToCSV = async () => {
+    const csvRows = [];
+    
+    // Header row
+    csvRows.push([
+      'Sale ID', 'Sale Date', 'Customer', 'Cashier', 'Sale Status', 'Sale Total',
+      'Product Name', 'Variant', 'Category', 'Brand', 'Product Code', 'Quantity', 'Unit Price', 'Item Total'
+    ]);
 
+    // Process each sale with detailed items
+    for (const sale of filteredSales) {
+      const itemsResponse = await fetch(`/api/sales/${sale.id}/items`);
+      const saleItems = itemsResponse.ok ? await itemsResponse.json() : [];
+
+      if (saleItems.length > 0) {
+        saleItems.forEach((item: any) => {
+          csvRows.push([
+            `#${sale.id}`,
+            sale.saleDate ? format(new Date(sale.saleDate), 'yyyy-MM-dd HH:mm') : '',
+            sale.customerName || sale.customer?.name || 'Walk-in Customer',
+            sale.user?.name || 'Unknown',
+            sale.status || 'Unknown',
+            parseFloat(sale.totalAmount || '0').toFixed(2),
+            item.product?.name || 'Unknown Product',
+            item.variant?.variantName || 'Default',
+            item.product?.categoryName || 'N/A',
+            item.product?.brandName || 'N/A',
+            item.product?.barcode || 'N/A',
+            parseFloat(item.quantity || '0').toString(),
+            parseFloat(item.price || '0').toFixed(2),
+            (parseFloat(item.quantity || '0') * parseFloat(item.price || '0')).toFixed(2)
+          ]);
+        });
+      } else {
+        // If no items, still show the sale row
+        csvRows.push([
+          `#${sale.id}`,
+          sale.saleDate ? format(new Date(sale.saleDate), 'yyyy-MM-dd HH:mm') : '',
+          sale.customerName || sale.customer?.name || 'Walk-in Customer',
+          sale.user?.name || 'Unknown',
+          sale.status || 'Unknown',
+          parseFloat(sale.totalAmount || '0').toFixed(2),
+          'No items', '', '', '', '', '', '', ''
+        ]);
+      }
+    }
+
+    const csvContent = csvRows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `sales-history-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.download = `detailed-sales-history-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     link.click();
     window.URL.revokeObjectURL(url);
   };
 
-  const printReport = () => {
+  const printReport = async () => {
+    // Build detailed print content
+    let salesHTML = '';
+    
+    for (const sale of filteredSales) {
+      const itemsResponse = await fetch(`/api/sales/${sale.id}/items`);
+      const saleItems = itemsResponse.ok ? await itemsResponse.json() : [];
+      
+      salesHTML += `
+        <div class="sale-section">
+          <div class="sale-header">
+            <h3>Sale #${sale.id} - ${sale.saleDate ? format(new Date(sale.saleDate), 'MMM dd, yyyy HH:mm') : 'N/A'}</h3>
+            <div class="sale-info">
+              <div><strong>Customer:</strong> ${sale.customerName || sale.customer?.name || 'Walk-in Customer'}</div>
+              <div><strong>Cashier:</strong> ${sale.user?.name || 'Unknown'}</div>
+              <div><strong>Status:</strong> ${sale.status || 'Unknown'}</div>
+              <div><strong>Total:</strong> ${formatCurrencyValue(parseFloat(sale.totalAmount || '0'))}</div>
+            </div>
+          </div>
+          
+          ${saleItems.length > 0 ? `
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Variant</th>
+                  <th>Category</th>
+                  <th>Brand</th>
+                  <th>Code</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${saleItems.map((item: any) => `
+                  <tr>
+                    <td>${item.product?.name || 'Unknown'}</td>
+                    <td>${item.variant?.variantName || 'Default'}</td>
+                    <td>${item.product?.categoryName || 'N/A'}</td>
+                    <td>${item.product?.brandName || 'N/A'}</td>
+                    <td>${item.product?.barcode || 'N/A'}</td>
+                    <td>${parseFloat(item.quantity || '0')}</td>
+                    <td>${formatCurrencyValue(parseFloat(item.price || '0'))}</td>
+                    <td>${formatCurrencyValue(parseFloat(item.quantity || '0') * parseFloat(item.price || '0'))}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : '<p class="no-items">No items found for this sale</p>'}
+        </div>
+      `;
+    }
+
+    const totalSales = filteredSales.length;
+    const totalAmount = filteredSales.reduce((sum: number, sale: any) => sum + parseFloat(sale.totalAmount || '0'), 0);
+
     const printContent = `
       <html>
         <head>
-          <title>Sales History Report</title>
+          <title>Detailed Sales History Report</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            h1 { text-align: center; color: #333; }
-            .date-range { text-align: center; margin-bottom: 20px; color: #666; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-            th { background-color: #f8f9fa; font-weight: bold; }
-            .amount { text-align: right; }
-            @media print { body { margin: 0; } }
+            body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
+            h1 { text-align: center; color: #333; margin-bottom: 10px; }
+            .date-range { text-align: center; margin-bottom: 10px; color: #666; }
+            .summary { text-align: center; margin-bottom: 20px; padding: 10px; background-color: #f0f9ff; border-radius: 5px; }
+            .sale-section { margin-bottom: 30px; page-break-inside: avoid; }
+            .sale-header { background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+            .sale-header h3 { margin: 0 0 10px 0; color: #1f2937; }
+            .sale-info { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+            .items-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            .items-table th, .items-table td { padding: 8px; text-align: left; border: 1px solid #ddd; font-size: 11px; }
+            .items-table th { background-color: #22c55e; color: white; font-weight: bold; }
+            .items-table td:nth-child(6), .items-table td:nth-child(7), .items-table td:nth-child(8) { text-align: right; }
+            .no-items { text-align: center; color: #666; font-style: italic; }
+            @media print { 
+              body { margin: 0; } 
+              .sale-section { page-break-inside: avoid; }
+            }
           </style>
         </head>
         <body>
-          <h1>Sales History Report</h1>
+          <h1>Detailed Sales History Report</h1>
           <div class="date-range">${startDate && endDate ? 
             `${format(new Date(startDate), 'MMM dd, yyyy')} - ${format(new Date(endDate), 'MMM dd, yyyy')}` : 
             'All Sales'}</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Sale ID</th>
-                <th>Date</th>
-                <th>Customer</th>
-                <th>Cashier</th>
-                <th>Amount</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredSales.map((sale: any) => `
-                <tr>
-                  <td>#${sale.id}</td>
-                  <td>${sale.saleDate ? format(new Date(sale.saleDate), 'MMM dd, yyyy') : 'N/A'}</td>
-                  <td>${sale.customerName || sale.customer?.name || 'Walk-in Customer'}</td>
-                  <td>${sale.user?.name || 'Unknown'}</td>
-                  <td class="amount">${formatCurrencyValue(parseFloat(sale.totalAmount || '0'))}</td>
-                  <td>${sale.status || 'Unknown'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+          <div class="summary">
+            <strong>Summary:</strong> ${totalSales} Sales | Total Amount: ${formatCurrencyValue(totalAmount)}
+          </div>
+          ${salesHTML}
         </body>
       </html>
     `;
