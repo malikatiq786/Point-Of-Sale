@@ -264,17 +264,21 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       .where(inArray(saleItems.saleId, saleIds));
 
       // Get all return information for these sales
-      const returnItemsQuery = await db.execute(sql`
-        SELECT 
-          r.sale_id,
-          ri.product_variant_id,
-          SUM(ri.quantity) as total_returned
-        FROM returns r
-        JOIN return_items ri ON r.id = ri.return_id
-        WHERE r.sale_id IN (${saleIds.join(',')}) 
-          AND r.status IN ('approved', 'processed')
-        GROUP BY r.sale_id, ri.product_variant_id
-      `);
+      let returnItemsQuery = { rows: [] };
+      if (saleIds.length > 0) {
+        const saleIdsPlaceholders = saleIds.map((_, index) => `$${index + 1}`).join(', ');
+        returnItemsQuery = await db.execute(sql`
+          SELECT 
+            r.sale_id,
+            ri.product_variant_id,
+            SUM(ri.quantity) as total_returned
+          FROM returns r
+          JOIN return_items ri ON r.id = ri.return_id
+          WHERE r.sale_id IN (${sql.raw(saleIdsPlaceholders)}) 
+            AND r.status IN ('approved', 'processed')
+          GROUP BY r.sale_id, ri.product_variant_id
+        `, saleIds);
+      }
 
       // Convert return data to a nested map for easy lookup: [saleId][variantId] = returnedQuantity
       const returnedQuantities = new Map();

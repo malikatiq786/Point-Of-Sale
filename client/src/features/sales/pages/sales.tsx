@@ -218,79 +218,6 @@ export default function Sales() {
     pdf.save(`detailed-sales-history-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
-  const exportToCSV = async () => {
-    const csvRows = [];
-    
-    // Header row
-    csvRows.push([
-      'Sale ID', 'Sale Date', 'Customer', 'Cashier', 'Sale Status', 'Sale Total',
-      'Product Name', 'Variant', 'Category', 'Brand', 'Product Code', 'Return Status', 
-      'Original Qty', 'Returned Qty', 'Net Qty', 'Unit Price', 'Original Total', 'Net Total'
-    ]);
-
-    // Fetch all sale items in bulk for better performance
-    const saleIds = filteredSales.map(sale => sale.id);
-    const bulkResponse = await fetch('/api/sales/bulk-items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ saleIds })
-    });
-    const allSaleItems = bulkResponse.ok ? await bulkResponse.json() : {};
-
-    // Process each sale with detailed items
-    for (const sale of filteredSales) {
-      // Get items from bulk response
-      const saleItems = allSaleItems[sale.id] || [];
-
-      if (saleItems.length > 0) {
-        saleItems.forEach((item: any) => {
-          const returnStatus = item.isFullyReturned ? 'Fully Returned' : 
-                              item.hasReturns ? 'Partially Returned' : 'No Returns';
-          
-          csvRows.push([
-            `#${sale.id}`,
-            sale.saleDate ? format(new Date(sale.saleDate), 'yyyy-MM-dd HH:mm') : '',
-            sale.customerName || sale.customer?.name || 'Walk-in Customer',
-            sale.user?.name || 'Unknown',
-            sale.status || 'Unknown',
-            parseFloat(sale.totalAmount || '0').toFixed(2),
-            item.product?.name || 'Unknown Product',
-            item.variant?.variantName || 'Default',
-            item.product?.categoryName || 'N/A',
-            item.product?.brandName || 'N/A',
-            item.product?.barcode || 'N/A',
-            returnStatus,
-            parseFloat(item.originalQuantity || item.quantity || '0').toFixed(2),
-            parseFloat(item.returnedQuantity || '0').toFixed(2),
-            parseFloat(item.netQuantity || item.quantity || '0').toFixed(2),
-            parseFloat(item.price || '0').toFixed(2),
-            (parseFloat(item.originalQuantity || item.quantity || '0') * parseFloat(item.price || '0')).toFixed(2),
-            (parseFloat(item.netQuantity || item.quantity || '0') * parseFloat(item.price || '0')).toFixed(2)
-          ]);
-        });
-      } else {
-        // If no items, still show the sale row
-        csvRows.push([
-          `#${sale.id}`,
-          sale.saleDate ? format(new Date(sale.saleDate), 'yyyy-MM-dd HH:mm') : '',
-          sale.customerName || sale.customer?.name || 'Walk-in Customer',
-          sale.user?.name || 'Unknown',
-          sale.status || 'Unknown',
-          parseFloat(sale.totalAmount || '0').toFixed(2),
-          'No items', '', '', '', '', '', '', '', '', '', '', ''
-        ]);
-      }
-    }
-
-    const csvContent = csvRows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `detailed-sales-history-${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-  };
 
   const printReport = async () => {
     // Build detailed print content
@@ -450,10 +377,6 @@ export default function Sales() {
             <Button variant="outline" size="sm" onClick={exportToPDF}>
               <FileText className="w-4 h-4 mr-2" />
               PDF
-            </Button>
-            <Button variant="outline" size="sm" onClick={exportToCSV}>
-              <Download className="w-4 h-4 mr-2" />
-              CSV
             </Button>
             <Button variant="outline" size="sm" onClick={printReport}>
               <Printer className="w-4 h-4 mr-2" />
