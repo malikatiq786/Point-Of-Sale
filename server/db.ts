@@ -1,9 +1,9 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
 import * as schema from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
+// Minimal configuration to avoid WebSocket issues
+neonConfig.fetchConnectionCache = true;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -11,13 +11,13 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configure connection pool with proper limits
+// Configure connection pool with conservative settings
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 20, // Maximum number of connections in the pool
-  min: 2,  // Minimum number of connections in the pool
-  idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
-  connectionTimeoutMillis: 2000, // Timeout after 2 seconds when trying to connect
+  max: 10, // Reduced maximum connections 
+  min: 1,  // Reduced minimum connections
+  idleTimeoutMillis: 60000, // Longer idle timeout
+  connectionTimeoutMillis: 10000, // Longer connection timeout
 });
 
 export const db = drizzle({ client: pool, schema });
