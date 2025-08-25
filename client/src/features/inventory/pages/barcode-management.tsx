@@ -16,6 +16,8 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { formatBarcodeForDisplay, validateEAN13Barcode } from "@/utils/barcode";
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
+import JsBarcode from 'jsbarcode';
+import QRCode from 'qrcode';
 
 export default function BarcodeManagement() {
   const { user } = useAuth();
@@ -101,8 +103,45 @@ export default function BarcodeManagement() {
   const isAllSelected = filteredProducts.length > 0 && 
     filteredProducts.every((product: any) => selectedProducts.includes(product.id));
 
-  // Export to PDF function
-  const exportBarcodesPDF = () => {
+  // Generate barcode images
+  const generateBarcodeImage = async (barcodeText: string, format: string = 'CODE128'): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      try {
+        JsBarcode(canvas, barcodeText, {
+          format: format,
+          width: 2,
+          height: 60,
+          displayValue: false,
+          margin: 0
+        });
+        resolve(canvas.toDataURL());
+      } catch (error) {
+        console.error('Error generating barcode:', error);
+        resolve('');
+      }
+    });
+  };
+
+  // Generate QR code
+  const generateQRCode = async (text: string): Promise<string> => {
+    try {
+      return await QRCode.toDataURL(text, {
+        width: 80,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      return '';
+    }
+  };
+
+  // Export to PDF function with visual barcodes
+  const exportBarcodesPDF = async () => {
     const selectedProductData = filteredProducts.filter((product: any) => 
       selectedProducts.length === 0 ? true : selectedProducts.includes(product.id)
     );
@@ -117,79 +156,80 @@ export default function BarcodeManagement() {
     }
 
     const pdf = new jsPDF();
-    let currentY = 20;
+    const pageWidth = pdf.internal.pageSize.width;
     const pageHeight = pdf.internal.pageSize.height;
-
+    
     // Title
     pdf.setFontSize(16);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Product Barcodes Report', 15, currentY);
-    currentY += 15;
-
-    // Summary
-    pdf.setFontSize(10);
-    pdf.text(`Total Products: ${selectedProductData.length}`, 15, currentY);
-    pdf.text(`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm')}`, 120, currentY);
-    currentY += 20;
-
-    // Process each product
-    for (const product of selectedProductData) {
-      if (currentY > pageHeight - 50) {
+    pdf.text('Product Barcode Labels', pageWidth / 2, 20, { align: 'center' });
+    
+    // Layout configuration
+    const cols = 3;
+    const rows = 4;
+    const labelWidth = (pageWidth - 40) / cols;
+    const labelHeight = (pageHeight - 60) / rows;
+    const startX = 20;
+    const startY = 40;
+    
+    let currentProduct = 0;
+    
+    for (let page = 0; currentProduct < selectedProductData.length; page++) {
+      if (page > 0) {
         pdf.addPage();
-        currentY = 20;
       }
-
-      // Product info
-      pdf.setFontSize(12);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(`${product.name}`, 15, currentY);
-      currentY += 8;
-
-      pdf.setFontSize(10);
-      pdf.text(`Category: ${product.category?.name || 'N/A'}`, 15, currentY);
-      pdf.text(`Brand: ${product.brand?.name || 'N/A'}`, 110, currentY);
-      currentY += 6;
       
-      pdf.text(`Price: ${formatCurrencyValue(parseFloat(product.price || '0'))}`, 15, currentY);
-      pdf.text(`Stock: ${product.stock || 0}`, 110, currentY);
-      currentY += 10;
-
-      // Barcode
-      pdf.setFontSize(14);
-      pdf.setFont(undefined, 'bold');
-      const formattedBarcode = formatBarcodeForDisplay(product.barcode);
-      pdf.text(`Barcode: ${formattedBarcode}`, 15, currentY);
-      
-      // Barcode validation indicator
-      pdf.setFontSize(8);
-      pdf.setFont(undefined, 'normal');
-      if (validateEAN13Barcode(product.barcode)) {
-        pdf.setTextColor(0, 128, 0);
-        pdf.text('✓ Valid EAN-13', 150, currentY);
-      } else {
-        pdf.setTextColor(255, 0, 0);
-        pdf.text('⚠ Invalid Format', 150, currentY);
+      for (let row = 0; row < rows && currentProduct < selectedProductData.length; row++) {
+        for (let col = 0; col < cols && currentProduct < selectedProductData.length; col++) {
+          const product = selectedProductData[currentProduct];
+          const x = startX + col * labelWidth;
+          const y = startY + row * labelHeight;
+          
+          // Draw border
+          pdf.setLineWidth(0.5);
+          pdf.rect(x, y, labelWidth, labelHeight);
+          
+          // Product name
+          pdf.setFontSize(10);
+          pdf.setFont(undefined, 'bold');
+          const productName = product.name.length > 20 ? product.name.substring(0, 20) + '...' : product.name;
+          pdf.text(productName, x + labelWidth/2, y + 12, { align: 'center' });
+          
+          // Generate and add barcode image
+          try {
+            const barcodeImage = await generateBarcodeImage(product.barcode, 'CODE128');
+            if (barcodeImage) {
+              pdf.addImage(barcodeImage, 'PNG', x + 10, y + 18, labelWidth - 20, 25);
+            }
+          } catch (error) {
+            console.error('Error adding barcode to PDF:', error);
+          }
+          
+          // Barcode number
+          pdf.setFontSize(8);
+          pdf.setFont(undefined, 'normal');
+          pdf.text(formatBarcodeForDisplay(product.barcode), x + labelWidth/2, y + 50, { align: 'center' });
+          
+          // Price and category
+          pdf.setFontSize(7);
+          pdf.text(`${formatCurrencyValue(parseFloat(product.price || '0'))}`, x + labelWidth/2, y + 58, { align: 'center' });
+          pdf.text(`${product.category?.name || 'N/A'}`, x + labelWidth/2, y + 65, { align: 'center' });
+          
+          currentProduct++;
+        }
       }
-      pdf.setTextColor(0, 0, 0);
-      
-      currentY += 20;
-      
-      // Add separator line
-      pdf.setLineWidth(0.1);
-      pdf.line(15, currentY, 195, currentY);
-      currentY += 10;
     }
 
-    pdf.save(`barcodes-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    pdf.save(`barcode-labels-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
     
     toast({
       title: "PDF Generated",
-      description: `Barcode PDF generated for ${selectedProductData.length} products.`,
+      description: `Barcode labels generated for ${selectedProductData.length} products.`,
     });
   };
 
-  // Print barcodes function
-  const printBarcodes = () => {
+  // Print barcodes function with visual barcodes
+  const printBarcodes = async () => {
     const selectedProductData = filteredProducts.filter((product: any) => 
       selectedProducts.length === 0 ? true : selectedProducts.includes(product.id)
     );
@@ -205,53 +245,162 @@ export default function BarcodeManagement() {
 
     let productsHTML = '';
     
-    for (const product of selectedProductData) {
-      const formattedBarcode = formatBarcodeForDisplay(product.barcode);
-      const isValidBarcode = validateEAN13Barcode(product.barcode);
+    // Generate barcode labels in grid format (3 columns)
+    for (let i = 0; i < selectedProductData.length; i += 3) {
+      productsHTML += '<div class="barcode-row">';
       
-      productsHTML += `
-        <div class="barcode-item">
-          <div class="product-header">
-            <h3>${product.name}</h3>
-            <div class="product-details">
-              <span>${product.category?.name || 'N/A'} • ${product.brand?.name || 'N/A'}</span>
-              <span>Price: ${formatCurrencyValue(parseFloat(product.price || '0'))} • Stock: ${product.stock || 0}</span>
+      for (let j = 0; j < 3 && (i + j) < selectedProductData.length; j++) {
+        const product = selectedProductData[i + j];
+        const formattedBarcode = formatBarcodeForDisplay(product.barcode);
+        
+        // Generate barcode image as base64
+        const canvas = document.createElement('canvas');
+        let barcodeImageData = '';
+        try {
+          JsBarcode(canvas, product.barcode, {
+            format: 'CODE128',
+            width: 2,
+            height: 60,
+            displayValue: false,
+            margin: 0
+          });
+          barcodeImageData = canvas.toDataURL();
+        } catch (error) {
+          console.error('Error generating barcode for print:', error);
+        }
+        
+        // Generate QR code as base64
+        let qrCodeData = '';
+        try {
+          qrCodeData = await QRCode.toDataURL(product.barcode, {
+            width: 80,
+            margin: 1,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF'
+            }
+          });
+        } catch (error) {
+          console.error('Error generating QR code for print:', error);
+        }
+        
+        const productName = product.name.length > 18 ? product.name.substring(0, 18) + '...' : product.name;
+        
+        productsHTML += `
+          <div class="barcode-label">
+            <div class="label-header">
+              <h4>${productName}</h4>
             </div>
-          </div>
-          
-          <div class="barcode-section">
+            
+            <div class="barcode-visual">
+              ${barcodeImageData ? `<img src="${barcodeImageData}" alt="Barcode" class="barcode-img">` : ''}
+            </div>
+            
             <div class="barcode-number">${formattedBarcode}</div>
-            <div class="barcode-status ${isValidBarcode ? 'valid' : 'invalid'}">
-              ${isValidBarcode ? '✓ Valid EAN-13' : '⚠ Invalid Format'}
+            
+            <div class="product-info">
+              <div class="price">${formatCurrencyValue(parseFloat(product.price || '0'))}</div>
+              <div class="category">${product.category?.name || 'N/A'}</div>
+            </div>
+            
+            <div class="qr-section">
+              ${qrCodeData ? `<img src="${qrCodeData}" alt="QR Code" class="qr-img">` : ''}
             </div>
           </div>
-        </div>
-      `;
+        `;
+      }
+      
+      productsHTML += '</div>';
     }
 
     const printContent = `
       <html>
         <head>
-          <title>Product Barcodes</title>
+          <title>Product Barcode Labels</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
-            h1 { text-align: center; color: #333; margin-bottom: 20px; }
-            .barcode-item { margin-bottom: 30px; page-break-inside: avoid; border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
-            .product-header h3 { margin: 0 0 5px 0; color: #22c55e; font-size: 16px; }
-            .product-details { color: #666; font-size: 11px; line-height: 1.4; }
-            .barcode-section { margin-top: 15px; text-align: center; }
-            .barcode-number { font-size: 24px; font-weight: bold; font-family: 'Courier New', monospace; letter-spacing: 2px; margin-bottom: 10px; }
-            .barcode-status { font-size: 10px; font-weight: bold; }
-            .barcode-status.valid { color: #22c55e; }
-            .barcode-status.invalid { color: #ef4444; }
+            * { box-sizing: border-box; }
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 0; 
+              padding: 20px; 
+              font-size: 10px; 
+              background: white;
+            }
+            h1 { 
+              text-align: center; 
+              color: #333; 
+              margin-bottom: 30px; 
+              font-size: 18px;
+            }
+            .barcode-row { 
+              display: flex; 
+              margin-bottom: 20px; 
+              gap: 10px;
+            }
+            .barcode-label { 
+              flex: 1; 
+              border: 2px solid #333; 
+              padding: 10px; 
+              text-align: center; 
+              background: white;
+              min-height: 200px;
+              page-break-inside: avoid;
+            }
+            .label-header h4 { 
+              margin: 0 0 8px 0; 
+              font-size: 12px; 
+              font-weight: bold; 
+              color: #333;
+              text-transform: uppercase;
+            }
+            .barcode-visual { 
+              margin: 10px 0; 
+              min-height: 70px;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            }
+            .barcode-img { 
+              max-width: 100%; 
+              height: auto;
+            }
+            .barcode-number { 
+              font-size: 11px; 
+              font-weight: bold; 
+              font-family: 'Courier New', monospace; 
+              letter-spacing: 1px; 
+              margin: 8px 0;
+              color: #000;
+            }
+            .product-info { 
+              margin: 8px 0; 
+              font-size: 9px;
+            }
+            .price { 
+              font-weight: bold; 
+              color: #22c55e; 
+              font-size: 11px;
+            }
+            .category { 
+              color: #666; 
+              margin-top: 2px;
+            }
+            .qr-section { 
+              margin-top: 8px;
+            }
+            .qr-img { 
+              width: 40px; 
+              height: 40px;
+            }
             @media print { 
-              body { margin: 0; } 
-              .barcode-item { page-break-inside: avoid; margin-bottom: 20px; }
+              body { margin: 0; padding: 10px; } 
+              .barcode-label { page-break-inside: avoid; }
+              @page { margin: 0.5in; }
             }
           </style>
         </head>
         <body>
-          <h1>Product Barcodes</h1>
+          <h1>Product Barcode Labels</h1>
           ${productsHTML}
         </body>
       </html>
@@ -262,12 +411,16 @@ export default function BarcodeManagement() {
       printWindow.document.write(printContent);
       printWindow.document.close();
       printWindow.focus();
-      printWindow.print();
+      
+      // Wait a bit for images to load before printing
+      setTimeout(() => {
+        printWindow.print();
+      }, 1000);
     }
 
     toast({
       title: "Print Dialog Opened",
-      description: `Barcode print dialog opened for ${selectedProductData.length} products.`,
+      description: `Barcode labels prepared for ${selectedProductData.length} products.`,
     });
   };
 
