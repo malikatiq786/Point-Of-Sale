@@ -304,18 +304,28 @@ export class DatabaseStorage implements IStorage {
 
       // Delete records that directly reference the product (not through variants)
       // These don't have cascade delete configured, so we need to handle them manually
+      // Use try-catch for each table in case they don't exist yet
 
-      // Delete purchase order items for this product
-      await db.delete(purchaseOrderItems).where(eq(purchaseOrderItems.productId, id));
-      console.log(`STORAGE: Deleted purchase order items for product ${id}`);
+      try {
+        await db.delete(purchaseOrderItems).where(eq(purchaseOrderItems.productId, id));
+        console.log(`STORAGE: Deleted purchase order items for product ${id}`);
+      } catch (error) {
+        console.log(`STORAGE: Purchase order items table not found or error deleting - skipping`);
+      }
 
-      // Delete stock adjustment items for this product
-      await db.delete(stockAdjustmentItems).where(eq(stockAdjustmentItems.productId, id));
-      console.log(`STORAGE: Deleted stock adjustment items for product ${id}`);
+      try {
+        await db.delete(stockAdjustmentItems).where(eq(stockAdjustmentItems.productId, id));
+        console.log(`STORAGE: Deleted stock adjustment items for product ${id}`);
+      } catch (error) {
+        console.log(`STORAGE: Stock adjustment items table not found or error deleting - skipping`);
+      }
 
-      // Delete COGS tracking records for this product
-      await db.delete(cogsTracking).where(eq(cogsTracking.productId, id));
-      console.log(`STORAGE: Deleted COGS tracking records for product ${id}`);
+      try {
+        await db.delete(cogsTracking).where(eq(cogsTracking.productId, id));
+        console.log(`STORAGE: Deleted COGS tracking records for product ${id}`);
+      } catch (error) {
+        console.log(`STORAGE: COGS tracking table not found or error deleting - skipping`);
+      }
 
       // Note: inventoryMovements, productWac, and wacHistory have cascade delete configured,
       // so they will be automatically deleted when the product is deleted
