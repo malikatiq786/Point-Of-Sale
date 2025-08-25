@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Package, Save, Plus, Minus, List, Warehouse } from "lucide-react";
+import { ArrowLeft, Package, Save, Plus, Minus, List, Warehouse, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
+import { generateProductBarcode, validateEAN13Barcode, formatBarcodeForDisplay } from "@/utils/barcode";
 
 export default function AddProduct() {
   const { user } = useAuth();
@@ -21,7 +22,7 @@ export default function AddProduct() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    barcode: "",
+    barcode: generateProductBarcode(), // Auto-generate barcode on component load
     categoryId: "",
     brandId: "",
     unitId: "",
@@ -82,7 +83,7 @@ export default function AddProduct() {
       setFormData({
         name: "",
         description: "",
-        barcode: "",
+        barcode: generateProductBarcode(), // Auto-generate new barcode after successful creation
         categoryId: "",
         brandId: "",
         unitId: "",
@@ -334,13 +335,32 @@ export default function AddProduct() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="barcode">Barcode</Label>
-                    <Input
-                      id="barcode"
-                      type="text"
-                      value={formData.barcode}
-                      onChange={(e) => handleInputChange('barcode', e.target.value)}
-                      placeholder="Enter barcode"
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id="barcode"
+                        type="text"
+                        value={formatBarcodeForDisplay(formData.barcode)}
+                        onChange={(e) => handleInputChange('barcode', e.target.value.replace(/\s/g, ''))}
+                        placeholder="Enter barcode or use auto-generated"
+                        className="font-mono"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleInputChange('barcode', generateProductBarcode())}
+                        className="px-3 whitespace-nowrap"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-1" />
+                        Generate
+                      </Button>
+                    </div>
+                    {formData.barcode && !validateEAN13Barcode(formData.barcode) && (
+                      <p className="text-sm text-yellow-600">⚠ Invalid barcode format (should be 13 digits)</p>
+                    )}
+                    {formData.barcode && validateEAN13Barcode(formData.barcode) && (
+                      <p className="text-sm text-green-600">✓ Valid barcode format</p>
+                    )}
                   </div>
                 </div>
                 

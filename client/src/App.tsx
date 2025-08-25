@@ -28,6 +28,7 @@ import AddPurchase from "@/features/purchases/pages/add-purchase";
 import { PurchaseDetail } from "@/features/purchases/pages/purchase-detail";
 import { Warehouses, StockManagement, StockTransfers, StockAdjustments } from "@/features/inventory";
 import InventoryValuation from "@/features/inventory/pages/inventory-valuation";
+import BarcodeManagement from "@/features/inventory/pages/barcode-management";
 import AddProduct from "@/features/products/pages/add-product";
 import EditProduct from "@/features/products/pages/edit-product";
 import ViewProduct from "@/features/products/pages/view-product";
@@ -117,6 +118,7 @@ function Router() {
           <Route path="/stock-management" component={StockManagement} />
           <Route path="/stock-transfers" component={StockTransfers} />
           <Route path="/stock-adjustments" component={StockAdjustments} />
+          <Route path="/barcodes" component={BarcodeManagement} />
           <Route path="/inventory/valuation" component={InventoryValuation} />
           <Route path="/business-profile" component={BusinessProfile} />
           <Route path="/branches" component={Branches} />
