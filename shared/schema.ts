@@ -533,6 +533,138 @@ export const backupLogs = pgTable("backup_logs", {
 });
 
 // =========================================
+// 📊 Weighted Average Cost (WAC) Inventory System
+// =========================================
+
+// Current WAC values per product
+export const productWac = pgTable("product_wac", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  branchId: integer("branch_id").references(() => branches.id),
+  warehouseId: integer("warehouse_id").references(() => warehouses.id),
+  currentQuantity: numeric("current_quantity", { precision: 15, scale: 4 }).default("0"),
+  totalValue: numeric("total_value", { precision: 15, scale: 4 }).default("0"),
+  weightedAverageCost: numeric("weighted_average_cost", { precision: 15, scale: 4 }).default("0"),
+  lastCalculatedAt: timestamp("last_calculated_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// All inventory movements for WAC calculation
+export const inventoryMovements = pgTable("inventory_movements", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  branchId: integer("branch_id").references(() => branches.id),
+  warehouseId: integer("warehouse_id").references(() => warehouses.id),
+  movementType: varchar("movement_type", { length: 30 }).notNull(), // purchase, sale, adjustment, transfer_in, transfer_out, return, wastage
+  quantity: numeric("quantity", { precision: 15, scale: 4 }).notNull(), // Positive for inbound, negative for outbound
+  unitCost: numeric("unit_cost", { precision: 15, scale: 4 }).notNull(), // Cost per unit for this movement
+  totalCost: numeric("total_cost", { precision: 15, scale: 4 }).notNull(), // quantity * unitCost
+  runningQuantity: numeric("running_quantity", { precision: 15, scale: 4 }).default("0"), // Quantity after this movement
+  runningValue: numeric("running_value", { precision: 15, scale: 4 }).default("0"), // Total value after this movement
+  wacAfterMovement: numeric("wac_after_movement", { precision: 15, scale: 4 }).default("0"), // WAC after this movement
+  referenceType: varchar("reference_type", { length: 30 }), // sale, purchase, adjustment, transfer
+  referenceId: integer("reference_id"), // Reference to source transaction
+  notes: text("notes"),
+  createdBy: varchar("created_by").references(() => users.id),
+  movementDate: timestamp("movement_date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Enhanced Purchase Orders for WAC calculation
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: serial("id").primaryKey(),
+  purchaseOrderNumber: varchar("purchase_order_number", { length: 50 }).unique().notNull(),
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  branchId: integer("branch_id").references(() => branches.id),
+  warehouseId: integer("warehouse_id").references(() => warehouses.id),
+  totalAmount: numeric("total_amount", { precision: 15, scale: 2 }).default("0"),
+  taxAmount: numeric("tax_amount", { precision: 15, scale: 2 }).default("0"),
+  discountAmount: numeric("discount_amount", { precision: 15, scale: 2 }).default("0"),
+  shippingCost: numeric("shipping_cost", { precision: 15, scale: 2 }).default("0"),
+  grandTotal: numeric("grand_total", { precision: 15, scale: 2 }).default("0"),
+  currency: varchar("currency", { length: 3 }).default("USD"),
+  exchangeRate: numeric("exchange_rate", { precision: 10, scale: 6 }).default("1"),
+  status: varchar("status", { length: 30 }).default("draft"), // draft, sent, received, partially_received, completed, cancelled
+  orderDate: timestamp("order_date").defaultNow(),
+  expectedDeliveryDate: timestamp("expected_delivery_date"),
+  receivedDate: timestamp("received_date"),
+  notes: text("notes"),
+  createdBy: varchar("created_by").references(() => users.id),
+  receivedBy: varchar("received_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Purchase Order Items with detailed costing
+export const purchaseOrderItems = pgTable("purchase_order_items", {
+  id: serial("id").primaryKey(),
+  purchaseOrderId: integer("purchase_order_id").references(() => purchaseOrders.id, { onDelete: "cascade" }).notNull(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  orderedQuantity: numeric("ordered_quantity", { precision: 15, scale: 4 }).notNull(),
+  receivedQuantity: numeric("received_quantity", { precision: 15, scale: 4 }).default("0"),
+  unitCost: numeric("unit_cost", { precision: 15, scale: 4 }).notNull(),
+  totalCost: numeric("total_cost", { precision: 15, scale: 4 }).notNull(),
+  discountPercent: numeric("discount_percent", { precision: 5, scale: 2 }).default("0"),
+  discountAmount: numeric("discount_amount", { precision: 15, scale: 4 }).default("0"),
+  taxPercent: numeric("tax_percent", { precision: 5, scale: 2 }).default("0"),
+  taxAmount: numeric("tax_amount", { precision: 15, scale: 4 }).default("0"),
+  lineTotal: numeric("line_total", { precision: 15, scale: 4 }).notNull(),
+  notes: text("notes"),
+});
+
+// Stock Adjustments with WAC impact tracking
+export const stockAdjustmentItems = pgTable("stock_adjustment_items", {
+  id: serial("id").primaryKey(),
+  adjustmentId: integer("adjustment_id").references(() => stockAdjustments.id, { onDelete: "cascade" }).notNull(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  adjustmentType: varchar("adjustment_type", { length: 20 }).notNull(), // increase, decrease, recount
+  quantityBefore: numeric("quantity_before", { precision: 15, scale: 4 }).notNull(),
+  quantityAfter: numeric("quantity_after", { precision: 15, scale: 4 }).notNull(),
+  adjustmentQuantity: numeric("adjustment_quantity", { precision: 15, scale: 4 }).notNull(),
+  unitCost: numeric("unit_cost", { precision: 15, scale: 4 }), // Used for increases
+  totalCostImpact: numeric("total_cost_impact", { precision: 15, scale: 4 }).default("0"),
+  wacBefore: numeric("wac_before", { precision: 15, scale: 4 }),
+  wacAfter: numeric("wac_after", { precision: 15, scale: 4 }),
+  reason: text("reason"),
+  notes: text("notes"),
+});
+
+// WAC History for audit trail
+export const wacHistory = pgTable("wac_history", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  branchId: integer("branch_id").references(() => branches.id),
+  warehouseId: integer("warehouse_id").references(() => warehouses.id),
+  previousWac: numeric("previous_wac", { precision: 15, scale: 4 }),
+  newWac: numeric("new_wac", { precision: 15, scale: 4 }).notNull(),
+  previousQuantity: numeric("previous_quantity", { precision: 15, scale: 4 }),
+  newQuantity: numeric("new_quantity", { precision: 15, scale: 4 }).notNull(),
+  previousTotalValue: numeric("previous_total_value", { precision: 15, scale: 4 }),
+  newTotalValue: numeric("new_total_value", { precision: 15, scale: 4 }).notNull(),
+  triggerType: varchar("trigger_type", { length: 30 }).notNull(), // purchase, sale, adjustment, transfer
+  triggerReferenceId: integer("trigger_reference_id"),
+  calculationDetails: jsonb("calculation_details"), // Store calculation breakdown
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// COGS Tracking per sale item
+export const cogsTracking = pgTable("cogs_tracking", {
+  id: serial("id").primaryKey(),
+  saleItemId: integer("sale_item_id").references(() => saleItems.id, { onDelete: "cascade" }).notNull(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  quantitySold: numeric("quantity_sold", { precision: 15, scale: 4 }).notNull(),
+  wacAtSale: numeric("wac_at_sale", { precision: 15, scale: 4 }).notNull(),
+  totalCogs: numeric("total_cogs", { precision: 15, scale: 4 }).notNull(),
+  salePrice: numeric("sale_price", { precision: 15, scale: 4 }).notNull(),
+  grossProfit: numeric("gross_profit", { precision: 15, scale: 4 }).notNull(),
+  profitMargin: numeric("profit_margin", { precision: 5, scale: 2 }).notNull(),
+  saleDate: timestamp("sale_date").notNull(),
+  branchId: integer("branch_id").references(() => branches.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// =========================================
 // 🔔 Notifications
 // =========================================
 
@@ -780,6 +912,15 @@ export type MenuCategory = typeof menuCategories.$inferSelect;
 export type DeliveryRider = typeof deliveryRiders.$inferSelect;
 export type RiderAssignment = typeof riderAssignments.$inferSelect;
 
+// WAC System Types
+export type ProductWac = typeof productWac.$inferSelect;
+export type InventoryMovement = typeof inventoryMovements.$inferSelect;
+export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
+export type PurchaseOrderItem = typeof purchaseOrderItems.$inferSelect;
+export type StockAdjustmentItem = typeof stockAdjustmentItems.$inferSelect;
+export type WacHistory = typeof wacHistory.$inferSelect;
+export type CogsTracking = typeof cogsTracking.$inferSelect;
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -885,3 +1026,42 @@ export type InsertOnlineCustomer = z.infer<typeof insertOnlineCustomerSchema>;
 export type InsertDeliveryRider = z.infer<typeof insertDeliveryRiderSchema>;
 export type InsertRiderAssignment = z.infer<typeof insertRiderAssignmentSchema>;
 export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
+
+// WAC System Insert Schemas
+export const insertProductWacSchema = createInsertSchema(productWac).omit({
+  id: true,
+  lastCalculatedAt: true,
+  updatedAt: true,
+});
+
+export const insertInventoryMovementSchema = createInsertSchema(inventoryMovements).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPurchaseOrderItemSchema = createInsertSchema(purchaseOrderItems).omit({
+  id: true,
+});
+
+export const insertStockAdjustmentItemSchema = createInsertSchema(stockAdjustmentItems).omit({
+  id: true,
+});
+
+export const insertCogsTrackingSchema = createInsertSchema(cogsTracking).omit({
+  id: true,
+  createdAt: true,
+});
+
+// WAC System Insert Types
+export type InsertProductWac = z.infer<typeof insertProductWacSchema>;
+export type InsertInventoryMovement = z.infer<typeof insertInventoryMovementSchema>;
+export type InsertPurchaseOrder = z.infer<typeof insertPurchaseOrderSchema>;
+export type InsertPurchaseOrderItem = z.infer<typeof insertPurchaseOrderItemSchema>;
+export type InsertStockAdjustmentItem = z.infer<typeof insertStockAdjustmentItemSchema>;
+export type InsertCogsTracking = z.infer<typeof insertCogsTrackingSchema>;

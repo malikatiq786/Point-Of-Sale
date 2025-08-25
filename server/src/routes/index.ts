@@ -13,6 +13,9 @@ import { db } from '../../db';
 import * as schema from '../../../shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { isAuthenticated } from '../../replitAuth';
+import { WacCalculationService } from '../services/WacCalculationService';
+import { PurchaseOrderService } from '../services/PurchaseOrderService';
+import { CogsTrackingService } from '../services/CogsTrackingService';
 
 // Initialize controllers
 const productController = new ProductController();
@@ -820,5 +823,261 @@ router.get('/reports/:reportType', isAuthenticated, financialReportController.ge
 router.get('/reports/dashboard/summary', isAuthenticated, financialReportController.getDashboardSummary);
 router.get('/reports/profit-loss', isAuthenticated, financialReportController.getProfitLossData);
 router.get('/reports/expense-breakdown', isAuthenticated, financialReportController.getExpenseBreakdown);
+
+// =========================================
+// 📊 WAC (Weighted Average Cost) Routes
+// =========================================
+
+// Get inventory valuation report
+router.get('/wac/inventory-valuation', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { branchId, warehouseId } = req.query;
+    const valuation = await WacCalculationService.getInventoryValuation(
+      branchId ? parseInt(branchId) : undefined,
+      warehouseId ? parseInt(warehouseId) : undefined
+    );
+    res.json(valuation);
+  } catch (error) {
+    console.error('Get inventory valuation error:', error);
+    res.status(500).json({ message: 'Failed to get inventory valuation' });
+  }
+});
+
+// Get current WAC for a product
+router.get('/wac/product/:productId', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { productId } = req.params;
+    const { branchId, warehouseId } = req.query;
+    
+    const wac = await WacCalculationService.getCurrentWacValue(
+      parseInt(productId),
+      branchId ? parseInt(branchId) : undefined,
+      warehouseId ? parseInt(warehouseId) : undefined
+    );
+    
+    res.json({ productId: parseInt(productId), wac });
+  } catch (error) {
+    console.error('Get product WAC error:', error);
+    res.status(500).json({ message: 'Failed to get product WAC' });
+  }
+});
+
+// Process manual inventory movement
+router.post('/wac/movement', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const movementData = {
+      ...req.body,
+      createdBy: req.session?.user?.id || req.user?.claims?.sub || 'system',
+    };
+    
+    const result = await WacCalculationService.processInventoryMovement(movementData);
+    res.json(result);
+  } catch (error) {
+    console.error('Process inventory movement error:', error);
+    res.status(500).json({ message: 'Failed to process inventory movement' });
+  }
+});
+
+// Recalculate WAC from history (for data correction)
+router.post('/wac/recalculate/:productId', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { productId } = req.params;
+    const { branchId, warehouseId } = req.body;
+    
+    const result = await WacCalculationService.recalculateWacFromHistory(
+      parseInt(productId),
+      branchId,
+      warehouseId
+    );
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Recalculate WAC error:', error);
+    res.status(500).json({ message: 'Failed to recalculate WAC' });
+  }
+});
+
+// =========================================
+// 🛒 Purchase Order Routes
+// =========================================
+
+// Get all purchase orders
+router.get('/purchase-orders', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { branchId, status } = req.query;
+    const orders = await PurchaseOrderService.getPurchaseOrders(
+      branchId ? parseInt(branchId) : undefined,
+      status
+    );
+    res.json(orders);
+  } catch (error) {
+    console.error('Get purchase orders error:', error);
+    res.status(500).json({ message: 'Failed to get purchase orders' });
+  }
+});
+
+// Get purchase order details
+router.get('/purchase-orders/:id', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const details = await PurchaseOrderService.getPurchaseOrderDetails(parseInt(id));
+    res.json(details);
+  } catch (error) {
+    console.error('Get purchase order details error:', error);
+    res.status(500).json({ message: 'Failed to get purchase order details' });
+  }
+});
+
+// Create new purchase order
+router.post('/purchase-orders', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const orderData = {
+      ...req.body,
+      createdBy: req.session?.user?.id || req.user?.claims?.sub || 'system',
+    };
+    
+    const order = await PurchaseOrderService.createPurchaseOrder(orderData);
+    res.status(201).json(order);
+  } catch (error) {
+    console.error('Create purchase order error:', error);
+    res.status(500).json({ message: 'Failed to create purchase order' });
+  }
+});
+
+// Receive purchase order (updates WAC automatically)
+router.post('/purchase-orders/:id/receive', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const receiveData = {
+      ...req.body,
+      purchaseOrderId: parseInt(id),
+      receivedBy: req.session?.user?.id || req.user?.claims?.sub || 'system',
+    };
+    
+    await PurchaseOrderService.receivePurchaseOrder(receiveData);
+    res.json({ message: 'Purchase order received successfully' });
+  } catch (error) {
+    console.error('Receive purchase order error:', error);
+    res.status(500).json({ message: 'Failed to receive purchase order' });
+  }
+});
+
+// Cancel purchase order
+router.post('/purchase-orders/:id/cancel', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const cancelledBy = req.session?.user?.id || req.user?.claims?.sub || 'system';
+    
+    await PurchaseOrderService.cancelPurchaseOrder(parseInt(id), cancelledBy);
+    res.json({ message: 'Purchase order cancelled successfully' });
+  } catch (error) {
+    console.error('Cancel purchase order error:', error);
+    res.status(500).json({ message: 'Failed to cancel purchase order' });
+  }
+});
+
+// Get purchase order statistics
+router.get('/purchase-orders/stats/summary', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { branchId } = req.query;
+    const stats = await PurchaseOrderService.getPurchaseOrderStats(
+      branchId ? parseInt(branchId) : undefined
+    );
+    res.json(stats);
+  } catch (error) {
+    console.error('Get purchase order stats error:', error);
+    res.status(500).json({ message: 'Failed to get purchase order stats' });
+  }
+});
+
+// =========================================
+// 📈 COGS Tracking & Profitability Routes
+// =========================================
+
+// Get COGS report
+router.get('/cogs/report', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { startDate, endDate, branchId, productIds } = req.query;
+    
+    const report = await CogsTrackingService.getCogsReport(
+      startDate ? new Date(startDate) : undefined,
+      endDate ? new Date(endDate) : undefined,
+      branchId ? parseInt(branchId) : undefined,
+      productIds ? productIds.split(',').map((id: string) => parseInt(id)) : undefined
+    );
+    
+    res.json(report);
+  } catch (error) {
+    console.error('Get COGS report error:', error);
+    res.status(500).json({ message: 'Failed to get COGS report' });
+  }
+});
+
+// Get profitability analysis
+router.get('/cogs/profitability', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { startDate, endDate, branchId } = req.query;
+    
+    const analysis = await CogsTrackingService.getProfitabilityAnalysis(
+      startDate ? new Date(startDate) : undefined,
+      endDate ? new Date(endDate) : undefined,
+      branchId ? parseInt(branchId) : undefined
+    );
+    
+    res.json(analysis);
+  } catch (error) {
+    console.error('Get profitability analysis error:', error);
+    res.status(500).json({ message: 'Failed to get profitability analysis' });
+  }
+});
+
+// Get daily COGS summary
+router.get('/cogs/daily-summary', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { startDate, endDate, branchId } = req.query;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: 'Start date and end date are required' });
+    }
+    
+    const summary = await CogsTrackingService.getDailyCogsummary(
+      new Date(startDate),
+      new Date(endDate),
+      branchId ? parseInt(branchId) : undefined
+    );
+    
+    res.json(summary);
+  } catch (error) {
+    console.error('Get daily COGS summary error:', error);
+    res.status(500).json({ message: 'Failed to get daily COGS summary' });
+  }
+});
+
+// Get COGS for specific sale
+router.get('/cogs/sale/:saleId', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { saleId } = req.params;
+    const cogs = await CogsTrackingService.getCogsForSale(parseInt(saleId));
+    res.json(cogs);
+  } catch (error) {
+    console.error('Get sale COGS error:', error);
+    res.status(500).json({ message: 'Failed to get sale COGS' });
+  }
+});
+
+// Backfill COGS data for existing sales
+router.post('/cogs/backfill', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { saleIds } = req.body;
+    const backfilledCount = await CogsTrackingService.backfillCogsData(saleIds);
+    res.json({ 
+      message: `Backfilled COGS data for ${backfilledCount} sales`,
+      backfilledCount 
+    });
+  } catch (error) {
+    console.error('Backfill COGS error:', error);
+    res.status(500).json({ message: 'Failed to backfill COGS data' });
+  }
+});
 
 export { router as apiRoutes };

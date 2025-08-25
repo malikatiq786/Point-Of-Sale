@@ -1,5 +1,6 @@
 import { SaleRepository } from '../repositories/SaleRepository';
 import { ProductRepository } from '../repositories/ProductRepository';
+import { CogsTrackingService } from './CogsTrackingService';
 import { validateInput, saleCreateSchema } from '../validators';
 import { formatCurrency, generateId } from '../utils';
 import { SaleRequest, DatabaseResult, ActivityLog } from '../types';
@@ -49,9 +50,25 @@ export class SaleService {
       // Create the sale
       const sale = await this.saleRepository.createSaleWithItems(saleInfo, items);
 
-      // Update product stock for each item
+      // Update product stock for each item and track COGS
       for (const item of items) {
         await this.productRepository.decreaseStock(item.productId, item.quantity);
+        
+        // Track COGS for this sale item (WAC-based cost tracking)
+        try {
+          await CogsTrackingService.trackCogsForSaleItem({
+            saleItemId: item.id || 0, // This will be set by the repository
+            productId: item.productId,
+            quantitySold: item.quantity,
+            salePrice: item.price,
+            branchId: saleInfo.branchId,
+            saleDate: new Date(saleInfo.saleDate),
+          });
+          console.log(`COGS tracked for product ${item.productId}: ${item.quantity} units at $${item.price}`);
+        } catch (cogsError) {
+          console.error(`Failed to track COGS for product ${item.productId}:`, cogsError);
+          // Don't fail the sale if COGS tracking fails, but log the error
+        }
       }
 
       // Log the activity (you can add this to an activities table if needed)
