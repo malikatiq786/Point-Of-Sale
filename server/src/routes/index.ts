@@ -73,12 +73,14 @@ router.get('/products', isAuthenticated, async (req: any, res: any) => {
     
     if (search) {
       console.log('Searching for:', search);
+      const searchPattern = `%${search.toLowerCase()}%`;
       conditions.push(
         or(
-          like(schema.products.name, `%${search}%`),
-          like(schema.products.description, `%${search}%`),
-          like(schema.categories.name, `%${search}%`),
-          like(schema.brands.name, `%${search}%`)
+          sql`LOWER(${schema.products.name}) LIKE ${searchPattern}`,
+          sql`LOWER(COALESCE(${schema.products.description}, '')) LIKE ${searchPattern}`,
+          sql`LOWER(${schema.categories.name}) LIKE ${searchPattern}`,
+          sql`LOWER(${schema.brands.name}) LIKE ${searchPattern}`,
+          sql`LOWER(COALESCE(${schema.products.barcode}, '')) LIKE ${searchPattern}`
         )
       );
     }
