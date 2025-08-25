@@ -12,6 +12,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, RotateCcw, Plus, Calendar, DollarSign, Package, User, FileText } from "lucide-react";
 
+// Currency formatting utility
+const formatCurrency = (amount: number | string | null | undefined) => {
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : (amount || 0);
+  return new Intl.NumberFormat('en-PK', {
+    style: 'currency',
+    currency: 'PKR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(numAmount);
+};
+
 export default function Returns() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -26,6 +37,39 @@ export default function Returns() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Update return status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ returnId, status }: { returnId: number; status: string }) => {
+      const response = await fetch(`/api/returns/${returnId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update return status');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Return status updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/returns"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update return status",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Fetch returns
   const { data: returns = [], isLoading } = useQuery({
@@ -77,11 +121,21 @@ export default function Returns() {
     },
   });
 
-  const filteredReturns = returns.filter((returnItem: any) =>
-    returnItem.reason?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    returnItem.saleId?.toString().includes(searchQuery) ||
-    returnItem.customerName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter returns by search and date
+  const filteredReturns = returns.filter((returnItem: any) => {
+    const matchesSearch = 
+      returnItem.reason?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      returnItem.saleId?.toString().includes(searchQuery) ||
+      returnItem.customerName?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (!dateFilter) return matchesSearch;
+    
+    const returnDate = new Date(returnItem.createdAt || returnItem.returnDate);
+    const filterDate = new Date(dateFilter);
+    
+    return matchesSearch && 
+           returnDate.toDateString() === filterDate.toDateString();
+  });
 
   const getReturnStatus = (status: string) => {
     switch (status) {
@@ -197,11 +251,11 @@ export default function Returns() {
                         </div>
                         <div className="flex items-center">
                           <Calendar className="w-4 h-4 mr-2" />
-                          {new Date(returnItem.createdAt).toLocaleDateString()}
+                          {new Date(returnItem.createdAt || returnItem.returnDate).toLocaleDateString('en-GB')}
                         </div>
                         <div className="flex items-center">
                           <DollarSign className="w-4 h-4 mr-2" />
-                          ${parseFloat(returnItem.totalAmount || '0').toFixed(2)}
+                          {formatCurrency(returnItem.totalAmount)}
                         </div>
                         <div className="flex items-center">
                           <User className="w-4 h-4 mr-2" />
@@ -215,6 +269,42 @@ export default function Returns() {
                     </div>
                     
                     <div className="flex items-center space-x-2 ml-4">
+                      {returnItem.status === 'pending' && (
+                        <>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => updateStatusMutation.mutate({ returnId: returnItem.id, status: 'approved' })}
+                            disabled={updateStatusMutation.isPending}
+                            className="text-green-600 hover:text-green-700 border-green-200 hover:border-green-300"
+                            data-testid={`button-approve-${returnItem.id}`}
+                          >
+                            Approve
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => updateStatusMutation.mutate({ returnId: returnItem.id, status: 'rejected' })}
+                            disabled={updateStatusMutation.isPending}
+                            className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                            data-testid={`button-reject-${returnItem.id}`}
+                          >
+                            Reject
+                          </Button>
+                        </>
+                      )}
+                      {returnItem.status === 'approved' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => updateStatusMutation.mutate({ returnId: returnItem.id, status: 'processed' })}
+                          disabled={updateStatusMutation.isPending}
+                          className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+                          data-testid={`button-process-${returnItem.id}`}
+                        >
+                          Mark Processed
+                        </Button>
+                      )}
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -252,7 +342,7 @@ export default function Returns() {
                   <SelectContent>
                     {sales.slice(0, 20).map((sale: any) => (
                       <SelectItem key={sale.id} value={sale.id.toString()}>
-                        Sale #{sale.id} - ${parseFloat(sale.totalAmount || '0').toFixed(2)} ({new Date(sale.createdAt).toLocaleDateString()})
+                        Sale #{sale.id} - {formatCurrency(sale.totalAmount)} ({new Date(sale.createdAt || sale.saleDate).toLocaleDateString('en-GB')})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -328,11 +418,11 @@ export default function Returns() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-gray-700">Return Amount</Label>
-                  <p className="text-sm">${parseFloat(selectedReturn.totalAmount || '0').toFixed(2)}</p>
+                  <p className="text-sm">{formatCurrency(selectedReturn.totalAmount)}</p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-gray-700">Date</Label>
-                  <p className="text-sm">{new Date(selectedReturn.createdAt).toLocaleDateString()}</p>
+                  <p className="text-sm">{new Date(selectedReturn.createdAt || selectedReturn.returnDate).toLocaleDateString('en-GB')}</p>
                 </div>
               </div>
               
@@ -349,7 +439,7 @@ export default function Returns() {
                       <div key={index} className="flex justify-between items-center">
                         <span className="text-sm">Product ID: {item.productId}</span>
                         <span className="text-sm">Qty: {item.quantity}</span>
-                        <span className="text-sm capitalize">{item.returnType}</span>
+                        <span className="text-sm capitalize">{item.returnType || 'refund'}</span>
                       </div>
                     ))}
                   </div>

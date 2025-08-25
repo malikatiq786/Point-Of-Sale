@@ -113,7 +113,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   ];
 
-  // Returns routes
+  // DISABLED: Old mock returns routes - using database-backed MVC routes instead
+  /*
   app.get('/api/returns', isAuthenticated, async (req: any, res: any) => {
     try {
       console.log('MAIN ROUTES: Fetching returns, current storage has:', returnsStorage.length, 'items');
@@ -161,6 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to create return' });
     }
   });
+  */
 
   // Financial modules APIs
   

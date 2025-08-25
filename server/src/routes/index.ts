@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ProductController } from '../controllers/ProductController';
 import { SaleController } from '../controllers/SaleController';
+import { ReturnController } from '../controllers/ReturnController';
 import { DashboardController } from '../controllers/DashboardController';
 import { UserController } from '../controllers/UserController';
 import { InventoryController } from '../controllers/InventoryController';
@@ -22,6 +23,7 @@ import { CogsTrackingService } from '../services/CogsTrackingService';
 // Initialize controllers
 const productController = new ProductController();
 const saleController = new SaleController();
+const returnController = new ReturnController();
 const dashboardController = new DashboardController();
 const userController = new UserController();
 const inventoryController = new InventoryController();
@@ -306,6 +308,13 @@ router.get('/sales/:id', isAuthenticated, saleController.getSaleById as any);
 router.get('/sales/:id/items', isAuthenticated, saleController.getSaleItems as any);
 router.post('/sales/bulk-items', isAuthenticated, saleController.getBulkSaleItems as any);
 router.get('/sales/date-range', isAuthenticated, saleController.getSalesByDateRange as any);
+
+// Return routes
+router.post('/returns', isAuthenticated, returnController.createReturn as any);
+router.get('/returns', isAuthenticated, returnController.getReturns as any);
+router.get('/returns/:id', isAuthenticated, returnController.getReturnById as any);
+router.put('/returns/:id/status', isAuthenticated, returnController.updateReturnStatus as any);
+router.get('/returns/date-range', isAuthenticated, returnController.getReturnsByDateRange as any);
 
 // In-memory storage for returns
 let returnsStorage: any[] = [

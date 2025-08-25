@@ -314,8 +314,23 @@ export const returns = pgTable("returns", {
   id: serial("id").primaryKey(),
   saleId: integer("sale_id").references(() => sales.id),
   userId: varchar("user_id").references(() => users.id),
+  customerId: integer("customer_id").references(() => customers.id),
   reason: text("reason"),
-  returnDate: timestamp("return_date"),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected, processed
+  totalAmount: numeric("total_amount", { precision: 12, scale: 2 }),
+  customerName: varchar("customer_name", { length: 150 }),
+  returnDate: timestamp("return_date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const returnItems = pgTable("return_items", {
+  id: serial("id").primaryKey(),
+  returnId: integer("return_id").references(() => returns.id),
+  productVariantId: integer("product_variant_id").references(() => productVariants.id),
+  quantity: numeric("quantity", { precision: 10, scale: 2 }),
+  price: numeric("price", { precision: 12, scale: 2 }),
+  returnType: varchar("return_type", { length: 20 }).default("refund"), // refund, exchange, store_credit
 });
 
 // =========================================
