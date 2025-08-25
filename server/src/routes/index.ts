@@ -365,6 +365,7 @@ router.get('/sales', isAuthenticated, async (req: any, res: any) => {
   }
 });
 router.get('/sales/:id', isAuthenticated, saleController.getSaleById as any);
+router.get('/sales/:id/items', isAuthenticated, saleController.getSaleItems as any);
 router.get('/sales/date-range', isAuthenticated, saleController.getSalesByDateRange as any);
 
 // In-memory storage for returns

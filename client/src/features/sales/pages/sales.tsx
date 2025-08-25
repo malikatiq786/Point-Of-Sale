@@ -5,16 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Receipt, Eye, Calendar, DollarSign, User, Package, CreditCard } from "lucide-react";
+import { Search, Receipt, Eye, Calendar, DollarSign, User, Package, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
+import { useCurrency } from "@/hooks/useCurrency";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export default function Sales() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [expandedSale, setExpandedSale] = useState<number | null>(null);
+  const { formatCurrencyValue } = useCurrency();
 
   // Fetch sales
   const { data: sales = [], isLoading } = useQuery({
     queryKey: ["/api/sales"],
+    retry: false,
+  });
+
+  // Fetch sale items for expanded sale
+  const { data: saleItems = [], isLoading: itemsLoading } = useQuery({
+    queryKey: ["/api/sales", expandedSale, "items"],
+    enabled: !!expandedSale,
     retry: false,
   });
 
@@ -135,19 +146,108 @@ export default function Sales() {
                           <div className="flex items-center space-x-2">
                             <DollarSign className="w-4 h-4" />
                             <span className="font-semibold">
-                              ${parseFloat(sale.totalAmount || '0').toFixed(2)}
+                              {formatCurrencyValue(parseFloat(sale.totalAmount || '0'))}
                             </span>
                           </div>
                         </div>
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="w-4 h-4" />
-                          View Details
-                        </Button>
+                        <Collapsible open={expandedSale === sale.id} onOpenChange={() => 
+                          setExpandedSale(expandedSale === sale.id ? null : sale.id)
+                        }>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              {expandedSale === sale.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              View Details
+                            </Button>
+                          </CollapsibleTrigger>
+                        </Collapsible>
                       </div>
                     </div>
+                    
+                    {/* Sale Items Details - Expandable */}
+                    <Collapsible open={expandedSale === sale.id}>
+                      <CollapsibleContent className="pt-4 border-t border-gray-200">
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Package className="w-4 h-4" />
+                            <h4 className="font-semibold text-gray-900">Sale Items</h4>
+                          </div>
+                          
+                          {itemsLoading ? (
+                            <div className="space-y-2">
+                              {Array.from({ length: 3 }).map((_, i) => (
+                                <div key={i} className="bg-white p-3 rounded-md animate-pulse">
+                                  <div className="flex justify-between items-center">
+                                    <div className="space-y-1">
+                                      <div className="h-4 bg-gray-200 rounded w-32"></div>
+                                      <div className="h-3 bg-gray-200 rounded w-24"></div>
+                                    </div>
+                                    <div className="h-4 bg-gray-200 rounded w-16"></div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : saleItems.length > 0 ? (
+                            <div className="space-y-2">
+                              {saleItems.map((item: any, index: number) => (
+                                <div key={index} className="bg-white p-3 rounded-md border">
+                                  <div className="flex justify-between items-center">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <h5 className="font-medium text-gray-900">
+                                          {item.product?.name || 'Unknown Product'}
+                                        </h5>
+                                        {item.variant?.variantName && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            {item.variant.variantName}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex gap-4 text-sm text-gray-600">
+                                        {item.product?.categoryName && (
+                                          <span>Category: {item.product.categoryName}</span>
+                                        )}
+                                        {item.product?.brandName && (
+                                          <span>Brand: {item.product.brandName}</span>
+                                        )}
+                                        {item.product?.barcode && (
+                                          <span>Code: {item.product.barcode}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="text-right">
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <span className="text-gray-600">
+                                          {parseFloat(item.quantity || '0')} × {formatCurrencyValue(parseFloat(item.price || '0'))}
+                                        </span>
+                                      </div>
+                                      <div className="font-semibold text-gray-900">
+                                        {formatCurrencyValue(parseFloat(item.quantity || '0') * parseFloat(item.price || '0'))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                              
+                              <div className="border-t pt-2 mt-3">
+                                <div className="flex justify-between font-semibold text-gray-900">
+                                  <span>Total:</span>
+                                  <span>{formatCurrencyValue(parseFloat(sale.totalAmount || '0'))}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 text-gray-500">
+                              <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                              <p>No items found for this sale</p>
+                            </div>
+                          )}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   </CardContent>
                 </Card>
               ))}

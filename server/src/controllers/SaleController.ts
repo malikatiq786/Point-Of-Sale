@@ -95,6 +95,34 @@ export class SaleController {
     }
   };
 
+  // Get sale items for a specific sale
+  getSaleItems = async (req: Request, res: Response) => {
+    try {
+      const saleId = parseInt(req.params.id);
+      
+      if (isNaN(saleId)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: 'Invalid sale ID'
+        });
+      }
+
+      const result = await this.saleService.getSaleItems(saleId);
+
+      if (result.success) {
+        res.status(HTTP_STATUS.OK).json(result.data);
+      } else {
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+          message: result.error || ERROR_MESSAGES.INTERNAL_ERROR
+        });
+      }
+    } catch (error) {
+      console.error('SaleController: Error in getSaleItems:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
+
   // Get sales by date range
   getSalesByDateRange = async (req: Request, res: Response) => {
     try {

@@ -213,4 +213,22 @@ export class SaleService {
       };
     }
   }
+
+  // Get sale items for a specific sale with product variants
+  async getSaleItems(saleId: number): Promise<DatabaseResult> {
+    try {
+      const saleItems = await this.saleRepository.getSaleItems(saleId);
+      
+      return {
+        success: true,
+        data: saleItems,
+      };
+    } catch (error) {
+      console.error('SaleService: Error getting sale items:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch sale items',
+      };
+    }
+  }
 }
