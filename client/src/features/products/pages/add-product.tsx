@@ -120,11 +120,23 @@ export default function AddProduct() {
   const validateVariantPrices = (variant: any, index: number) => {
     const purchasePrice = parseFloat(variant.purchasePrice) || 0;
     const salePrice = parseFloat(variant.salePrice) || 0;
+    const wholesalePrice = parseFloat(variant.wholesalePrice) || 0;
+    const retailPrice = parseFloat(variant.retailPrice) || 0;
+    
+    let errorMessage = "";
     
     if (salePrice > 0 && purchasePrice > 0 && salePrice <= purchasePrice) {
+      errorMessage = "Sale price must be greater than purchase price";
+    } else if (wholesalePrice > 0 && purchasePrice > 0 && wholesalePrice <= purchasePrice) {
+      errorMessage = "Wholesale price must be greater than purchase price";
+    } else if (retailPrice > 0 && purchasePrice > 0 && retailPrice <= purchasePrice) {
+      errorMessage = "Shopkeeper price must be greater than purchase price";
+    }
+    
+    if (errorMessage) {
       setVariantErrors(prev => ({
         ...prev,
-        [index]: "Sale price must be greater than purchase price"
+        [index]: errorMessage
       }));
       return false;
     } else {
@@ -185,8 +197,8 @@ export default function AddProduct() {
         }));
       }
       
-      // Validate prices when purchase or sale price changes
-      if (field === 'purchasePrice' || field === 'salePrice') {
+      // Validate prices when any price field changes
+      if (field === 'purchasePrice' || field === 'salePrice' || field === 'wholesalePrice' || field === 'retailPrice') {
         const updatedVariant = updated[index];
         validateVariantPrices(updatedVariant, index);
       }
@@ -479,7 +491,7 @@ export default function AddProduct() {
                           placeholder="0.00"
                           className={variantErrors[index] ? "border-red-500" : ""}
                         />
-                        {variantErrors[index] && (
+                        {variantErrors[index] && variantErrors[index].includes('Sale') && (
                           <p className="text-sm text-red-500 mt-1">{variantErrors[index]}</p>
                         )}
                       </div>
@@ -493,7 +505,11 @@ export default function AddProduct() {
                           value={variant.wholesalePrice}
                           onChange={(e) => updateVariant(index, 'wholesalePrice', e.target.value)}
                           placeholder="0.00"
+                          className={variantErrors[index] && variantErrors[index].includes('Wholesale') ? "border-red-500" : ""}
                         />
+                        {variantErrors[index] && variantErrors[index].includes('Wholesale') && (
+                          <p className="text-sm text-red-500 mt-1">{variantErrors[index]}</p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor={`variant-retail-${index}`}>Shopkeeper Price</Label>
@@ -505,7 +521,11 @@ export default function AddProduct() {
                           value={variant.retailPrice}
                           onChange={(e) => updateVariant(index, 'retailPrice', e.target.value)}
                           placeholder="0.00"
+                          className={variantErrors[index] && variantErrors[index].includes('Shopkeeper') ? "border-red-500" : ""}
                         />
+                        {variantErrors[index] && variantErrors[index].includes('Shopkeeper') && (
+                          <p className="text-sm text-red-500 mt-1">{variantErrors[index]}</p>
+                        )}
                       </div>
                     </div>
                   </div>
