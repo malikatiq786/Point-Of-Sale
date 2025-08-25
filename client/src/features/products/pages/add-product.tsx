@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Package, Save, Plus, Minus, List } from "lucide-react";
+import { ArrowLeft, Package, Save, Plus, Minus, List, Warehouse } from "lucide-react";
 import { Link } from "wouter";
 
 export default function AddProduct() {
@@ -38,6 +38,8 @@ export default function AddProduct() {
     { variantName: "Default", initialStock: "0" }
   ]);
 
+  const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
+
   // Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
@@ -53,6 +55,12 @@ export default function AddProduct() {
   // Fetch units
   const { data: units = [] } = useQuery({
     queryKey: ["/api/units"],
+    retry: false,
+  });
+
+  // Fetch warehouses
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ["/api/warehouses"],
     retry: false,
   });
 
@@ -83,6 +91,7 @@ export default function AddProduct() {
         image: ""
       });
       setVariants([{ variantName: "Default", initialStock: "0" }]);
+      setSelectedWarehouses([]);
     },
     onError: (error: any) => {
       toast({
@@ -119,6 +128,23 @@ export default function AddProduct() {
     );
   };
 
+  // Warehouse selection functions
+  const toggleWarehouse = (warehouseId: string) => {
+    setSelectedWarehouses(prev => 
+      prev.includes(warehouseId) 
+        ? prev.filter(id => id !== warehouseId)
+        : [...prev, warehouseId]
+    );
+  };
+
+  const selectAllWarehouses = () => {
+    setSelectedWarehouses(warehouses.map((w: any) => w.id.toString()));
+  };
+
+  const deselectAllWarehouses = () => {
+    setSelectedWarehouses([]);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -126,6 +152,17 @@ export default function AddProduct() {
       toast({
         title: "Validation Error",
         description: "Product name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if warehouses are selected when there's initial stock
+    const totalInitialStock = variants.reduce((sum, variant) => sum + (parseInt(variant.initialStock) || 0), 0);
+    if (totalInitialStock > 0 && selectedWarehouses.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one warehouse to distribute the initial stock",
         variant: "destructive",
       });
       return;
@@ -146,7 +183,8 @@ export default function AddProduct() {
       variants: variants.map(variant => ({
         variantName: variant.variantName || "Default",
         initialStock: parseInt(variant.initialStock) || 0
-      }))
+      })),
+      selectedWarehouses: selectedWarehouses
     };
 
     createProductMutation.mutate(productData);
@@ -323,6 +361,74 @@ export default function AddProduct() {
                     )}
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+
+            {/* Warehouse Selection */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Warehouse className="mr-2 h-5 w-5" />
+                    Select Warehouses for Stock Distribution
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      type="button"
+                      onClick={selectAllWarehouses}
+                      variant="outline"
+                      size="sm"
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={deselectAllWarehouses}
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">
+                  Choose which warehouses should receive the initial stock. Stock will be distributed evenly among selected warehouses.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {warehouses.map((warehouse: any) => (
+                    <div 
+                      key={warehouse.id} 
+                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                        selectedWarehouses.includes(warehouse.id.toString()) 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => toggleWarehouse(warehouse.id.toString())}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedWarehouses.includes(warehouse.id.toString())}
+                          onChange={() => toggleWarehouse(warehouse.id.toString())}
+                          className="rounded"
+                        />
+                        <div>
+                          <div className="font-medium text-sm">{warehouse.name}</div>
+                          <div className="text-xs text-gray-500">{warehouse.location}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {selectedWarehouses.length === 0 && (
+                  <p className="text-sm text-amber-600 mt-2">
+                    ⚠️ No warehouses selected. Stock will not be created until you select at least one warehouse.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>

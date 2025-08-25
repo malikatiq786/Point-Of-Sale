@@ -137,9 +137,17 @@ router.post('/products', isAuthenticated, async (req: any, res: any) => {
 
     // Handle variants creation if provided
     const variants = req.body.variants || [{ variantName: 'Default', initialStock: 0 }];
+    const selectedWarehouseIds = req.body.selectedWarehouses || [];
     
-    // Get available warehouses for stock distribution
-    const warehouses = await db.select().from(schema.warehouses).limit(3);
+    // Get selected warehouses for stock distribution
+    let warehouses = [];
+    if (selectedWarehouseIds.length > 0) {
+      const warehouseIdsAsNumbers = selectedWarehouseIds.map(id => parseInt(id));
+      warehouses = await db.select().from(schema.warehouses)
+        .where(inArray(schema.warehouses.id, warehouseIdsAsNumbers));
+    } else {
+      console.log('No warehouses selected - stock will not be created');
+    }
     
     for (const variant of variants) {
       // Create product variant
@@ -152,7 +160,7 @@ router.post('/products', isAuthenticated, async (req: any, res: any) => {
         
       console.log('Variant created:', createdVariant);
       
-      // Create initial stock entries in warehouses if initial stock > 0
+      // Create initial stock entries in selected warehouses if initial stock > 0
       if (variant.initialStock > 0 && warehouses.length > 0) {
         const stockPerWarehouse = Math.floor(variant.initialStock / warehouses.length);
         const remainder = variant.initialStock % warehouses.length;
@@ -170,6 +178,8 @@ router.post('/products', isAuthenticated, async (req: any, res: any) => {
             console.log(`Stock created: ${warehouseStock} units in warehouse ${warehouses[i].name}`);
           }
         }
+      } else if (variant.initialStock > 0 && warehouses.length === 0) {
+        console.log(`Warning: Cannot create stock for variant ${createdVariant.variantName} - no warehouses selected`);
       }
     }
     
