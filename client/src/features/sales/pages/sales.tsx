@@ -70,26 +70,22 @@ export default function Sales() {
     }
   };
 
-  // Build query parameters for date filtering
-  const buildSalesQuery = () => {
-    const params = new URLSearchParams();
-    if (startDate && endDate) {
-      console.log(`Building sales query with dates: ${startDate} to ${endDate}`);
-      params.append('startDate', startDate);
-      params.append('endDate', endDate);
-    }
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    console.log(`Final sales query: /api/sales${queryString}`);
-    return queryString;
-  };
+  // Removed buildSalesQuery function to prevent infinite loops
 
   // Fetch sales with date range support
   const { data: sales = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/sales", startDate, endDate],
     queryFn: async () => {
-      const query = buildSalesQuery();
-      console.log(`Fetching sales with query: /api/sales${query}`);
-      const response = await fetch(`/api/sales${query}`);
+      let url = '/api/sales';
+      if (startDate && endDate) {
+        const params = new URLSearchParams({
+          startDate,
+          endDate
+        });
+        url = `/api/sales?${params.toString()}`;
+      }
+      console.log(`Fetching sales with query: ${url}`);
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch sales');
       const data = await response.json();
       console.log(`Received ${data.length} sales from API`);
