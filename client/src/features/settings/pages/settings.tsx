@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star } from "lucide-react";
 
 export default function Settings() {
@@ -22,6 +23,13 @@ export default function Settings() {
   const [editingCurrency, setEditingCurrency] = useState<any>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // General settings state
+  const [generalSettings, setGeneralSettings] = useState({
+    timezone: "UTC",
+    dateFormat: "MM/DD/YYYY",
+    systemCurrency: ""
+  });
 
   // Currency form state
   const [currencyForm, setCurrencyForm] = useState({
@@ -36,6 +44,20 @@ export default function Settings() {
   // Fetch currencies
   const { data: currencies = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/currencies"],
+  });
+
+  // Fetch system settings
+  const { data: systemSettings } = useQuery({
+    queryKey: ['/api/settings/system_currency'],
+    select: (data) => {
+      if (data?.data?.value) {
+        setGeneralSettings(prev => ({
+          ...prev, 
+          systemCurrency: data.data.value
+        }));
+      }
+      return data;
+    }
   });
 
   // Create currency mutation
@@ -121,6 +143,32 @@ export default function Settings() {
     },
   });
 
+  // Update system currency mutation
+  const updateSystemCurrencyMutation = useMutation({
+    mutationFn: async (currencyId: string) => {
+      const response = await apiRequest(`/api/settings/system_currency`, {
+        method: 'PUT',
+        body: JSON.stringify({ value: currencyId })
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/system_currency'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/currencies'] });
+      toast({
+        title: "Success",
+        description: "System currency updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error", 
+        description: error.message || "Failed to update system currency",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetCurrencyForm = () => {
     setCurrencyForm({
       code: "",
@@ -163,6 +211,13 @@ export default function Settings() {
       });
     } else {
       createCurrencyMutation.mutate(currencyForm);
+    }
+  };
+
+  // Handle general settings save
+  const handleSaveGeneralSettings = () => {
+    if (generalSettings.systemCurrency) {
+      updateSystemCurrencyMutation.mutate(generalSettings.systemCurrency);
     }
   };
 
@@ -220,20 +275,44 @@ export default function Settings() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="timezone">Timezone</Label>
-                      <Input id="timezone" defaultValue="UTC" />
+                      <Input 
+                        id="timezone" 
+                        value={generalSettings.timezone}
+                        onChange={(e) => setGeneralSettings(prev => ({ ...prev, timezone: e.target.value }))}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="currency">Currency</Label>
-                      <Input id="currency" defaultValue="USD" />
+                      <Select
+                        value={generalSettings.systemCurrency}
+                        onValueChange={(value) => setGeneralSettings(prev => ({ ...prev, systemCurrency: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select currency..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {currencies.map((currency) => (
+                            <SelectItem key={currency.id} value={currency.id.toString()}>
+                              {currency.symbol} {currency.code} - {currency.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="dateFormat">Date Format</Label>
-                    <Input id="dateFormat" defaultValue="MM/DD/YYYY" />
+                    <Input 
+                      id="dateFormat" 
+                      value={generalSettings.dateFormat}
+                      onChange={(e) => setGeneralSettings(prev => ({ ...prev, dateFormat: e.target.value }))}
+                    />
                   </div>
 
-                  <Button>Save Changes</Button>
+                  <Button onClick={handleSaveGeneralSettings} disabled={updateSystemCurrencyMutation.isPending}>
+                    {updateSystemCurrencyMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>

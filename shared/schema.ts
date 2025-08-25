@@ -716,11 +716,8 @@ export const salaries = pgTable("salaries", {
 
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
-  keyName: varchar("key_name", { length: 100 }).unique().notNull(),
+  key: varchar("key", { length: 100 }).unique().notNull(),
   value: text("value"),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const currencies = pgTable("currencies", {

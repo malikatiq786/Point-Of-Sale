@@ -9,6 +9,7 @@ import { SupplierController } from '../controllers/SupplierController';
 import { ExpenseController } from '../controllers/ExpenseController';
 import { FinancialReportController } from '../controllers/FinancialReportController';
 import { ProfitLossController } from '../controllers/ProfitLossController';
+import { SettingsController } from '../controllers/SettingsController';
 import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
@@ -29,6 +30,7 @@ const supplierController = new SupplierController();
 const expenseController = new ExpenseController();
 const financialReportController = new FinancialReportController();
 const profitLossController = new ProfitLossController();
+const settingsController = new SettingsController();
 
 // Create router
 const router = Router();
@@ -1853,5 +1855,9 @@ router.post('/cogs/backfill', isAuthenticated, async (req: any, res: any) => {
     res.status(500).json({ message: 'Failed to backfill COGS data' });
   }
 });
+
+// Settings routes
+router.get('/settings/:key', isAuthenticated, settingsController.getSetting);
+router.put('/settings/:key', isAuthenticated, settingsController.updateSetting);
 
 export { router as apiRoutes };

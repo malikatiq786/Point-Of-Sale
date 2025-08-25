@@ -17,7 +17,19 @@ export function useCurrency() {
     queryKey: ["/api/currencies"],
   });
 
-  const defaultCurrency = currencies.find(currency => currency.isDefault) || {
+  // Get system currency setting
+  const { data: systemCurrencySetting } = useQuery({
+    queryKey: ['/api/settings/system_currency'],
+    retry: false,
+  });
+
+  // Find the system-selected currency or fallback to default
+  const systemCurrencyId = systemCurrencySetting?.data?.value ? 
+    parseInt(systemCurrencySetting.data.value) : null;
+    
+  const defaultCurrency = currencies.find(currency => 
+    systemCurrencyId ? currency.id === systemCurrencyId : currency.isDefault
+  ) || currencies.find(currency => currency.isDefault) || {
     id: 1,
     code: "PKR",
     name: "Pakistani Rupee",
