@@ -74,22 +74,37 @@ export default function BarcodeManagement() {
   });
 
   // Transform variants data to include product info and create separate items for each variant
-  const productVariants = variantsData.filter((variant: any) => {
-    const product = products.find((p: any) => p.id === variant.productId);
+  const productVariants = variantsData.filter((stock: any) => {
+    // Find the product by matching product name
+    const product = products.find((p: any) => p.name === stock.productName);
     return product && product.barcode && product.barcode.trim() !== "";
-  }).map((variant: any) => {
-    const product = products.find((p: any) => p.id === variant.productId);
+  }).map((stock: any) => {
+    // Find the matching product by name
+    const product = products.find((p: any) => p.name === stock.productName);
+    
+    if (!product) return null;
+    
     return {
       ...product,
-      variantId: variant.id,
-      variantName: variant.variantName || 'Default',
-      quantity: variant.quantity || 0,
-      warehouseName: variant.warehouseName || 'N/A',
-      location: variant.location || 'N/A',
+      variantId: stock.id, // Use stock ID as unique identifier
+      variantName: stock.variantName || 'Default',
+      quantity: stock.quantity || 0,
+      warehouseName: stock.warehouseName || 'N/A',
+      location: stock.location || 'N/A',
+      productVariantId: stock.productVariantId,
+      // Update category and brand from stock data if available
+      category: { 
+        ...product.category, 
+        name: stock.categoryName || product.category?.name || 'N/A' 
+      },
+      brand: { 
+        ...product.brand, 
+        name: stock.brandName || product.brand?.name || 'N/A' 
+      },
       // Use product barcode for now - we might generate variant-specific barcodes later
-      displayName: `${product.name} - ${variant.variantName || 'Default'}`
+      displayName: `${product.name} - ${stock.variantName || 'Default'}`
     };
-  });
+  }).filter(Boolean); // Remove any null entries
 
   // Fetch categories for filter dropdown
   const { data: categories = [] } = useQuery({
