@@ -8,6 +8,7 @@ import { CustomerController } from '../controllers/CustomerController';
 import { SupplierController } from '../controllers/SupplierController';
 import { ExpenseController } from '../controllers/ExpenseController';
 import { FinancialReportController } from '../controllers/FinancialReportController';
+import { ProfitLossController } from '../controllers/ProfitLossController';
 import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
@@ -27,6 +28,7 @@ const customerController = new CustomerController();
 const supplierController = new SupplierController();
 const expenseController = new ExpenseController();
 const financialReportController = new FinancialReportController();
+const profitLossController = new ProfitLossController();
 
 // Create router
 const router = Router();
@@ -1750,6 +1752,19 @@ router.get('/purchase-orders/stats/summary', isAuthenticated, async (req: any, r
 
 // =========================================
 // 📈 COGS Tracking & Profitability Routes
+// =========================================
+
+// Profit & Loss Reports - Comprehensive reporting system
+router.get('/reports/profit-loss/overall', isAuthenticated, profitLossController.getOverallReport as any);
+router.get('/reports/profit-loss/products', isAuthenticated, profitLossController.getProductWiseReport as any);
+router.get('/reports/profit-loss/variants', isAuthenticated, profitLossController.getVariantWiseReport as any);
+router.get('/reports/profit-loss/categories', isAuthenticated, profitLossController.getCategoryWiseReport as any);
+router.get('/reports/profit-loss/brands', isAuthenticated, profitLossController.getBrandWiseReport as any);
+router.get('/reports/profit-loss/daily', isAuthenticated, profitLossController.getDailyReport as any);
+router.get('/reports/profit-loss/monthly', isAuthenticated, profitLossController.getMonthlyReport as any);
+router.get('/reports/profit-loss/yearly', isAuthenticated, profitLossController.getYearlyReport as any);
+router.get('/reports/profit-loss/top-performers', isAuthenticated, profitLossController.getTopPerformers as any);
+
 // =========================================
 
 // Get COGS report
