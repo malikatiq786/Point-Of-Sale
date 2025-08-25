@@ -56,7 +56,8 @@ router.get('/products', isAuthenticated, async (req: any, res: any) => {
       .from(schema.products)
       .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
       .leftJoin(schema.brands, eq(schema.products.brandId, schema.brands.id))
-      .limit(50);
+      .orderBy(schema.products.name)
+      .limit(1000); // Increased limit to show all products
     
     res.json(products);
   } catch (error) {
