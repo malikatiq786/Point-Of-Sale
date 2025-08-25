@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, Package, TrendingUp, DollarSign, RefreshCw, Tag, Bookmark } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AlertCircle, Package, TrendingUp, DollarSign, RefreshCw, Tag, Bookmark, ChevronDown, ChevronRight, Receipt, Calculator } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface InventoryValuationItem {
@@ -47,6 +48,39 @@ interface VariantInventoryValuationItem {
   warehouseId: number | null;
 }
 
+interface VariantPurchaseDetail {
+  purchaseNumber: number;
+  purchaseId: number;
+  purchaseDate: string;
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+  supplierName: string | null;
+  status: string;
+  previousQuantity: number;
+  previousTotalValue: number;
+  previousWac: number;
+  newQuantity: number;
+  newTotalValue: number;
+  newWac: number;
+}
+
+interface VariantPurchaseDetailsResponse {
+  variant: {
+    variantId: number;
+    variantName: string;
+    productId: number;
+    productName: string;
+  };
+  summary: {
+    totalPurchases: number;
+    totalQuantityPurchased: number;
+    totalValuePurchased: number;
+    finalWac: number;
+  };
+  purchaseHistory: VariantPurchaseDetail[];
+}
+
 interface CogsReport {
   productId: number;
   productName: string;
@@ -61,6 +95,7 @@ interface CogsReport {
 
 export default function InventoryValuationPage() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [expandedVariants, setExpandedVariants] = useState<Set<number>>(new Set());
 
   // Get inventory valuation data
   const { data: valuationData, isLoading: valuationLoading, error: valuationError } = useQuery({
@@ -178,6 +213,32 @@ export default function InventoryValuationPage() {
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
+  };
+
+  // Function to get detailed purchase history for a variant
+  const { data: variantDetailsData, refetch: refetchVariantDetails } = useQuery({
+    queryKey: ['/api/wac/variant-purchase-details', Array.from(expandedVariants)],
+    queryFn: async () => {
+      const results: Record<number, VariantPurchaseDetailsResponse> = {};
+      for (const variantId of expandedVariants) {
+        const response = await fetch(`/api/wac/variant-purchase-details/${variantId}`);
+        if (response.ok) {
+          results[variantId] = await response.json();
+        }
+      }
+      return results;
+    },
+    enabled: expandedVariants.size > 0,
+  });
+
+  const toggleVariantExpansion = (variantId: number) => {
+    const newExpanded = new Set(expandedVariants);
+    if (newExpanded.has(variantId)) {
+      newExpanded.delete(variantId);
+    } else {
+      newExpanded.add(variantId);
+    }
+    setExpandedVariants(newExpanded);
   };
 
   if (valuationError) {
@@ -311,49 +372,152 @@ export default function InventoryValuationPage() {
               ) : (
                 <div className="space-y-4">
                   {variantData && variantData.length > 0 ? (
-                    <div className="max-h-96 overflow-y-auto">
-                      {variantData.map((variant) => (
-                        <div
-                          key={`${variant.productId}-${variant.variantId}`}
-                          className="flex items-center justify-between py-3 border-b last:border-b-0"
-                          data-testid={`row-variant-${variant.variantId}`}
-                        >
-                          <div className="flex-1">
-                            <div className="font-medium" data-testid={`text-variant-name-${variant.variantId}`}>
-                              {variant.productName} - {variant.variantName}
+                    <div className="max-h-[600px] overflow-y-auto space-y-2">
+                      {variantData.map((variant) => {
+                        const isExpanded = expandedVariants.has(variant.variantId);
+                        const variantDetails = variantDetailsData?.[variant.variantId];
+                        
+                        return (
+                          <Collapsible
+                            key={`${variant.productId}-${variant.variantId}`}
+                            open={isExpanded}
+                            onOpenChange={() => toggleVariantExpansion(variant.variantId)}
+                          >
+                            <div className="border rounded-lg">
+                              <CollapsibleTrigger className="w-full">
+                                <div 
+                                  className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                                  data-testid={`row-variant-${variant.variantId}`}
+                                >
+                                  <div className="flex items-center space-x-3">
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4 text-gray-500" />
+                                    )}
+                                    <div className="flex-1 text-left">
+                                      <div className="font-medium" data-testid={`text-variant-name-${variant.variantId}`}>
+                                        {variant.productName} - {variant.variantName}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground space-x-4">
+                                        <span>Qty: {variant.currentQuantity}</span>
+                                        <span>•</span>
+                                        <span data-testid={`text-variant-wac-${variant.variantId}`}>
+                                          WAC: ${variant.weightedAverageCost.toFixed(2)}
+                                        </span>
+                                        <span>•</span>
+                                        <span>{variant.purchaseTransactions} purchase{variant.purchaseTransactions !== 1 ? 's' : ''}</span>
+                                        {variant.brandName && (
+                                          <>
+                                            <span>•</span>
+                                            <span>Brand: {variant.brandName}</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="font-medium" data-testid={`text-variant-total-value-${variant.variantId}`}>
+                                      ${variant.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      Click to view details
+                                    </div>
+                                  </div>
+                                </div>
+                              </CollapsibleTrigger>
+                              
+                              <CollapsibleContent>
+                                <div className="border-t p-4 bg-gray-50">
+                                  {variantDetails ? (
+                                    <div className="space-y-4">
+                                      {/* Summary */}
+                                      <div className="bg-white rounded-lg p-4 border">
+                                        <div className="flex items-center space-x-2 mb-3">
+                                          <Calculator className="h-4 w-4 text-blue-600" />
+                                          <h4 className="font-semibold">WAC Calculation Summary</h4>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                          <div>
+                                            <div className="text-muted-foreground">Total Purchases</div>
+                                            <div className="font-medium">{variantDetails.summary.totalPurchases}</div>
+                                          </div>
+                                          <div>
+                                            <div className="text-muted-foreground">Total Quantity</div>
+                                            <div className="font-medium">{variantDetails.summary.totalQuantityPurchased}</div>
+                                          </div>
+                                          <div>
+                                            <div className="text-muted-foreground">Total Value</div>
+                                            <div className="font-medium">${variantDetails.summary.totalValuePurchased.toFixed(2)}</div>
+                                          </div>
+                                          <div>
+                                            <div className="text-muted-foreground">Final WAC</div>
+                                            <div className="font-medium text-green-600">${variantDetails.summary.finalWac.toFixed(2)}</div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Purchase History */}
+                                      <div className="bg-white rounded-lg border">
+                                        <div className="p-4 border-b">
+                                          <div className="flex items-center space-x-2">
+                                            <Receipt className="h-4 w-4 text-green-600" />
+                                            <h4 className="font-semibold">Purchase History & WAC Calculation</h4>
+                                          </div>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                          <table className="w-full text-sm">
+                                            <thead className="bg-gray-50">
+                                              <tr>
+                                                <th className="px-4 py-2 text-left">#</th>
+                                                <th className="px-4 py-2 text-left">Date</th>
+                                                <th className="px-4 py-2 text-left">Supplier</th>
+                                                <th className="px-4 py-2 text-right">Qty</th>
+                                                <th className="px-4 py-2 text-right">Unit Cost</th>
+                                                <th className="px-4 py-2 text-right">Total Cost</th>
+                                                <th className="px-4 py-2 text-right">Running Qty</th>
+                                                <th className="px-4 py-2 text-right">Running Value</th>
+                                                <th className="px-4 py-2 text-right">New WAC</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {variantDetails.purchaseHistory.map((purchase) => (
+                                                <tr key={purchase.purchaseId} className="border-b hover:bg-gray-50">
+                                                  <td className="px-4 py-2 font-medium">{purchase.purchaseNumber}</td>
+                                                  <td className="px-4 py-2">{new Date(purchase.purchaseDate).toLocaleDateString()}</td>
+                                                  <td className="px-4 py-2">{purchase.supplierName || 'N/A'}</td>
+                                                  <td className="px-4 py-2 text-right">{purchase.quantity}</td>
+                                                  <td className="px-4 py-2 text-right">${purchase.unitCost.toFixed(2)}</td>
+                                                  <td className="px-4 py-2 text-right">${purchase.totalCost.toFixed(2)}</td>
+                                                  <td className="px-4 py-2 text-right font-medium">{purchase.newQuantity}</td>
+                                                  <td className="px-4 py-2 text-right font-medium">${purchase.newTotalValue.toFixed(2)}</td>
+                                                  <td className="px-4 py-2 text-right font-medium text-green-600">
+                                                    ${purchase.newWac.toFixed(2)}
+                                                  </td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="text-xs text-muted-foreground">
+                                        <strong>WAC Formula:</strong> New WAC = Total Value ÷ Total Quantity
+                                        <br />
+                                        Each purchase updates the running total, creating a weighted average cost.
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-center py-4">
+                                      <div className="text-sm text-muted-foreground">Loading purchase details...</div>
+                                    </div>
+                                  )}
+                                </div>
+                              </CollapsibleContent>
                             </div>
-                            <div className="text-sm text-muted-foreground space-x-4">
-                              <span>Qty: {variant.currentQuantity}</span>
-                              <span>•</span>
-                              <span data-testid={`text-variant-wac-${variant.variantId}`}>
-                                WAC: ${variant.weightedAverageCost.toFixed(2)}
-                              </span>
-                              <span>•</span>
-                              <span>{variant.purchaseTransactions} purchase{variant.purchaseTransactions !== 1 ? 's' : ''}</span>
-                              {variant.brandName && (
-                                <>
-                                  <span>•</span>
-                                  <span>Brand: {variant.brandName}</span>
-                                </>
-                              )}
-                              {variant.categoryName && (
-                                <>
-                                  <span>•</span>
-                                  <span>Category: {variant.categoryName}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium" data-testid={`text-variant-total-value-${variant.variantId}`}>
-                              ${variant.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Variant ID: {variant.variantId}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                          </Collapsible>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">

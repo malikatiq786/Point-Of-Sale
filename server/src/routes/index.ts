@@ -1273,6 +1273,115 @@ router.get('/wac/inventory-valuation-variants', isAuthenticated, async (req: any
   }
 });
 
+// Get detailed purchase history for a specific variant
+router.get('/wac/variant-purchase-details/:variantId', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const variantId = parseInt(req.params.variantId);
+    
+    if (!variantId) {
+      return res.status(400).json({ message: 'Valid variant ID is required' });
+    }
+
+    // Get variant info
+    const [variant] = await db
+      .select({
+        variantId: schema.productVariants.id,
+        variantName: schema.productVariants.variantName,
+        productId: schema.productVariants.productId,
+        productName: schema.products.name,
+      })
+      .from(schema.productVariants)
+      .leftJoin(schema.products, eq(schema.productVariants.productId, schema.products.id))
+      .where(eq(schema.productVariants.id, variantId))
+      .limit(1);
+
+    if (!variant) {
+      return res.status(404).json({ message: 'Variant not found' });
+    }
+
+    // Get detailed purchase history with running WAC calculation
+    const purchaseHistory = await db
+      .select({
+        purchaseId: schema.purchases.id,
+        purchaseDate: schema.purchases.purchaseDate,
+        quantity: schema.purchaseItems.quantity,
+        costPrice: schema.purchaseItems.costPrice,
+        totalCost: sql<string>`CAST(${schema.purchaseItems.quantity} AS DECIMAL) * CAST(${schema.purchaseItems.costPrice} AS DECIMAL)`,
+        supplierName: schema.suppliers.name,
+        status: schema.purchases.status,
+      })
+      .from(schema.purchaseItems)
+      .leftJoin(schema.purchases, eq(schema.purchaseItems.purchaseId, schema.purchases.id))
+      .leftJoin(schema.suppliers, eq(schema.purchases.supplierId, schema.suppliers.id))
+      .where(
+        and(
+          eq(schema.purchaseItems.productVariantId, variantId),
+          eq(schema.purchases.status, 'approved')
+        )
+      )
+      .orderBy(schema.purchases.purchaseDate);
+
+    // Calculate running WAC for each purchase
+    let runningQuantity = 0;
+    let runningTotalValue = 0;
+    let runningWac = 0;
+
+    const detailedHistory = purchaseHistory.map((purchase, index) => {
+      const qty = parseFloat(purchase.quantity || '0');
+      const cost = parseFloat(purchase.costPrice || '0');
+      const totalCost = qty * cost;
+
+      // Calculate running totals
+      const previousQuantity = runningQuantity;
+      const previousTotalValue = runningTotalValue;
+      const previousWac = runningWac;
+
+      runningQuantity += qty;
+      runningTotalValue += totalCost;
+      runningWac = runningQuantity > 0 ? runningTotalValue / runningQuantity : 0;
+
+      return {
+        purchaseNumber: index + 1,
+        purchaseId: purchase.purchaseId,
+        purchaseDate: purchase.purchaseDate,
+        quantity: qty,
+        unitCost: cost,
+        totalCost: totalCost,
+        supplierName: purchase.supplierName,
+        status: purchase.status,
+        // Running calculations
+        previousQuantity,
+        previousTotalValue,
+        previousWac,
+        newQuantity: runningQuantity,
+        newTotalValue: runningTotalValue,
+        newWac: runningWac,
+      };
+    });
+
+    const response = {
+      variant: {
+        variantId: variant.variantId,
+        variantName: variant.variantName,
+        productId: variant.productId,
+        productName: variant.productName,
+      },
+      summary: {
+        totalPurchases: purchaseHistory.length,
+        totalQuantityPurchased: runningQuantity,
+        totalValuePurchased: runningTotalValue,
+        finalWac: runningWac,
+      },
+      purchaseHistory: detailedHistory,
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Get variant purchase details error:', error);
+    res.status(500).json({ message: 'Failed to get variant purchase details' });
+  }
+});
+
 // Get current WAC for a product
 router.get('/wac/product/:productId', isAuthenticated, async (req: any, res: any) => {
   try {
