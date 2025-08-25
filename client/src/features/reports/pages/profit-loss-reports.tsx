@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { BarChart, TrendingUp, Calendar, Package, Tag, Building, DollarSign, ShoppingCart, Percent, Activity } from 'lucide-react';
+import { useCurrency } from '@/hooks/useCurrency';
 import {
   LineChart,
   Line,
@@ -50,11 +51,10 @@ interface ProfitLossData {
   averageOrderValue: number;
 }
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
+// Use system-wide currency formatting
+const usePLCurrency = () => {
+  const { formatCurrencyValue } = useCurrency();
+  return { formatCurrency: formatCurrencyValue };
 };
 
 const formatPercentage = (percentage: number) => {
@@ -76,14 +76,14 @@ const CHART_COLORS = {
 };
 
 // Custom tooltip component for charts
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label, formatCurrencyProp }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 border rounded-lg shadow-lg">
         <p className="font-semibold text-gray-900">{label}</p>
         {payload.map((entry: any, index: number) => (
           <p key={index} className="text-sm" style={{ color: entry.color }}>
-            {entry.name}: {typeof entry.value === 'number' ? formatCurrency(entry.value) : entry.value}
+            {entry.name}: {typeof entry.value === 'number' ? formatCurrencyProp(entry.value) : entry.value}
           </p>
         ))}
       </div>
@@ -93,6 +93,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function ProfitLossReports() {
+  const { formatCurrency } = usePLCurrency();
   const [filters, setFilters] = useState<ReportFilters>({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
@@ -246,7 +247,7 @@ export default function ProfitLossReports() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={(props) => <CustomTooltip {...props} formatCurrencyProp={formatCurrency} />} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -340,7 +341,7 @@ export default function ProfitLossReports() {
                   fontSize={12}
                 />
                 <YAxis fontSize={12} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={(props) => <CustomTooltip {...props} formatCurrencyProp={formatCurrency} />} />
                 <Legend />
                 <Bar dataKey="revenue" fill={CHART_COLORS.success} name="Revenue" radius={[2, 2, 0, 0]} />
                 <Bar dataKey="cost" fill={CHART_COLORS.danger} name="Cost" radius={[2, 2, 0, 0]} />
@@ -486,7 +487,7 @@ export default function ProfitLossReports() {
                   height={80}
                 />
                 <YAxis fontSize={12} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={(props) => <CustomTooltip {...props} formatCurrencyProp={formatCurrency} />} />
                 <Legend />
                 <Area
                   type="monotone"

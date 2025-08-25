@@ -157,9 +157,12 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/settings/system_currency'] });
       queryClient.invalidateQueries({ queryKey: ['/api/currencies'] });
+      // Invalidate all P&L reports to refresh currency formatting
+      queryClient.invalidateQueries({ queryKey: ['/api/reports/profit-loss'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
       toast({
         title: "Success",
-        description: "System currency updated successfully",
+        description: "System currency updated successfully - all displays refreshed",
       });
     },
     onError: (error: any) => {
