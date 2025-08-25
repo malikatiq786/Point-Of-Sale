@@ -1,5 +1,5 @@
 import { eq, and, desc, sum } from 'drizzle-orm';
-import { db } from '../../db';
+import { db, pool } from '../../db';
 import {
   cogsTracking,
   saleItems,
@@ -184,16 +184,16 @@ export class CogsTrackingService {
     const conditions = [];
 
     if (startDate) {
-      conditions.push(`cogs_tracking.sale_date >= '${startDate.toISOString()}'`);
+      conditions.push(`ct.sale_date >= '${startDate.toISOString()}'`);
     }
     if (endDate) {
-      conditions.push(`cogs_tracking.sale_date <= '${endDate.toISOString()}'`);
+      conditions.push(`ct.sale_date <= '${endDate.toISOString()}'`);
     }
     if (branchId) {
-      conditions.push(`cogs_tracking.branch_id = ${branchId}`);
+      conditions.push(`ct.branch_id = ${branchId}`);
     }
     if (productIds && productIds.length > 0) {
-      conditions.push(`cogs_tracking.product_id IN (${productIds.join(',')})`);
+      conditions.push(`ct.product_id IN (${productIds.join(',')})`);
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -217,7 +217,7 @@ export class CogsTrackingService {
       ORDER BY gross_profit DESC
     `;
 
-    const results = await db.execute({ sql: query });
+    const results = await pool.query(query);
 
     return results.rows.map((row: any) => ({
       productId: parseInt(row.product_id),
@@ -307,7 +307,7 @@ export class CogsTrackingService {
       ORDER BY profit DESC
     `;
 
-    const results = await db.execute({ sql: query });
+    const results = await pool.query(query);
 
     return results.rows.map((row: any) => ({
       categoryName: row.category_name,
@@ -386,7 +386,7 @@ export class CogsTrackingService {
       ORDER BY sale_date DESC
     `;
 
-    const results = await db.execute({ sql: query });
+    const results = await pool.query(query);
 
     return results.rows.map((row: any) => ({
       saleDate: row.sale_date,
