@@ -30,7 +30,8 @@ import {
   Car,
   CheckCircle,
   FileText,
-  AlertCircle
+  AlertCircle,
+  TrendingUp
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
@@ -88,6 +89,7 @@ export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) 
         { name: "Stock Management", href: "/stock", icon: Warehouse, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
         { name: "Stock Transfers", href: "/stock-transfers", icon: Truck, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
         { name: "Stock Adjustments", href: "/stock-adjustments", icon: Package, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
+        { name: "Inventory Valuation", href: "/inventory/valuation", icon: TrendingUp, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
         { name: "Warehouses", href: "/warehouses", icon: Warehouse, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
       ]
     },
