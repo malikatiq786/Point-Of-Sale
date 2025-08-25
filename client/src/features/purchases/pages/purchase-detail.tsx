@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'wouter';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 import { format } from 'date-fns';
 import {
   ArrowLeft, Calendar, Truck, User, DollarSign, Package,
@@ -15,6 +17,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 export function PurchaseDetail() {
   const params = useParams();
   const purchaseId = params.id;
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch purchase details
   const { data: purchase, isLoading } = useQuery({
@@ -23,11 +27,40 @@ export function PurchaseDetail() {
     retry: false,
   });
 
+  // Status update mutation
+  const statusUpdateMutation = useMutation({
+    mutationFn: ({ purchaseId, status }: { purchaseId: number; status: string }) =>
+      apiRequest('PATCH', `/api/purchases/${purchaseId}/status`, { status }),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Purchase status updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases", purchaseId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update purchase status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStatusUpdate = (status: string) => {
+    if (purchaseId) {
+      statusUpdateMutation.mutate({ purchaseId: parseInt(purchaseId), status });
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'completed': return 'bg-green-100 text-green-800';
+      case 'completed': 
+      case 'approved': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'cancelled':
+      case 'rejected': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -211,10 +244,28 @@ export function PurchaseDetail() {
               <CardTitle>Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
-                <Package className="w-4 h-4 mr-2" />
-                Update Status
-              </Button>
+              {purchase.status === 'pending' && (
+                <>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-green-600 border-green-600 hover:bg-green-50"
+                    onClick={() => handleStatusUpdate('approved')}
+                    disabled={statusUpdateMutation.isPending}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Approve Purchase
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-red-600 border-red-600 hover:bg-red-50"
+                    onClick={() => handleStatusUpdate('rejected')}
+                    disabled={statusUpdateMutation.isPending}
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Reject Purchase
+                  </Button>
+                </>
+              )}
               <Button variant="outline" className="w-full justify-start">
                 <DollarSign className="w-4 h-4 mr-2" />
                 Record Payment

@@ -4,14 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { Search, ShoppingBag, Eye, Calendar, DollarSign, Truck, Plus } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { Search, ShoppingBag, Eye, Calendar, DollarSign, Truck, Plus, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 
 export default function Purchases() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch purchases
   const { data: purchases = [], isLoading, error } = useQuery({
@@ -26,6 +30,30 @@ export default function Purchases() {
   console.log('Purchases query loading:', isLoading);
   console.log('Purchases query error:', error);
 
+  // Status update mutation
+  const statusUpdateMutation = useMutation({
+    mutationFn: ({ purchaseId, status }: { purchaseId: number; status: string }) =>
+      apiRequest('PATCH', `/api/purchases/${purchaseId}/status`, { status }),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Purchase status updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update purchase status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStatusUpdate = (purchaseId: number, status: string) => {
+    statusUpdateMutation.mutate({ purchaseId, status });
+  };
+
   const filteredPurchases = purchases.filter((purchase: any) => {
     const matchesSearch = purchase.id?.toString().includes(searchQuery) ||
       purchase.supplier?.name?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -38,9 +66,11 @@ export default function Purchases() {
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'completed': return 'bg-green-100 text-green-800';
+      case 'completed': 
+      case 'approved': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'cancelled':
+      case 'rejected': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -148,6 +178,30 @@ export default function Purchases() {
                       </div>
                       
                       <div className="flex items-center space-x-2">
+                        {purchase.status === 'pending' && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-green-600 border-green-600 hover:bg-green-50"
+                              onClick={() => handleStatusUpdate(purchase.id, 'approved')}
+                              data-testid={`button-approve-purchase-${purchase.id}`}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-red-600 border-red-600 hover:bg-red-50"
+                              onClick={() => handleStatusUpdate(purchase.id, 'rejected')}
+                              data-testid={`button-reject-purchase-${purchase.id}`}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Reject
+                            </Button>
+                          </>
+                        )}
                         <Button 
                           variant="ghost" 
                           size="sm"

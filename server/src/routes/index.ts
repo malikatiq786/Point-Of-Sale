@@ -553,6 +553,38 @@ router.get('/purchases/:id', isAuthenticated, async (req: any, res: any) => {
   }
 });
 
+// Update purchase status
+router.patch('/purchases/:id/status', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const purchaseId = parseInt(req.params.id);
+    const { status } = req.body;
+    
+    if (isNaN(purchaseId)) {
+      return res.status(400).json({ message: 'Invalid purchase ID' });
+    }
+    
+    if (!['pending', 'approved', 'rejected', 'completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+    
+    const [updatedPurchase] = await db
+      .update(schema.purchases)
+      .set({ status })
+      .where(eq(schema.purchases.id, purchaseId))
+      .returning();
+    
+    if (!updatedPurchase) {
+      return res.status(404).json({ message: 'Purchase not found' });
+    }
+    
+    console.log(`Purchase ${purchaseId} status updated to: ${status}`);
+    res.json({ message: 'Purchase status updated successfully', purchase: updatedPurchase });
+  } catch (error) {
+    console.error('Update purchase status error:', error);
+    res.status(500).json({ message: 'Failed to update purchase status' });
+  }
+});
+
 // Supplier routes
 router.get('/suppliers', isAuthenticated, supplierController.getSuppliers as any);
 router.post('/suppliers', isAuthenticated, supplierController.createSupplier as any);
