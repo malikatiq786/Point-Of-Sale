@@ -91,12 +91,11 @@ export default function StockManagement() {
     stock.brandName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Group stock by product
+  // Group stock by product name (since productId is not available in API response)
   const groupedStock = filteredStock.reduce((groups: any, stock: any) => {
-    const key = `${stock.productName}-${stock.productId}`;
+    const key = stock.productName; // Use just product name as key
     if (!groups[key]) {
       groups[key] = {
-        productId: stock.productId,
         productName: stock.productName,
         categoryName: stock.categoryName,
         brandName: stock.brandName,
@@ -115,12 +114,12 @@ export default function StockManagement() {
 
   const groupedStockArray = Object.values(groupedStock);
 
-  const toggleProductExpand = (productKey: string) => {
+  const toggleProductExpand = (productName: string) => {
     const newExpanded = new Set(expandedProducts);
-    if (newExpanded.has(productKey)) {
-      newExpanded.delete(productKey);
+    if (newExpanded.has(productName)) {
+      newExpanded.delete(productName);
     } else {
-      newExpanded.add(productKey);
+      newExpanded.add(productName);
     }
     setExpandedProducts(newExpanded);
   };
@@ -294,7 +293,7 @@ export default function StockManagement() {
           ) : (
             <div className="space-y-2">
               {groupedStockArray.map((product: any) => {
-                const productKey = `${product.productName}-${product.productId}`;
+                const productKey = product.productName; // Use product name as key
                 const isExpanded = expandedProducts.has(productKey);
                 const stockStatus = getStockStatus(product.totalStock);
                 
