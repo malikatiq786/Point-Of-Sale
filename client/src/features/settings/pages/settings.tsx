@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -49,16 +50,17 @@ export default function Settings() {
   // Fetch system settings
   const { data: systemSettings } = useQuery({
     queryKey: ['/api/settings/system_currency'],
-    select: (data) => {
-      if (data?.data?.value) {
-        setGeneralSettings(prev => ({
-          ...prev, 
-          systemCurrency: data.data.value
-        }));
-      }
-      return data;
-    }
   });
+
+  // Update generalSettings when systemSettings loads
+  React.useEffect(() => {
+    if (systemSettings?.data?.value) {
+      setGeneralSettings(prev => ({
+        ...prev, 
+        systemCurrency: systemSettings.data.value
+      }));
+    }
+  }, [systemSettings?.data?.value]);
 
   // Create currency mutation
   const createCurrencyMutation = useMutation({
