@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Search, RotateCcw, Plus, Calendar, DollarSign, Package, User, FileText, Printer } from "lucide-react";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, subYears } from 'date-fns';
 
 // Currency formatting utility
 const formatCurrency = (amount: number | string | null | undefined) => {
@@ -30,6 +30,9 @@ const formatCurrency = (amount: number | string | null | undefined) => {
 export default function Returns() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [dateRangeType, setDateRangeType] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [selectedReturn, setSelectedReturn] = useState<any>(null);
@@ -43,6 +46,54 @@ export default function Returns() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Handle date range presets
+  const handleDateRangeChange = (value: string) => {
+    setDateRangeType(value);
+    const today = new Date();
+    
+    switch (value) {
+      case "today":
+        const todayStr = format(today, 'yyyy-MM-dd');
+        setStartDate(todayStr);
+        setEndDate(todayStr);
+        setDateFilter("");
+        break;
+      case "thisMonth":
+        setStartDate(format(startOfMonth(today), 'yyyy-MM-dd'));
+        setEndDate(format(endOfMonth(today), 'yyyy-MM-dd'));
+        setDateFilter("");
+        break;
+      case "lastMonth":
+        const lastMonth = subMonths(today, 1);
+        setStartDate(format(startOfMonth(lastMonth), 'yyyy-MM-dd'));
+        setEndDate(format(endOfMonth(lastMonth), 'yyyy-MM-dd'));
+        setDateFilter("");
+        break;
+      case "thisYear":
+        setStartDate(format(startOfYear(today), 'yyyy-MM-dd'));
+        setEndDate(format(endOfYear(today), 'yyyy-MM-dd'));
+        setDateFilter("");
+        break;
+      case "lastYear":
+        const lastYear = subYears(today, 1);
+        setStartDate(format(startOfYear(lastYear), 'yyyy-MM-dd'));
+        setEndDate(format(endOfYear(lastYear), 'yyyy-MM-dd'));
+        setDateFilter("");
+        break;
+      case "custom":
+        setStartDate("");
+        setEndDate("");
+        setDateFilter("");
+        break;
+      case "all":
+      default:
+        setStartDate("");
+        setEndDate("");
+        setDateFilter("");
+        break;
+    }
+  };
 
   // Update return status mutation
   const updateStatusMutation = useMutation({
@@ -77,9 +128,25 @@ export default function Returns() {
     },
   });
 
-  // Fetch returns
+  // Fetch returns with date range support
   const { data: returns = [], isLoading } = useQuery({
-    queryKey: ["/api/returns"],
+    queryKey: ["/api/returns", startDate, endDate],
+    queryFn: async () => {
+      let url = '/api/returns';
+      if (startDate && endDate) {
+        const params = new URLSearchParams({
+          startDate,
+          endDate
+        });
+        url = `/api/returns?${params.toString()}`;
+      }
+      console.log(`Fetching returns with query: ${url}`);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch returns');
+      const data = await response.json();
+      console.log(`Received ${data.length} returns from API`);
+      return data;
+    },
     retry: false,
   });
 
@@ -148,20 +215,14 @@ export default function Returns() {
     },
   });
 
-  // Filter returns by search and date
+  // Filter returns by search (date filtering now handled by API query)
   const filteredReturns = returns.filter((returnItem: any) => {
     const matchesSearch = 
       returnItem.reason?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       returnItem.saleId?.toString().includes(searchQuery) ||
       returnItem.customerName?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    if (!dateFilter) return matchesSearch;
-    
-    const returnDate = new Date(returnItem.createdAt || returnItem.returnDate);
-    const filterDate = new Date(dateFilter);
-    
-    return matchesSearch && 
-           returnDate.toDateString() === filterDate.toDateString();
+    return matchesSearch;
   });
 
   const getReturnStatus = (status: string) => {
@@ -464,7 +525,7 @@ export default function Returns() {
         <p className="text-gray-600">Process customer returns and refunds</p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="flex flex-col lg:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Input 
             type="text" 
@@ -476,17 +537,46 @@ export default function Returns() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
         </div>
         
-        <Input
-          type="date"
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="w-full sm:w-48"
-        />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={dateRangeType} onValueChange={handleDateRangeChange}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Select date range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="thisMonth">This Month</SelectItem>
+              <SelectItem value="lastMonth">Last Month</SelectItem>
+              <SelectItem value="thisYear">This Year</SelectItem>
+              <SelectItem value="lastYear">Last Year</SelectItem>
+              <SelectItem value="custom">Custom Range</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Process Return
-        </Button>
+          {dateRangeType === "custom" && (
+            <>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full sm:w-40"
+                placeholder="Start date"
+              />
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full sm:w-40"
+                placeholder="End date"
+              />
+            </>
+          )}
+
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Process Return
+          </Button>
+        </div>
       </div>
 
       <Card>
