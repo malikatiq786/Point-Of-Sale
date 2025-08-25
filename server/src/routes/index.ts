@@ -558,37 +558,57 @@ router.get('/purchases/:id', isAuthenticated, async (req: any, res: any) => {
       return res.status(400).json({ message: 'Invalid purchase ID' });
     }
     
-    const [purchase] = await db
+    // First get the purchase without joins - try with specific fields
+    const purchaseResults = await db
       .select({
         id: schema.purchases.id,
         supplierId: schema.purchases.supplierId,
-        userId: schema.purchases.userId,
         totalAmount: schema.purchases.totalAmount,
         purchaseDate: schema.purchases.purchaseDate,
         status: schema.purchases.status,
-        supplier: {
-          id: schema.suppliers.id,
-          name: schema.suppliers.name,
-          email: schema.suppliers.email,
-          phone: schema.suppliers.phone,
-          address: schema.suppliers.address,
-        },
       })
       .from(schema.purchases)
-      .leftJoin(schema.suppliers, eq(schema.purchases.supplierId, schema.suppliers.id))
-      .where(eq(schema.purchases.id, purchaseId));
+      .where(eq(schema.purchases.id, purchaseId))
+      .limit(1);
+
+    const purchase = purchaseResults[0];
     
     if (!purchase) {
       return res.status(404).json({ message: 'Purchase not found' });
     }
 
-    // For now, return purchase without items since we need to check the schema
-    const purchaseWithItems = {
+    // Get supplier separately if exists
+    let supplier = null;
+    if (purchase.supplierId) {
+      const [supplierResult] = await db
+        .select()
+        .from(schema.suppliers)
+        .where(eq(schema.suppliers.id, purchase.supplierId))
+        .limit(1);
+      supplier = supplierResult || null;
+    }
+
+    // Get purchase items
+    const purchaseItems = await db
+      .select()
+      .from(schema.purchaseItems)
+      .where(eq(schema.purchaseItems.purchaseId, purchaseId));
+    
+    const result = {
       ...purchase,
-      items: []
+      supplier: supplier,
+      items: purchaseItems.map(item => ({
+        id: item.id,
+        purchaseId: item.purchaseId,
+        productVariantId: item.productVariantId,
+        quantity: parseFloat(item.quantity || '0'),
+        costPrice: parseFloat(item.costPrice || '0'),
+        totalCost: parseFloat(item.quantity || '0') * parseFloat(item.costPrice || '0'),
+      }))
     };
     
-    res.json(purchaseWithItems);
+    console.log(`Found purchase ${purchaseId} with ${purchaseItems.length} items`);
+    res.json(result);
   } catch (error) {
     console.error('Get purchase by ID error:', error);
     res.status(500).json({ message: 'Failed to fetch purchase details' });
