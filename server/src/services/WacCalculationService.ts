@@ -5,6 +5,12 @@ import {
   inventoryMovements,
   wacHistory,
   products,
+  productVariants,
+  stock,
+  purchaseItems,
+  purchases,
+  categories,
+  brands,
   type ProductWac,
   type InventoryMovement,
   type InsertProductWac,
@@ -468,5 +474,98 @@ export class WacCalculationService {
     `);
     
     console.log(`✓ Product ${productId} stock synced from variants`);
+  }
+
+  /**
+   * Get variant-level inventory valuation with WAC per variant
+   */
+  static async getVariantLevelValuation(branchId?: number, warehouseId?: number) {
+    console.log('Getting variant-level WAC valuation...');
+
+    // Get all variants with their stock and purchase history
+    const variantsQuery = await db
+      .select({
+        variantId: productVariants.id,
+        variantName: productVariants.variantName,
+        productId: productVariants.productId,
+        productName: products.name,
+        categoryId: products.categoryId,
+        categoryName: categories.name,
+        brandId: products.brandId,
+        brandName: brands.name,
+        currentStock: stock.quantity,
+        warehouseId: stock.warehouseId,
+      })
+      .from(productVariants)
+      .leftJoin(products, eq(productVariants.productId, products.id))
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .leftJoin(brands, eq(products.brandId, brands.id))
+      .leftJoin(stock, eq(productVariants.id, stock.productVariantId))
+      .where(sql`${stock.quantity} > 0`)
+      .orderBy(products.name, productVariants.variantName);
+
+    console.log(`Found ${variantsQuery.length} variants with stock`);
+
+    const variantWacData = [];
+
+    for (const variant of variantsQuery) {
+      // Calculate WAC for this variant based on all its purchase history
+      const purchaseHistory = await db
+        .select({
+          quantity: purchaseItems.quantity,
+          costPrice: purchaseItems.costPrice,
+          purchaseDate: purchases.purchaseDate,
+        })
+        .from(purchaseItems)
+        .leftJoin(purchases, eq(purchaseItems.purchaseId, purchases.id))
+        .where(
+          and(
+            eq(purchaseItems.productVariantId, variant.variantId),
+            eq(purchases.status, 'approved')
+          )
+        )
+        .orderBy(purchases.purchaseDate);
+
+      let totalCost = 0;
+      let totalQuantity = 0;
+      let averageCost = 0;
+
+      // Calculate weighted average cost from purchase history
+      for (const purchase of purchaseHistory) {
+        const qty = parseFloat(purchase.quantity || '0');
+        const cost = parseFloat(purchase.costPrice || '0');
+        
+        if (qty > 0 && cost > 0) {
+          totalQuantity += qty;
+          totalCost += qty * cost;
+        }
+      }
+
+      if (totalQuantity > 0) {
+        averageCost = totalCost / totalQuantity;
+      }
+
+      const currentQuantity = parseFloat(variant.currentStock || '0');
+      const totalValue = currentQuantity * averageCost;
+
+      variantWacData.push({
+        variantId: variant.variantId,
+        variantName: variant.variantName,
+        productId: variant.productId,
+        productName: variant.productName,
+        categoryId: variant.categoryId,
+        categoryName: variant.categoryName,
+        brandId: variant.brandId,
+        brandName: variant.brandName,
+        currentQuantity: currentQuantity,
+        weightedAverageCost: averageCost,
+        totalValue: totalValue,
+        purchaseTransactions: purchaseHistory.length,
+        warehouseId: variant.warehouseId,
+      });
+    }
+
+    console.log(`Calculated WAC for ${variantWacData.length} variants`);
+    return variantWacData;
   }
 }

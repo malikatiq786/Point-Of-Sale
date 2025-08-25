@@ -31,6 +31,22 @@ interface EnhancedInventoryValuationItem {
   lastCalculatedAt: string;
 }
 
+interface VariantInventoryValuationItem {
+  variantId: number;
+  variantName: string;
+  productId: number;
+  productName: string;
+  categoryId: number | null;
+  categoryName: string | null;
+  brandId: number | null;
+  brandName: string | null;
+  currentQuantity: number;
+  weightedAverageCost: number;
+  totalValue: number;
+  purchaseTransactions: number;
+  warehouseId: number | null;
+}
+
 interface CogsReport {
   productId: number;
   productName: string;
@@ -67,6 +83,18 @@ export default function InventoryValuationPage() {
         throw new Error('Failed to fetch enhanced inventory valuation');
       }
       return response.json() as Promise<EnhancedInventoryValuationItem[]>;
+    },
+  });
+
+  // Get variant-level inventory valuation data
+  const { data: variantData, isLoading: variantLoading } = useQuery({
+    queryKey: ['/api/wac/inventory-valuation-variants', refreshKey],
+    queryFn: async () => {
+      const response = await fetch('/api/wac/inventory-valuation-variants');
+      if (!response.ok) {
+        throw new Error('Failed to fetch variant-level inventory valuation');
+      }
+      return response.json() as Promise<VariantInventoryValuationItem[]>;
     },
   });
 
@@ -255,8 +283,12 @@ export default function InventoryValuationPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="products" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+          <Tabs defaultValue="variants" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="variants" data-testid="tab-variants">
+                <Package className="w-4 h-4 mr-2" />
+                Variants
+              </TabsTrigger>
               <TabsTrigger value="products" data-testid="tab-products">
                 <Package className="w-4 h-4 mr-2" />
                 Products
@@ -270,6 +302,67 @@ export default function InventoryValuationPage() {
                 Categories
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="variants" className="mt-6">
+              {variantLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-sm text-muted-foreground">Loading variant data...</div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {variantData && variantData.length > 0 ? (
+                    <div className="max-h-96 overflow-y-auto">
+                      {variantData.map((variant) => (
+                        <div
+                          key={`${variant.productId}-${variant.variantId}`}
+                          className="flex items-center justify-between py-3 border-b last:border-b-0"
+                          data-testid={`row-variant-${variant.variantId}`}
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium" data-testid={`text-variant-name-${variant.variantId}`}>
+                              {variant.productName} - {variant.variantName}
+                            </div>
+                            <div className="text-sm text-muted-foreground space-x-4">
+                              <span>Qty: {variant.currentQuantity}</span>
+                              <span>•</span>
+                              <span data-testid={`text-variant-wac-${variant.variantId}`}>
+                                WAC: ${variant.weightedAverageCost.toFixed(2)}
+                              </span>
+                              <span>•</span>
+                              <span>{variant.purchaseTransactions} purchase{variant.purchaseTransactions !== 1 ? 's' : ''}</span>
+                              {variant.brandName && (
+                                <>
+                                  <span>•</span>
+                                  <span>Brand: {variant.brandName}</span>
+                                </>
+                              )}
+                              {variant.categoryName && (
+                                <>
+                                  <span>•</span>
+                                  <span>Category: {variant.categoryName}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium" data-testid={`text-variant-total-value-${variant.variantId}`}>
+                              ${variant.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Variant ID: {variant.variantId}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No variant inventory data available. Variants need purchase history to calculate WAC.
+                    </div>
+                  )}
+                </div>
+              )}
+            </TabsContent>
 
             <TabsContent value="products" className="mt-6">
               {enhancedLoading ? (

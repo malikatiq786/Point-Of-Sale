@@ -1254,6 +1254,25 @@ router.get('/wac/inventory-valuation-enhanced', isAuthenticated, async (req: any
   }
 });
 
+// Get variant-level inventory valuation with WAC per variant
+router.get('/wac/inventory-valuation-variants', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { branchId, warehouseId } = req.query;
+    const branchIdNum = branchId ? parseInt(branchId) : undefined;
+    const warehouseIdNum = warehouseId ? parseInt(warehouseId) : undefined;
+    
+    const variantData = await WacCalculationService.getVariantLevelValuation(
+      branchIdNum,
+      warehouseIdNum
+    );
+
+    res.json(variantData);
+  } catch (error) {
+    console.error('Get variant-level inventory valuation error:', error);
+    res.status(500).json({ message: 'Failed to get variant-level inventory valuation' });
+  }
+});
+
 // Get current WAC for a product
 router.get('/wac/product/:productId', isAuthenticated, async (req: any, res: any) => {
   try {
