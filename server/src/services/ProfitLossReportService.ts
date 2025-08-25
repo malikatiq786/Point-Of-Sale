@@ -153,17 +153,24 @@ export class ProfitLossReportService {
 
     const results = await db
       .select({
-        productId: sql<number>`1`, // Aggregated view since line items unavailable
-        productName: sql<string>`'All Sales (Aggregated)'`,
-        brandName: sql<string>`'Various Brands'`,
-        categoryName: sql<string>`'All Categories'`,
-        totalRevenue: sql<string>`SUM(CAST(${sales.totalAmount} AS DECIMAL))`,
-        totalCost: sql<string>`SUM(CAST(${sales.totalAmount} AS DECIMAL) * 0.6)`,
-        transactionCount: sql<string>`COUNT(${sales.id})`,
-        totalQuantitySold: sql<string>`COUNT(${sales.id})`,
+        productId: products.id,
+        productName: products.name,
+        brandName: brands.name,
+        categoryName: categories.name,
+        totalRevenue: sql<string>`SUM(CAST(${saleItems.quantity} AS DECIMAL) * CAST(${saleItems.price} AS DECIMAL))`,
+        totalCost: sql<string>`SUM(CAST(${saleItems.quantity} AS DECIMAL) * CAST(${saleItems.price} AS DECIMAL) * 0.6)`,
+        transactionCount: sql<string>`COUNT(DISTINCT ${sales.id})`,
+        totalQuantitySold: sql<string>`SUM(CAST(${saleItems.quantity} AS DECIMAL))`,
       })
-      .from(sales)
+      .from(saleItems)
+      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .innerJoin(productVariants, eq(saleItems.productVariantId, productVariants.id))
+      .innerJoin(products, eq(productVariants.productId, products.id))
+      .leftJoin(brands, eq(products.brandId, brands.id))
+      .leftJoin(categories, eq(products.categoryId, categories.id))
       .where(whereClause)
+      .groupBy(products.id, products.name, brands.name, categories.name)
+      .orderBy(sql`SUM(CAST(${saleItems.quantity} AS DECIMAL) * CAST(${saleItems.price} AS DECIMAL)) DESC`)
       .limit(limit)
       .offset(offset);
 
@@ -176,8 +183,8 @@ export class ProfitLossReportService {
       return {
         productId: row.productId,
         productName: row.productName || 'Unknown Product',
-        brandName: row.brandName,
-        categoryName: row.categoryName,
+        brandName: row.brandName || null,
+        categoryName: row.categoryName || null,
         revenue,
         cost,
         grossProfit,
@@ -217,50 +224,54 @@ export class ProfitLossReportService {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // Since sale_items is empty, create aggregated variant data
     const results = await db
       .select({
-        variantId: sql<number>`1`,
-        variantName: sql<string>`'Mixed Variants'`,
-        productId: sql<number>`1`,
-        productName: sql<string>`'All Products'`,
-        brandName: sql<string>`'Various'`,
-        categoryName: sql<string>`'General'`,
-        totalRevenue: sql<string>`SUM(CAST(${sales.totalAmount} AS DECIMAL))`,
-        totalCost: sql<string>`SUM(CAST(${sales.totalAmount} AS DECIMAL) * 0.6)`,
-        transactionCount: sql<string>`COUNT(${sales.id})`,
-        totalQuantitySold: sql<string>`COUNT(${sales.id})`,
+        variantId: productVariants.id,
+        variantName: productVariants.variantName,
+        productId: products.id,
+        productName: products.name,
+        brandName: brands.name,
+        categoryName: categories.name,
+        totalRevenue: sql<string>`SUM(CAST(${saleItems.quantity} AS DECIMAL) * CAST(${saleItems.price} AS DECIMAL))`,
+        totalCost: sql<string>`SUM(CAST(${saleItems.quantity} AS DECIMAL) * CAST(${saleItems.price} AS DECIMAL) * 0.6)`,
+        transactionCount: sql<string>`COUNT(DISTINCT ${sales.id})`,
+        totalQuantitySold: sql<string>`SUM(CAST(${saleItems.quantity} AS DECIMAL))`,
       })
-      .from(sales)
+      .from(saleItems)
+      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .innerJoin(productVariants, eq(saleItems.productVariantId, productVariants.id))
+      .innerJoin(products, eq(productVariants.productId, products.id))
+      .leftJoin(brands, eq(products.brandId, brands.id))
+      .leftJoin(categories, eq(products.categoryId, categories.id))
       .where(whereClause)
+      .groupBy(productVariants.id, productVariants.variantName, products.id, products.name, brands.name, categories.name)
+      .orderBy(sql`SUM(CAST(${saleItems.quantity} AS DECIMAL) * CAST(${saleItems.price} AS DECIMAL)) DESC`)
       .limit(limit)
       .offset(offset);
 
-    return results
-      .filter(row => row.variantId != null) // Only include variants
-      .map((row: any) => {
-        const revenue = parseFloat(row.totalRevenue || '0');
-        const cost = parseFloat(row.totalCost || '0');
-        const grossProfit = revenue - cost;
-        const transactionCount = parseInt(row.transactionCount || '0');
+    return results.map((row: any) => {
+      const revenue = parseFloat(row.totalRevenue || '0');
+      const cost = parseFloat(row.totalCost || '0');
+      const grossProfit = revenue - cost;
+      const transactionCount = parseInt(row.transactionCount || '0');
 
-        return {
-          variantId: row.variantId!,
-          variantName: row.variantName || 'Unknown Variant',
-          productId: row.productId!,
-          productName: row.productName || 'Unknown Product',
-          brandName: row.brandName,
-          categoryName: row.categoryName,
-          revenue,
-          cost,
-          grossProfit,
-          grossProfitMargin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
-          netProfit: grossProfit,
-          netProfitMargin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
-          transactionCount,
-          averageOrderValue: transactionCount > 0 ? revenue / transactionCount : 0,
-        };
-      });
+      return {
+        variantId: row.variantId,
+        variantName: row.variantName || 'Unknown Variant',
+        productId: row.productId,
+        productName: row.productName || 'Unknown Product',
+        brandName: row.brandName || null,
+        categoryName: row.categoryName || null,
+        revenue,
+        cost,
+        grossProfit,
+        grossProfitMargin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
+        netProfit: grossProfit,
+        netProfitMargin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
+        transactionCount,
+        averageOrderValue: transactionCount > 0 ? revenue / transactionCount : 0,
+      };
+    });
   }
 
   /**
@@ -290,39 +301,43 @@ export class ProfitLossReportService {
 
     const results = await db
       .select({
-        categoryId: sql<number>`1`,
-        categoryName: sql<string>`'All Categories (Aggregated)'`,
-        productCount: sql<string>`1`,
-        totalRevenue: sql<string>`SUM(CAST(${sales.totalAmount} AS DECIMAL))`,
-        totalCost: sql<string>`SUM(CAST(${sales.totalAmount} AS DECIMAL) * 0.6)`,
-        transactionCount: sql<string>`COUNT(${sales.id})`,
-        totalQuantitySold: sql<string>`COUNT(${sales.id})`,
+        categoryId: categories.id,
+        categoryName: categories.name,
+        productCount: sql<string>`COUNT(DISTINCT ${products.id})`,
+        totalRevenue: sql<string>`SUM(CAST(${saleItems.quantity} AS DECIMAL) * CAST(${saleItems.price} AS DECIMAL))`,
+        totalCost: sql<string>`SUM(CAST(${saleItems.quantity} AS DECIMAL) * CAST(${saleItems.price} AS DECIMAL) * 0.6)`,
+        transactionCount: sql<string>`COUNT(DISTINCT ${sales.id})`,
+        totalQuantitySold: sql<string>`SUM(CAST(${saleItems.quantity} AS DECIMAL))`,
       })
-      .from(sales)
-      .where(whereClause);
+      .from(saleItems)
+      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .innerJoin(productVariants, eq(saleItems.productVariantId, productVariants.id))
+      .innerJoin(products, eq(productVariants.productId, products.id))
+      .innerJoin(categories, eq(products.categoryId, categories.id))
+      .where(whereClause)
+      .groupBy(categories.id, categories.name)
+      .orderBy(sql`SUM(CAST(${saleItems.quantity} AS DECIMAL) * CAST(${saleItems.price} AS DECIMAL)) DESC`);
 
-    return results
-      .filter(row => row.categoryId != null)
-      .map((row: any) => {
-        const revenue = parseFloat(row.totalRevenue || '0');
-        const cost = parseFloat(row.totalCost || '0');
-        const grossProfit = revenue - cost;
-        const transactionCount = parseInt(row.transactionCount || '0');
+    return results.map((row: any) => {
+      const revenue = parseFloat(row.totalRevenue || '0');
+      const cost = parseFloat(row.totalCost || '0');
+      const grossProfit = revenue - cost;
+      const transactionCount = parseInt(row.transactionCount || '0');
 
-        return {
-          categoryId: row.categoryId!,
-          categoryName: row.categoryName || 'Unknown Category',
-          productCount: parseInt(row.productCount || '0'),
-          revenue,
-          cost,
-          grossProfit,
-          grossProfitMargin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
-          netProfit: grossProfit,
-          netProfitMargin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
-          transactionCount,
-          averageOrderValue: transactionCount > 0 ? revenue / transactionCount : 0,
-        };
-      });
+      return {
+        categoryId: row.categoryId,
+        categoryName: row.categoryName || 'Unknown Category',
+        productCount: parseInt(row.productCount || '0'),
+        revenue,
+        cost,
+        grossProfit,
+        grossProfitMargin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
+        netProfit: grossProfit,
+        netProfitMargin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
+        transactionCount,
+        averageOrderValue: transactionCount > 0 ? revenue / transactionCount : 0,
+      };
+    });
   }
 
   /**
@@ -352,58 +367,69 @@ export class ProfitLossReportService {
 
     const results = await db
       .select({
-        brandId: sql<number>`1`,
-        brandName: sql<string>`'All Brands (Aggregated)'`,
-        productCount: sql<string>`1`,
-        totalRevenue: sql<string>`SUM(CAST(${sales.totalAmount} AS DECIMAL))`,
-        totalCost: sql<string>`SUM(CAST(${sales.totalAmount} AS DECIMAL) * 0.6)`,
-        transactionCount: sql<string>`COUNT(${sales.id})`,
-        totalQuantitySold: sql<string>`COUNT(${sales.id})`,
+        brandId: brands.id,
+        brandName: brands.name,
+        productCount: sql<string>`COUNT(DISTINCT ${products.id})`,
+        totalRevenue: sql<string>`SUM(CAST(${saleItems.quantity} AS DECIMAL) * CAST(${saleItems.price} AS DECIMAL))`,
+        totalCost: sql<string>`SUM(CAST(${saleItems.quantity} AS DECIMAL) * CAST(${saleItems.price} AS DECIMAL) * 0.6)`,
+        transactionCount: sql<string>`COUNT(DISTINCT ${sales.id})`,
+        totalQuantitySold: sql<string>`SUM(CAST(${saleItems.quantity} AS DECIMAL))`,
       })
-      .from(sales)
-      .where(whereClause);
+      .from(saleItems)
+      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .innerJoin(productVariants, eq(saleItems.productVariantId, productVariants.id))
+      .innerJoin(products, eq(productVariants.productId, products.id))
+      .innerJoin(brands, eq(products.brandId, brands.id))
+      .where(whereClause)
+      .groupBy(brands.id, brands.name)
+      .orderBy(sql`SUM(CAST(${saleItems.quantity} AS DECIMAL) * CAST(${saleItems.price} AS DECIMAL)) DESC`);
 
-    return results
-      .filter(row => row.brandId != null)
-      .map((row: any) => {
-        const revenue = parseFloat(row.totalRevenue || '0');
-        const cost = parseFloat(row.totalCost || '0');
-        const grossProfit = revenue - cost;
-        const transactionCount = parseInt(row.transactionCount || '0');
+    return results.map((row: any) => {
+      const revenue = parseFloat(row.totalRevenue || '0');
+      const cost = parseFloat(row.totalCost || '0');
+      const grossProfit = revenue - cost;
+      const transactionCount = parseInt(row.transactionCount || '0');
 
-        return {
-          brandId: row.brandId!,
-          brandName: row.brandName || 'Unknown Brand',
-          productCount: parseInt(row.productCount || '0'),
-          revenue,
-          cost,
-          grossProfit,
-          grossProfitMargin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
-          netProfit: grossProfit,
-          netProfitMargin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
-          transactionCount,
-          averageOrderValue: transactionCount > 0 ? revenue / transactionCount : 0,
-        };
-      });
+      return {
+        brandId: row.brandId,
+        brandName: row.brandName || 'Unknown Brand',
+        productCount: parseInt(row.productCount || '0'),
+        revenue,
+        cost,
+        grossProfit,
+        grossProfitMargin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
+        netProfit: grossProfit,
+        netProfitMargin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
+        transactionCount,
+        averageOrderValue: transactionCount > 0 ? revenue / transactionCount : 0,
+      };
+    });
   }
 
   /**
-   * Get Daily P&L Report (for a date range)
+   * Get Daily P&L Report
    */
   static async getDailyReport(
-    startDate: Date,
-    endDate: Date,
+    startDate?: Date,
+    endDate?: Date,
     branchId?: number
   ): Promise<TimePeriodReport[]> {
-    const conditions = [
-      gte(sales.saleDate, startDate),
-      lte(sales.saleDate, endDate),
-      eq(sales.status, 'completed')
-    ];
+    const conditions = [];
     
+    if (startDate) {
+      conditions.push(gte(sales.saleDate, startDate));
+    }
+    if (endDate) {
+      conditions.push(lte(sales.saleDate, endDate));
+    }
     if (branchId) {
       conditions.push(eq(sales.branchId, branchId));
     }
+    
+    // Only include completed sales
+    conditions.push(eq(sales.status, 'completed'));
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const results = await db
       .select({
@@ -413,7 +439,7 @@ export class ProfitLossReportService {
         transactionCount: sql<string>`COUNT(${sales.id})`,
       })
       .from(sales)
-      .where(and(...conditions))
+      .where(whereClause)
       .groupBy(sql`DATE(${sales.saleDate})`)
       .orderBy(sql`DATE(${sales.saleDate})`);
 
@@ -422,12 +448,12 @@ export class ProfitLossReportService {
       const cost = parseFloat(row.totalCost || '0');
       const grossProfit = revenue - cost;
       const transactionCount = parseInt(row.transactionCount || '0');
-      const reportDate = new Date(row.saleDate);
+      const saleDate = new Date(row.saleDate);
 
       return {
-        periodStart: reportDate,
-        periodEnd: reportDate,
-        periodLabel: reportDate.toLocaleDateString(),
+        periodStart: saleDate,
+        periodEnd: saleDate,
+        periodLabel: saleDate.toLocaleDateString(),
         reportType: 'daily' as const,
         revenue,
         cost,
@@ -445,47 +471,53 @@ export class ProfitLossReportService {
    * Get Monthly P&L Report
    */
   static async getMonthlyReport(
-    startDate: Date,
-    endDate: Date,
+    startDate?: Date,
+    endDate?: Date,
     branchId?: number
   ): Promise<TimePeriodReport[]> {
-    const conditions = [
-      gte(sales.saleDate, startDate),
-      lte(sales.saleDate, endDate),
-      eq(sales.status, 'completed')
-    ];
+    const conditions = [];
     
+    if (startDate) {
+      conditions.push(gte(sales.saleDate, startDate));
+    }
+    if (endDate) {
+      conditions.push(lte(sales.saleDate, endDate));
+    }
     if (branchId) {
       conditions.push(eq(sales.branchId, branchId));
     }
+    
+    // Only include completed sales
+    conditions.push(eq(sales.status, 'completed'));
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const results = await db
       .select({
-        yearMonth: sql<string>`TO_CHAR(${sales.saleDate}, 'YYYY-MM')`,
+        yearMonth: sql<string>`DATE_TRUNC('month', ${sales.saleDate})`,
         totalRevenue: sql<string>`SUM(CAST(${sales.totalAmount} AS DECIMAL))`,
         totalCost: sql<string>`SUM(CAST(${sales.totalAmount} AS DECIMAL) * 0.6)`,
         transactionCount: sql<string>`COUNT(${sales.id})`,
       })
       .from(sales)
-      .where(and(...conditions))
-      .groupBy(sql`TO_CHAR(${sales.saleDate}, 'YYYY-MM')`)
-      .orderBy(sql`TO_CHAR(${sales.saleDate}, 'YYYY-MM')`);
+      .where(whereClause)
+      .groupBy(sql`DATE_TRUNC('month', ${sales.saleDate})`)
+      .orderBy(sql`DATE_TRUNC('month', ${sales.saleDate})`);
 
     return results.map((row: any) => {
       const revenue = parseFloat(row.totalRevenue || '0');
       const cost = parseFloat(row.totalCost || '0');
       const grossProfit = revenue - cost;
       const transactionCount = parseInt(row.transactionCount || '0');
-      
-      // Parse year-month for period dates
-      const [year, month] = row.yearMonth.split('-').map(Number);
-      const periodStart = new Date(year, month - 1, 1);
-      const periodEnd = new Date(year, month, 0); // Last day of month
+      const periodStart = new Date(row.yearMonth);
+      const periodEnd = new Date(periodStart);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      periodEnd.setDate(0); // Last day of the month
 
       return {
         periodStart,
         periodEnd,
-        periodLabel: periodStart.toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+        periodLabel: periodStart.toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
         reportType: 'monthly' as const,
         revenue,
         cost,
@@ -503,46 +535,53 @@ export class ProfitLossReportService {
    * Get Yearly P&L Report
    */
   static async getYearlyReport(
-    startDate: Date,
-    endDate: Date,
+    startDate?: Date,
+    endDate?: Date,
     branchId?: number
   ): Promise<TimePeriodReport[]> {
-    const conditions = [
-      gte(sales.saleDate, startDate),
-      lte(sales.saleDate, endDate),
-      eq(sales.status, 'completed')
-    ];
+    const conditions = [];
     
+    if (startDate) {
+      conditions.push(gte(sales.saleDate, startDate));
+    }
+    if (endDate) {
+      conditions.push(lte(sales.saleDate, endDate));
+    }
     if (branchId) {
       conditions.push(eq(sales.branchId, branchId));
     }
+    
+    // Only include completed sales
+    conditions.push(eq(sales.status, 'completed'));
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const results = await db
       .select({
-        year: sql<string>`EXTRACT(YEAR FROM ${sales.saleDate})`,
+        year: sql<string>`DATE_TRUNC('year', ${sales.saleDate})`,
         totalRevenue: sql<string>`SUM(CAST(${sales.totalAmount} AS DECIMAL))`,
         totalCost: sql<string>`SUM(CAST(${sales.totalAmount} AS DECIMAL) * 0.6)`,
         transactionCount: sql<string>`COUNT(${sales.id})`,
       })
       .from(sales)
-      .where(and(...conditions))
-      .groupBy(sql`EXTRACT(YEAR FROM ${sales.saleDate})`)
-      .orderBy(sql`EXTRACT(YEAR FROM ${sales.saleDate})`);
+      .where(whereClause)
+      .groupBy(sql`DATE_TRUNC('year', ${sales.saleDate})`)
+      .orderBy(sql`DATE_TRUNC('year', ${sales.saleDate})`);
 
     return results.map((row: any) => {
       const revenue = parseFloat(row.totalRevenue || '0');
       const cost = parseFloat(row.totalCost || '0');
       const grossProfit = revenue - cost;
       const transactionCount = parseInt(row.transactionCount || '0');
-      
-      const year = parseInt(row.year);
-      const periodStart = new Date(year, 0, 1);
-      const periodEnd = new Date(year, 11, 31);
+      const periodStart = new Date(row.year);
+      const periodEnd = new Date(periodStart);
+      periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+      periodEnd.setDate(0); // Last day of the year
 
       return {
         periodStart,
         periodEnd,
-        periodLabel: year.toString(),
+        periodLabel: periodStart.getFullYear().toString(),
         reportType: 'yearly' as const,
         revenue,
         cost,
@@ -557,7 +596,7 @@ export class ProfitLossReportService {
   }
 
   /**
-   * Get Top Performing Products/Categories/Brands
+   * Get Top Performers Report
    */
   static async getTopPerformers(
     type: 'products' | 'categories' | 'brands' | 'variants',
@@ -566,18 +605,19 @@ export class ProfitLossReportService {
     branchId?: number,
     limit: number = 10,
     sortBy: 'revenue' | 'profit' | 'margin' = 'profit'
-  ) {
+  ): Promise<any[]> {
+    // Use the appropriate existing method based on type
     switch (type) {
       case 'products':
         return this.getProductWiseReport(startDate, endDate, branchId, limit, 0);
+      case 'variants':
+        return this.getVariantWiseReport(startDate, endDate, branchId, limit, 0);
       case 'categories':
         return this.getCategoryWiseReport(startDate, endDate, branchId);
       case 'brands':
         return this.getBrandWiseReport(startDate, endDate, branchId);
-      case 'variants':
-        return this.getVariantWiseReport(startDate, endDate, branchId, limit, 0);
       default:
-        throw new Error(`Invalid report type: ${type}`);
+        return [];
     }
   }
 }
