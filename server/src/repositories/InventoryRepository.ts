@@ -125,13 +125,13 @@ export class InventoryRepository {
           AND warehouse_id = ${adjustmentData.warehouseId}
       `);
 
-      // Calculate and update the product's total stock
+      // Calculate and update the product's total stock across ALL warehouses
       const result = await db.execute(sql`
         UPDATE products 
         SET stock = (
           SELECT COALESCE(SUM(s.quantity), 0)
           FROM product_variants pv
-          LEFT JOIN stock s ON pv.id = s.product_variant_id AND s.warehouse_id = ${adjustmentData.warehouseId}
+          LEFT JOIN stock s ON pv.id = s.product_variant_id
           WHERE pv.product_id = ${variant.productId}
         ),
         updated_at = NOW()
