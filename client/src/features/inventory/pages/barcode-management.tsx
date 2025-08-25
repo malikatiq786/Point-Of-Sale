@@ -27,6 +27,7 @@ export default function BarcodeManagement() {
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
+  const [quantities, setQuantities] = useState<Record<number, number>>({});
   const { formatCurrencyValue } = useCurrency();
 
   // Fetch products with barcode information
@@ -155,6 +156,18 @@ export default function BarcodeManagement() {
   const isAllSelected = filteredProducts.length > 0 && 
     filteredProducts.every((variant: any) => selectedProducts.includes(variant.variantId));
 
+  // Quantity handlers
+  const handleQuantityChange = (variantId: number, quantity: number) => {
+    setQuantities(prev => ({
+      ...prev,
+      [variantId]: Math.max(0, quantity)
+    }));
+  };
+
+  const getQuantity = (variantId: number) => {
+    return quantities[variantId] || 1; // Default to 1 if not set
+  };
+
   // Generate barcode images
   const generateBarcodeImage = async (barcodeText: string, format: string = 'CODE128'): Promise<string> => {
     return new Promise((resolve) => {
@@ -191,6 +204,18 @@ export default function BarcodeManagement() {
       return;
     }
 
+    // Expand selected products based on quantities
+    const expandedProductData: any[] = [];
+    selectedProductData.forEach((variant: any) => {
+      const quantity = getQuantity(variant.variantId);
+      for (let i = 0; i < quantity; i++) {
+        expandedProductData.push({
+          ...variant,
+          copyNumber: i + 1
+        });
+      }
+    });
+
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.width;
     const pageHeight = pdf.internal.pageSize.height;
@@ -210,14 +235,14 @@ export default function BarcodeManagement() {
     
     let currentProduct = 0;
     
-    for (let page = 0; currentProduct < selectedProductData.length; page++) {
+    for (let page = 0; currentProduct < expandedProductData.length; page++) {
       if (page > 0) {
         pdf.addPage();
       }
       
-      for (let row = 0; row < rows && currentProduct < selectedProductData.length; row++) {
-        for (let col = 0; col < cols && currentProduct < selectedProductData.length; col++) {
-          const variant = selectedProductData[currentProduct];
+      for (let row = 0; row < rows && currentProduct < expandedProductData.length; row++) {
+        for (let col = 0; col < cols && currentProduct < expandedProductData.length; col++) {
+          const variant = expandedProductData[currentProduct];
           const x = startX + col * labelWidth;
           const y = startY + row * labelHeight;
           
@@ -258,9 +283,10 @@ export default function BarcodeManagement() {
 
     pdf.save(`barcode-labels-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
     
+    const totalLabels = expandedProductData.length;
     toast({
       title: "PDF Generated", 
-      description: `Barcode labels generated for ${selectedProductData.length} product variants.`,
+      description: `${totalLabels} barcode labels generated for ${selectedProductData.length} product variants.`,
     });
   };
 
@@ -279,14 +305,26 @@ export default function BarcodeManagement() {
       return;
     }
 
+    // Expand selected products based on quantities
+    const expandedProductData: any[] = [];
+    selectedProductData.forEach((variant: any) => {
+      const quantity = getQuantity(variant.variantId);
+      for (let i = 0; i < quantity; i++) {
+        expandedProductData.push({
+          ...variant,
+          copyNumber: i + 1
+        });
+      }
+    });
+
     let productsHTML = '';
     
     // Generate barcode labels in grid format (3 columns)
-    for (let i = 0; i < selectedProductData.length; i += 3) {
+    for (let i = 0; i < expandedProductData.length; i += 3) {
       productsHTML += '<div class="barcode-row">';
       
-      for (let j = 0; j < 3 && (i + j) < selectedProductData.length; j++) {
-        const variant = selectedProductData[i + j];
+      for (let j = 0; j < 3 && (i + j) < expandedProductData.length; j++) {
+        const variant = expandedProductData[i + j];
         const formattedBarcode = formatBarcodeForDisplay(variant.barcode || '');
         
         // Generate barcode image as base64
@@ -428,9 +466,10 @@ export default function BarcodeManagement() {
       }, 1000);
     }
 
+    const totalLabels = expandedProductData.length;
     toast({
       title: "Print Dialog Opened",
-      description: `Barcode labels prepared for ${selectedProductData.length} product variants.`,
+      description: `${totalLabels} barcode labels prepared for ${selectedProductData.length} product variants.`,
     });
   };
 
@@ -555,6 +594,7 @@ export default function BarcodeManagement() {
                     <TableHead>Status</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Quantity</TableHead>
+                    <TableHead>Labels</TableHead>
                     <TableHead>Warehouse</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -636,6 +676,16 @@ export default function BarcodeManagement() {
                         }`}>
                           {variant.quantity || 0}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={getQuantity(variant.variantId)}
+                          onChange={(e) => handleQuantityChange(variant.variantId, parseInt(e.target.value) || 0)}
+                          className="w-20 h-8 text-center"
+                          data-testid={`input-quantity-${variant.variantId}`}
+                        />
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-gray-600">
