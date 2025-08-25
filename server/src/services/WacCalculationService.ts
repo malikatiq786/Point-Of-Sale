@@ -25,6 +25,7 @@ export interface WacCalculationResult {
 
 export interface MovementData {
   productId: number;
+  productVariantId?: number;
   branchId?: number;
   warehouseId?: number;
   movementType: 'purchase' | 'sale' | 'adjustment' | 'transfer_in' | 'transfer_out' | 'return' | 'wastage';
@@ -46,6 +47,11 @@ export class WacCalculationService {
     console.log('Processing inventory movement:', movementData);
     
     try {
+      // If this is a variant-based movement, update variant stock first
+      if (movementData.productVariantId && movementData.warehouseId) {
+        await this.updateVariantStock(movementData.productVariantId, movementData.warehouseId, movementData.quantity);
+      }
+
       // Get current WAC data
       const currentWac = await this.getCurrentWac(
         movementData.productId,
@@ -68,6 +74,9 @@ export class WacCalculationService {
 
       // Record WAC history for audit trail
       await this.recordWacHistory(calculation, movementData);
+
+      // Sync product total stock from variants
+      await this.syncProductStockFromVariants(movementData.productId);
 
       console.log('✅ WAC calculation completed successfully');
       return calculation;
@@ -424,5 +433,40 @@ export class WacCalculationService {
       weightedAverageCost: parseFloat(item.weightedAverageCost || '0'),
       totalValue: parseFloat(item.totalValue || '0'),
     }));
+  }
+
+  /**
+   * Update variant stock in the stock table
+   */
+  private static async updateVariantStock(productVariantId: number, warehouseId: number, quantityChange: number): Promise<void> {
+    console.log(`Updating variant ${productVariantId} stock by ${quantityChange} in warehouse ${warehouseId}`);
+    
+    await db.execute(sql`
+      UPDATE stock 
+      SET quantity = quantity + ${quantityChange}
+      WHERE product_variant_id = ${productVariantId}
+        AND warehouse_id = ${warehouseId}
+    `);
+  }
+
+  /**
+   * Sync product total stock from all its variants
+   */
+  private static async syncProductStockFromVariants(productId: number): Promise<void> {
+    console.log(`Syncing product ${productId} stock from variants...`);
+    
+    await db.execute(sql`
+      UPDATE products 
+      SET stock = (
+        SELECT COALESCE(SUM(CAST(s.quantity AS INTEGER)), 0)
+        FROM product_variants pv
+        LEFT JOIN stock s ON pv.id = s.product_variant_id
+        WHERE pv.product_id = ${productId}
+      ),
+      updated_at = NOW()
+      WHERE id = ${productId}
+    `);
+    
+    console.log(`✓ Product ${productId} stock synced from variants`);
   }
 }

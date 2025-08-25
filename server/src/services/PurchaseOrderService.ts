@@ -179,6 +179,7 @@ export class PurchaseOrderService {
         if (receivedItem.receivedQuantity > 0) {
           await WacCalculationService.processInventoryMovement({
             productId: orderItem.productId,
+            productVariantId: orderItem.productVariantId || undefined,
             branchId: purchaseOrder.branchId || undefined,
             warehouseId: purchaseOrder.warehouseId || undefined,
             movementType: 'purchase',
