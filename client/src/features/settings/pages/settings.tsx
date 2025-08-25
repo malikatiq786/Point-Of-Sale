@@ -57,10 +57,10 @@ export default function Settings() {
     if (systemSettings?.data?.value) {
       setGeneralSettings(prev => ({
         ...prev, 
-        systemCurrency: systemSettings.data.value
+        systemCurrency: (systemSettings as any).data.value
       }));
     }
-  }, [systemSettings?.data?.value]);
+  }, [systemSettings]);
 
   // Create currency mutation
   const createCurrencyMutation = useMutation({
