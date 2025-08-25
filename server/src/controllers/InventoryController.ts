@@ -130,18 +130,51 @@ export class InventoryController {
   // Adjust stock
   adjustStock = async (req: Request, res: Response) => {
     try {
-      const result = await this.inventoryService.adjustStock(req.body);
+      console.log('Stock adjustment request received:', req.body);
+      const { warehouseId, reason, items } = req.body;
+      const userId = (req as any).user?.id || 'unknown';
 
-      if (result.success) {
-        res.status(HTTP_STATUS.OK).json({
-          message: SUCCESS_MESSAGES.UPDATED,
-          data: result.data
-        });
-      } else {
-        res.status(HTTP_STATUS.BAD_REQUEST).json({
-          message: result.error || ERROR_MESSAGES.VALIDATION_FAILED
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: 'Invalid request: items array is required'
         });
       }
+
+      const results = [];
+
+      // Process each item in the adjustment
+      for (const item of items) {
+        const { productVariantId, quantity } = item;
+        
+        if (!productVariantId || quantity === undefined) {
+          return res.status(HTTP_STATUS.BAD_REQUEST).json({
+            message: 'Invalid item: productVariantId and quantity are required'
+          });
+        }
+
+        const result = await this.inventoryService.adjustStock({
+          productVariantId,
+          warehouseId,
+          quantityChange: quantity,
+          reason,
+          userId
+        });
+
+        if (!result.success) {
+          return res.status(HTTP_STATUS.BAD_REQUEST).json({
+            message: result.error || ERROR_MESSAGES.VALIDATION_FAILED
+          });
+        }
+
+        results.push(result.data);
+      }
+
+      console.log('Stock adjustment created successfully:', results[0]);
+      res.status(HTTP_STATUS.CREATED).json({
+        message: 'Stock adjustment created successfully',
+        data: results[0]
+      });
+
     } catch (error) {
       console.error('InventoryController: Error in adjustStock:', error);
       res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
