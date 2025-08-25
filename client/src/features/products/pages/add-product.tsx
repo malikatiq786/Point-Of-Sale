@@ -116,16 +116,42 @@ export default function AddProduct() {
 
   const removeVariant = (index: number) => {
     if (variants.length > 1) {
-      setVariants(prev => prev.filter((_, i) => i !== index));
+      setVariants(prev => {
+        const updated = prev.filter((_, i) => i !== index);
+        
+        // Recalculate total stock after removing variant
+        const totalStock = updated.reduce((sum, variant) => 
+          sum + (parseInt(variant.initialStock) || 0), 0
+        );
+        setFormData(prevFormData => ({
+          ...prevFormData,
+          stock: totalStock.toString()
+        }));
+        
+        return updated;
+      });
     }
   };
 
   const updateVariant = (index: number, field: string, value: string) => {
-    setVariants(prev => 
-      prev.map((variant, i) => 
+    setVariants(prev => {
+      const updated = prev.map((variant, i) => 
         i === index ? { ...variant, [field]: value } : variant
-      )
-    );
+      );
+      
+      // Auto-calculate total stock when variant stock changes
+      if (field === 'initialStock') {
+        const totalStock = updated.reduce((sum, variant) => 
+          sum + (parseInt(variant.initialStock) || 0), 0
+        );
+        setFormData(prevFormData => ({
+          ...prevFormData,
+          stock: totalStock.toString()
+        }));
+      }
+      
+      return updated;
+    });
   };
 
   // Warehouse selection functions
@@ -493,7 +519,7 @@ export default function AddProduct() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="stock">Initial Stock</Label>
+                  <Label htmlFor="stock">Total Stock (Auto-calculated)</Label>
                   <Input
                     id="stock"
                     type="number"
@@ -501,7 +527,12 @@ export default function AddProduct() {
                     value={formData.stock}
                     onChange={(e) => handleInputChange('stock', e.target.value)}
                     placeholder="0"
+                    disabled
+                    className="bg-gray-100 text-gray-600"
                   />
+                  <p className="text-xs text-gray-500">
+                    This field is automatically calculated from variant initial stock totals
+                  </p>
                 </div>
                 
                 <div className="space-y-2">

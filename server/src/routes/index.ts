@@ -115,6 +115,10 @@ router.post('/products', isAuthenticated, async (req: any, res: any) => {
       return res.status(400).json({ message: 'Product name is required' });
     }
 
+    // Calculate total stock from variants
+    const variants = req.body.variants || [{ variantName: 'Default', initialStock: 0 }];
+    const totalStockFromVariants = variants.reduce((sum, variant) => sum + (variant.initialStock || 0), 0);
+
     const productData = {
       name: req.body.name,
       description: req.body.description || null,
@@ -123,7 +127,7 @@ router.post('/products', isAuthenticated, async (req: any, res: any) => {
       brandId: req.body.brandId || null,
       unitId: req.body.unitId || null,
       price: req.body.price?.toString() || "0",
-      stock: req.body.stock || 0,
+      stock: totalStockFromVariants, // Use calculated total from variants
       lowStockAlert: req.body.lowStockAlert || 0,
       image: req.body.image || null
     };
@@ -136,7 +140,6 @@ router.post('/products', isAuthenticated, async (req: any, res: any) => {
     console.log('Product created:', product);
 
     // Handle variants creation if provided
-    const variants = req.body.variants || [{ variantName: 'Default', initialStock: 0 }];
     const selectedWarehouseIds = req.body.selectedWarehouses || [];
     
     // Get selected warehouses for stock distribution
@@ -160,22 +163,33 @@ router.post('/products', isAuthenticated, async (req: any, res: any) => {
         
       console.log('Variant created:', createdVariant);
       
-      // Create initial stock entries in selected warehouses if initial stock > 0
+      // Create stock entries in selected warehouses - no distribution, full stock goes to each selected warehouse
       if (variant.initialStock > 0 && warehouses.length > 0) {
-        const stockPerWarehouse = Math.floor(variant.initialStock / warehouses.length);
-        const remainder = variant.initialStock % warehouses.length;
-        
-        for (let i = 0; i < warehouses.length; i++) {
-          const warehouseStock = stockPerWarehouse + (i < remainder ? 1 : 0);
+        // If only one warehouse is selected, put all stock there
+        if (warehouses.length === 1) {
+          await db.insert(schema.stock).values({
+            productVariantId: createdVariant.id,
+            warehouseId: warehouses[0].id,
+            quantity: variant.initialStock.toString()
+          });
+          console.log(`Stock created: ${variant.initialStock} units in warehouse ${warehouses[0].name}`);
+        } else {
+          // If multiple warehouses selected, distribute evenly
+          const stockPerWarehouse = Math.floor(variant.initialStock / warehouses.length);
+          const remainder = variant.initialStock % warehouses.length;
           
-          if (warehouseStock > 0) {
-            await db.insert(schema.stock).values({
-              productVariantId: createdVariant.id,
-              warehouseId: warehouses[i].id,
-              quantity: warehouseStock.toString()
-            });
+          for (let i = 0; i < warehouses.length; i++) {
+            const warehouseStock = stockPerWarehouse + (i < remainder ? 1 : 0);
             
-            console.log(`Stock created: ${warehouseStock} units in warehouse ${warehouses[i].name}`);
+            if (warehouseStock > 0) {
+              await db.insert(schema.stock).values({
+                productVariantId: createdVariant.id,
+                warehouseId: warehouses[i].id,
+                quantity: warehouseStock.toString()
+              });
+              
+              console.log(`Stock created: ${warehouseStock} units in warehouse ${warehouses[i].name}`);
+            }
           }
         }
       } else if (variant.initialStock > 0 && warehouses.length === 0) {
