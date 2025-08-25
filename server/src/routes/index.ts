@@ -11,7 +11,7 @@ import { FinancialReportController } from '../controllers/FinancialReportControl
 import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, and, or, like } from 'drizzle-orm';
 import { isAuthenticated } from '../../replitAuth';
 import { WacCalculationService } from '../services/WacCalculationService';
 import { PurchaseOrderService } from '../services/PurchaseOrderService';
@@ -34,7 +34,10 @@ const router = Router();
 // Product routes  
 router.get('/products', isAuthenticated, async (req: any, res: any) => {
   try {
-    const products = await db
+    const { search, categoryId, brandId } = req.query;
+    
+    // Build the query with proper search functionality
+    let query = db
       .select({
         id: schema.products.id,
         name: schema.products.name,
@@ -44,6 +47,8 @@ router.get('/products', isAuthenticated, async (req: any, res: any) => {
         barcode: schema.products.barcode,
         lowStockAlert: schema.products.lowStockAlert,
         image: schema.products.image,
+        createdAt: schema.products.createdAt,
+        updatedAt: schema.products.updatedAt,
         category: {
           id: schema.categories.id,
           name: schema.categories.name,
@@ -52,13 +57,48 @@ router.get('/products', isAuthenticated, async (req: any, res: any) => {
           id: schema.brands.id,
           name: schema.brands.name,
         },
+        unit: {
+          id: schema.units.id,
+          name: schema.units.name,
+          shortName: schema.units.shortName,
+        },
       })
       .from(schema.products)
       .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
       .leftJoin(schema.brands, eq(schema.products.brandId, schema.brands.id))
-      .orderBy(schema.products.name)
-      .limit(1000); // Increased limit to show all products
+      .leftJoin(schema.units, eq(schema.products.unitId, schema.units.id));
+
+    // Apply search conditions
+    const conditions = [];
     
+    if (search) {
+      console.log('Searching for:', search);
+      conditions.push(
+        or(
+          like(schema.products.name, `%${search}%`),
+          like(schema.products.description, `%${search}%`),
+          like(schema.categories.name, `%${search}%`),
+          like(schema.brands.name, `%${search}%`)
+        )
+      );
+    }
+    
+    if (categoryId) {
+      conditions.push(eq(schema.products.categoryId, parseInt(categoryId as string)));
+    }
+    
+    if (brandId) {
+      conditions.push(eq(schema.products.brandId, parseInt(brandId as string)));
+    }
+
+    // Apply where conditions if any exist
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    const products = await query.orderBy(schema.products.name).limit(1000);
+    
+    console.log(`Found ${products.length} products${search ? ` for search: "${search}"` : ''}`);
     res.json(products);
   } catch (error) {
     console.error('Get products error:', error);
