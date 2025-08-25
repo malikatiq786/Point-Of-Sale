@@ -216,4 +216,53 @@ export class ReturnRepository extends BaseRepository<typeof returns, any, typeof
       return 0;
     }
   }
+
+  // Get return items for multiple returns in a single optimized query
+  async getBulkReturnItems(returnIds: number[]) {
+    try {
+      const allItems = await db.select({
+        returnId: returnItems.returnId,
+        id: returnItems.id,
+        quantity: returnItems.quantity,
+        price: returnItems.price,
+        returnType: returnItems.returnType,
+        productVariantId: returnItems.productVariantId,
+        product: {
+          id: products.id,
+          name: products.name,
+          barcode: products.barcode,
+          categoryName: categories.name,
+          brandName: brands.name,
+          unitName: units.name,
+        },
+        variant: {
+          id: productVariants.id,
+          variantName: productVariants.variantName,
+          salePrice: productVariants.salePrice,
+          purchasePrice: productVariants.purchasePrice,
+        }
+      })
+      .from(returnItems)
+      .leftJoin(productVariants, eq(returnItems.productVariantId, productVariants.id))
+      .leftJoin(products, eq(productVariants.productId, products.id))
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .leftJoin(brands, eq(products.brandId, brands.id))
+      .leftJoin(units, eq(products.unitId, units.id))
+      .where(inArray(returnItems.returnId, returnIds));
+
+      // Group by returnId for easier consumption
+      const groupedItems: Record<number, any[]> = {};
+      allItems.forEach(item => {
+        if (!groupedItems[item.returnId]) {
+          groupedItems[item.returnId] = [];
+        }
+        groupedItems[item.returnId].push(item);
+      });
+
+      return groupedItems;
+    } catch (error) {
+      console.error('Error getting bulk return items:', error);
+      throw error;
+    }
+  }
 }

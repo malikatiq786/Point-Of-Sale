@@ -315,6 +315,7 @@ router.get('/returns', isAuthenticated, returnController.getReturns as any);
 router.get('/returns/:id', isAuthenticated, returnController.getReturnById as any);
 router.put('/returns/:id/status', isAuthenticated, returnController.updateReturnStatus as any);
 router.get('/returns/date-range', isAuthenticated, returnController.getReturnsByDateRange as any);
+router.post('/returns/bulk-items', isAuthenticated, returnController.getBulkReturnItems as any);
 
 // In-memory storage for returns
 let returnsStorage: any[] = [

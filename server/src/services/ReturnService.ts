@@ -285,4 +285,21 @@ export class ReturnService {
       };
     }
   }
+
+  // Get bulk return items for multiple returns
+  async getBulkReturnItems(returnIds: number[]): Promise<DatabaseResult> {
+    try {
+      const items = await this.returnRepository.getBulkReturnItems(returnIds);
+      return {
+        success: true,
+        data: items,
+      };
+    } catch (error) {
+      console.error('ReturnService: Error getting bulk return items:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch bulk return items',
+      };
+    }
+  }
 }

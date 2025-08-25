@@ -205,4 +205,32 @@ export class ReturnController {
       });
     }
   };
+
+  // Get bulk return items for multiple returns
+  getBulkReturnItems = async (req: Request, res: Response) => {
+    try {
+      const { returnIds } = req.body;
+      
+      if (!returnIds || !Array.isArray(returnIds)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: 'Return IDs are required and must be an array'
+        });
+      }
+
+      const result = await this.returnService.getBulkReturnItems(returnIds);
+
+      if (result.success) {
+        res.status(HTTP_STATUS.OK).json(result.data);
+      } else {
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+          message: result.error || ERROR_MESSAGES.INTERNAL_ERROR
+        });
+      }
+    } catch (error) {
+      console.error('ReturnController: Error in getBulkReturnItems:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
 }

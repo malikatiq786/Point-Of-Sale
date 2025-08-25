@@ -11,7 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, RotateCcw, Plus, Calendar, DollarSign, Package, User, FileText } from "lucide-react";
+import { Search, RotateCcw, Plus, Calendar, DollarSign, Package, User, FileText, Printer } from "lucide-react";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
 
 // Currency formatting utility
 const formatCurrency = (amount: number | string | null | undefined) => {
@@ -183,6 +186,214 @@ export default function Returns() {
       .reduce((total, item) => total + (item.price * item.returnQuantity), 0);
   };
 
+  // Format currency value for exports
+  const formatCurrencyValue = (amount: number) => {
+    return formatCurrency(amount);
+  };
+
+  // Export to PDF
+  const exportToPDF = async () => {
+    const pdf = new jsPDF();
+    let currentY = 20;
+
+    // Title
+    pdf.setFontSize(16);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('Detailed Returns History Report', 15, currentY);
+    currentY += 10;
+
+    // Date range and summary
+    pdf.setFontSize(10);
+    pdf.text(`All Returns`, 15, currentY);
+    currentY += 8;
+    const totalReturns = filteredReturns.length;
+    const totalAmount = filteredReturns.reduce((sum: number, returnItem: any) => sum + parseFloat(returnItem.totalAmount || '0'), 0);
+    pdf.text(`Summary: ${totalReturns} Returns | Total Amount: ${formatCurrencyValue(totalAmount)}`, 15, currentY);
+    currentY += 15;
+
+    // Fetch return details with items for each return
+    const returnIds = filteredReturns.map(returnItem => returnItem.id);
+    const bulkResponse = await fetch('/api/returns/bulk-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ returnIds })
+    });
+    const allReturnItems = bulkResponse.ok ? await bulkResponse.json() : {};
+
+    // Process each return with detailed items
+    for (const returnItem of filteredReturns) {
+      // Get items from bulk response
+      const returnItemsList = allReturnItems[returnItem.id] || [];
+
+      if (currentY > 250) { // Add new page if needed
+        pdf.addPage();
+        currentY = 20;
+      }
+
+      // Return header
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`Return #${returnItem.id} - ${returnItem.createdAt ? format(new Date(returnItem.createdAt), 'MMM dd, yyyy HH:mm') : 'N/A'}`, 15, currentY);
+      currentY += 8;
+
+      pdf.setFontSize(10);
+      pdf.text(`Sale: #${returnItem.saleId}`, 15, currentY);
+      pdf.text(`Customer: ${returnItem.customerName || 'Walk-in Customer'}`, 110, currentY);
+      currentY += 6;
+      pdf.text(`Status: ${returnItem.status || 'Unknown'}`, 15, currentY);
+      pdf.text(`Total: ${formatCurrencyValue(parseFloat(returnItem.totalAmount || '0'))}`, 110, currentY);
+      currentY += 6;
+      pdf.text(`Reason: ${returnItem.reason || 'N/A'}`, 15, currentY);
+      currentY += 10;
+
+      // Return items table
+      if (returnItemsList.length > 0) {
+        const itemsData = returnItemsList.map((item: any) => [
+          item.product?.name || 'Unknown Product',
+          item.variant?.variantName || 'Default',
+          item.product?.categoryName || 'N/A',
+          item.product?.brandName || 'N/A',
+          item.product?.barcode || 'N/A',
+          parseFloat(item.quantity || '0').toString(),
+          formatCurrencyValue(parseFloat(item.price || '0')),
+          formatCurrencyValue(parseFloat(item.quantity || '0') * parseFloat(item.price || '0')),
+          item.returnType || 'refund'
+        ]);
+
+        autoTable(pdf, {
+          startY: currentY,
+          head: [['Product', 'Variant', 'Category', 'Brand', 'Code', 'Qty', 'Price', 'Total', 'Type']],
+          body: itemsData,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [220, 53, 69] },
+          margin: { left: 15, right: 15 },
+          tableWidth: 'auto'
+        });
+
+        currentY = (pdf as any).lastAutoTable.finalY + 15;
+      } else {
+        pdf.text('No items found for this return', 15, currentY);
+        currentY += 10;
+      }
+    }
+
+    pdf.save(`detailed-returns-history-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
+  const printReport = async () => {
+    // Build detailed print content
+    let returnsHTML = '';
+    
+    // Fetch return details with items for each return
+    const returnIds = filteredReturns.map(returnItem => returnItem.id);
+    const bulkResponse = await fetch('/api/returns/bulk-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ returnIds })
+    });
+    const allReturnItems = bulkResponse.ok ? await bulkResponse.json() : {};
+    
+    for (const returnItem of filteredReturns) {
+      // Get items from bulk response
+      const returnItemsList = allReturnItems[returnItem.id] || [];
+      
+      returnsHTML += `
+        <div class="return-section">
+          <div class="return-header">
+            <h3>Return #${returnItem.id} - ${returnItem.createdAt ? format(new Date(returnItem.createdAt), 'MMM dd, yyyy HH:mm') : 'N/A'}</h3>
+            <div class="return-info">
+              <div><strong>Sale:</strong> #${returnItem.saleId}</div>
+              <div><strong>Customer:</strong> ${returnItem.customerName || 'Walk-in Customer'}</div>
+              <div><strong>Status:</strong> ${returnItem.status || 'Unknown'}</div>
+              <div><strong>Total:</strong> ${formatCurrencyValue(parseFloat(returnItem.totalAmount || '0'))}</div>
+              <div><strong>Reason:</strong> ${returnItem.reason || 'N/A'}</div>
+            </div>
+          </div>
+          
+          ${returnItemsList.length > 0 ? `
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Variant</th>
+                  <th>Category</th>
+                  <th>Brand</th>
+                  <th>Code</th>
+                  <th>Quantity</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                  <th>Return Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${returnItemsList.map((item: any) => `
+                  <tr>
+                    <td>${item.product?.name || 'Unknown'}</td>
+                    <td>${item.variant?.variantName || 'Default'}</td>
+                    <td>${item.product?.categoryName || 'N/A'}</td>
+                    <td>${item.product?.brandName || 'N/A'}</td>
+                    <td>${item.product?.barcode || 'N/A'}</td>
+                    <td>${parseFloat(item.quantity || '0')}</td>
+                    <td>${formatCurrencyValue(parseFloat(item.price || '0'))}</td>
+                    <td>${formatCurrencyValue(parseFloat(item.quantity || '0') * parseFloat(item.price || '0'))}</td>
+                    <td class="capitalize">${item.returnType || 'refund'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : '<p class="no-items">No items found for this return</p>'}
+        </div>
+      `;
+    }
+
+    const totalReturns = filteredReturns.length;
+    const totalAmount = filteredReturns.reduce((sum: number, returnItem: any) => sum + parseFloat(returnItem.totalAmount || '0'), 0);
+
+    const printContent = `
+      <html>
+        <head>
+          <title>Detailed Returns History Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
+            h1 { text-align: center; color: #333; margin-bottom: 10px; }
+            .date-range { text-align: center; margin-bottom: 10px; color: #666; }
+            .summary { text-align: center; margin-bottom: 20px; padding: 10px; background-color: #fee2e2; border-radius: 5px; }
+            .return-section { margin-bottom: 30px; page-break-inside: avoid; }
+            .return-header { background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+            .return-header h3 { margin: 0 0 10px 0; color: #dc2626; }
+            .return-info { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+            .items-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            .items-table th, .items-table td { padding: 8px; text-align: left; border: 1px solid #ddd; font-size: 11px; }
+            .items-table th { background-color: #dc2626; color: white; font-weight: bold; }
+            .items-table td:nth-child(6), .items-table td:nth-child(7), .items-table td:nth-child(8) { text-align: right; }
+            .capitalize { text-transform: capitalize; }
+            .no-items { text-align: center; color: #666; font-style: italic; }
+            @media print { 
+              body { margin: 0; } 
+              .return-section { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Detailed Returns History Report</h1>
+          <div class="date-range">All Returns</div>
+          <div class="summary">
+            <strong>Summary:</strong> ${totalReturns} Returns | <strong>Total Amount:</strong> ${formatCurrencyValue(totalAmount)}
+          </div>
+          ${returnsHTML}
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+  };
+
   // Handle item selection
   const toggleItemSelection = (itemId: number, checked: boolean) => {
     setReturnItems(prev => 
@@ -280,10 +491,22 @@ export default function Returns() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <RotateCcw className="w-5 h-5 mr-2" />
-            Returns History
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center">
+              <RotateCcw className="w-5 h-5 mr-2" />
+              Returns History
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={exportToPDF}>
+                <FileText className="w-4 h-4 mr-2" />
+                PDF
+              </Button>
+              <Button variant="outline" size="sm" onClick={printReport}>
+                <Printer className="w-4 h-4 mr-2" />
+                Print
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
