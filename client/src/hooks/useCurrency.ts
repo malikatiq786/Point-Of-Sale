@@ -18,7 +18,7 @@ export function useCurrency() {
   });
 
   // Get system currency setting
-  const { data: systemCurrencySetting } = useQuery({
+  const { data: systemCurrencySetting } = useQuery<{success: boolean, data: {value: string}}>({
     queryKey: ['/api/settings/system_currency'],
     retry: false,
   });

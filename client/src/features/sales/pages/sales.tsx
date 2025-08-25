@@ -17,13 +17,13 @@ export default function Sales() {
   const { formatCurrencyValue } = useCurrency();
 
   // Fetch sales
-  const { data: sales = [], isLoading } = useQuery({
+  const { data: sales = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/sales"],
     retry: false,
   });
 
   // Fetch sale items for expanded sale
-  const { data: saleItems = [], isLoading: itemsLoading } = useQuery({
+  const { data: saleItems = [], isLoading: itemsLoading } = useQuery<any[]>({
     queryKey: ["/api/sales", expandedSale, "items"],
     enabled: !!expandedSale,
     retry: false,
