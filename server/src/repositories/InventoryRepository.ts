@@ -126,21 +126,21 @@ export class InventoryRepository {
 
       // Calculate the new total product stock by summing all variant stocks for this product
       const totalStockQuery = await db.select({
-        totalStock: sql`COALESCE(SUM(${schema.stock.quantity}), 0)`.as('totalStock')
+        totalStock: sql<number>`COALESCE(SUM(${schema.stock.quantity}), 0)`
       })
       .from(schema.stock)
-      .leftJoin(schema.productVariants, eq(schema.stock.productVariantId, schema.productVariants.id))
+      .innerJoin(schema.productVariants, eq(schema.stock.productVariantId, schema.productVariants.id))
       .where(and(
         eq(schema.productVariants.productId, variant.productId),
         eq(schema.stock.warehouseId, adjustmentData.warehouseId)
       ));
 
-      const newTotalStock = totalStockQuery[0]?.totalStock || 0;
+      const newTotalStock = Number(totalStockQuery[0]?.totalStock || 0);
 
       // Update the product's total stock
       await db.update(schema.products)
         .set({
-          stock: Number(newTotalStock),
+          stock: newTotalStock,
           updatedAt: new Date()
         })
         .where(eq(schema.products.id, variant.productId));
