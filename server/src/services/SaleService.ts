@@ -153,7 +153,9 @@ export class SaleService {
   // Get sales by date range
   async getSalesByDateRange(startDate: Date, endDate: Date): Promise<DatabaseResult> {
     try {
+      console.log(`SaleService: Fetching sales by date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
       const sales = await this.saleRepository.findByDateRange(startDate, endDate);
+      console.log(`SaleService: Found ${sales.length} sales in date range`);
       
       return {
         success: true,

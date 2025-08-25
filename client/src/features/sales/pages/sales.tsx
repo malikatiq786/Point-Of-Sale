@@ -11,7 +11,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export default function Sales() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,6 +61,7 @@ export default function Sales() {
         setEndDate("");
         setDateFilter("");
         break;
+      case "all":
       default:
         setStartDate("");
         setEndDate("");
@@ -73,10 +74,13 @@ export default function Sales() {
   const buildSalesQuery = () => {
     const params = new URLSearchParams();
     if (startDate && endDate) {
+      console.log(`Building sales query with dates: ${startDate} to ${endDate}`);
       params.append('startDate', startDate);
       params.append('endDate', endDate);
     }
-    return params.toString() ? `?${params.toString()}` : '';
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    console.log(`Final sales query: /api/sales${queryString}`);
+    return queryString;
   };
 
   // Fetch sales with date range support
@@ -84,9 +88,12 @@ export default function Sales() {
     queryKey: ["/api/sales", startDate, endDate],
     queryFn: async () => {
       const query = buildSalesQuery();
+      console.log(`Fetching sales with query: /api/sales${query}`);
       const response = await fetch(`/api/sales${query}`);
       if (!response.ok) throw new Error('Failed to fetch sales');
-      return response.json();
+      const data = await response.json();
+      console.log(`Received ${data.length} sales from API`);
+      return data;
     },
     retry: false,
   });
@@ -104,10 +111,8 @@ export default function Sales() {
       sale.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sale.user?.name?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesDate = !dateFilter || 
-      (sale.saleDate && format(new Date(sale.saleDate), 'yyyy-MM-dd') === dateFilter);
-    
-    return matchesSearch && matchesDate;
+    // Date filtering is now handled by the API query, so we only do client-side search filtering
+    return matchesSearch;
   });
 
   const getStatusColor = (status: string) => {
@@ -146,8 +151,8 @@ export default function Sales() {
       sale.status || 'Unknown'
     ]);
 
-    // Add table
-    (pdf as any).autoTable({
+    // Add table using jspdf-autotable
+    autoTable(pdf, {
       startY: 40,
       head: [['Sale ID', 'Date', 'Customer', 'Cashier', 'Amount', 'Status']],
       body: tableData,

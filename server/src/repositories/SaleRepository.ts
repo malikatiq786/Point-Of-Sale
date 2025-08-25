@@ -1,10 +1,11 @@
-import { BaseRepository, eq, and, gte, lte } from './BaseRepository';
+import { BaseRepository, eq, and, gte, lte, sql } from './BaseRepository';
+import { desc } from 'drizzle-orm';
 import { sales, saleItems, customers, products, productVariants, categories, brands, units, users } from '../../../shared/schema';
 import { db } from './BaseRepository';
 
-export class SaleRepository extends BaseRepository<typeof sales.$inferSelect> {
+export class SaleRepository extends BaseRepository<typeof sales, any, typeof sales.$inferSelect> {
   constructor() {
-    super('sales', sales);
+    super(sales);
   }
 
   // Create sale with items

@@ -48,12 +48,16 @@ export class SaleController {
       const startDate = req.query.startDate as string;
       const endDate = req.query.endDate as string;
       
+      console.log(`SaleController: getSales called with startDate=${startDate}, endDate=${endDate}`);
+      
       let result;
       if (startDate && endDate) {
         // Use date range filtering
+        console.log(`SaleController: Using date range filtering from ${startDate} to ${endDate}`);
         result = await this.saleService.getSalesByDateRange(new Date(startDate), new Date(endDate));
       } else {
         // Get all sales with pagination
+        console.log(`SaleController: Using pagination - limit: ${limit}, offset: ${offset}`);
         result = await this.saleService.getSales(limit, offset);
       }
 
