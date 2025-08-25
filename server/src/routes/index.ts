@@ -588,10 +588,23 @@ router.get('/purchases/:id', isAuthenticated, async (req: any, res: any) => {
       supplier = supplierResult || null;
     }
 
-    // Get purchase items
+    // Get purchase items with product details
     const purchaseItems = await db
-      .select()
+      .select({
+        id: schema.purchaseItems.id,
+        purchaseId: schema.purchaseItems.purchaseId,
+        productVariantId: schema.purchaseItems.productVariantId,
+        quantity: schema.purchaseItems.quantity,
+        costPrice: schema.purchaseItems.costPrice,
+        // Product details
+        productId: schema.products.id,
+        productName: schema.products.name,
+        productDescription: schema.products.description,
+        productBarcode: schema.products.barcode,
+      })
       .from(schema.purchaseItems)
+      .leftJoin(schema.productVariants, eq(schema.purchaseItems.productVariantId, schema.productVariants.id))
+      .leftJoin(schema.products, eq(schema.productVariants.productId, schema.products.id))
       .where(eq(schema.purchaseItems.purchaseId, purchaseId));
     
     const result = {
@@ -601,8 +614,12 @@ router.get('/purchases/:id', isAuthenticated, async (req: any, res: any) => {
         id: item.id,
         purchaseId: item.purchaseId,
         productVariantId: item.productVariantId,
+        productId: item.productId,
+        productName: item.productName,
         quantity: parseFloat(item.quantity || '0'),
         costPrice: parseFloat(item.costPrice || '0'),
+        unitPrice: parseFloat(item.costPrice || '0'), // Frontend expects unitPrice
+        total: parseFloat(item.quantity || '0') * parseFloat(item.costPrice || '0'), // Frontend expects 'total'
         totalCost: parseFloat(item.quantity || '0') * parseFloat(item.costPrice || '0'),
       }))
     };
