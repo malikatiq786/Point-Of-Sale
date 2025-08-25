@@ -1,5 +1,6 @@
 import { ReturnRepository } from '../repositories/ReturnRepository';
 import { SaleRepository } from '../repositories/SaleRepository';
+import { InventoryRepository } from '../repositories/InventoryRepository';
 import { validateInput } from '../validators';
 import { formatCurrency, generateId } from '../utils';
 import { DatabaseResult, ActivityLog } from '../types';
@@ -35,10 +36,12 @@ const returnCreateSchema = z.object({
 export class ReturnService {
   private returnRepository: ReturnRepository;
   private saleRepository: SaleRepository;
+  private inventoryRepository: InventoryRepository;
 
   constructor() {
     this.returnRepository = new ReturnRepository();
     this.saleRepository = new SaleRepository();
+    this.inventoryRepository = new InventoryRepository();
   }
 
   // Create a new return
@@ -190,6 +193,11 @@ export class ReturnService {
         };
       }
 
+      // Process inventory adjustments when return is approved or processed
+      if (status === 'approved' || status === 'processed') {
+        await this.processReturnInventoryAdjustments(returnId, userId);
+      }
+
       const updatedReturn = await this.returnRepository.updateStatus(returnId, status, userId);
       
       if (updatedReturn.length === 0) {
@@ -220,6 +228,41 @@ export class ReturnService {
         success: false,
         error: 'Failed to update return status',
       };
+    }
+  }
+
+  // Process inventory adjustments for returned items
+  private async processReturnInventoryAdjustments(returnId: number, userId?: string): Promise<void> {
+    try {
+      console.log(`Processing inventory adjustments for return #${returnId}`);
+      
+      // Get return items
+      const returnItems = await this.returnRepository.getReturnItems(returnId);
+      
+      // Default warehouse ID (assuming warehouse 1 for now - could be configurable)
+      const defaultWarehouseId = 1;
+      
+      // Process each returned item
+      for (const item of returnItems) {
+        if (item.productVariantId && item.quantity) {
+          console.log(`Adding ${item.quantity} units of product variant ${item.productVariantId} back to inventory`);
+          
+          // Add returned quantity back to inventory
+          await this.inventoryRepository.adjustStock({
+            productVariantId: item.productVariantId,
+            warehouseId: defaultWarehouseId,
+            quantityChange: parseFloat(item.quantity.toString()), // Add back to inventory
+            reason: `Return processing - Return #${returnId}`,
+            userId: userId || 'system',
+          });
+        }
+      }
+
+      console.log(`Completed inventory adjustments for return #${returnId}`);
+    } catch (error) {
+      console.error(`Error processing inventory adjustments for return #${returnId}:`, error);
+      // Don't throw error to avoid breaking the status update
+      // The return status update should still succeed even if inventory adjustment fails
     }
   }
 
