@@ -1755,15 +1755,16 @@ router.get('/purchase-orders/stats/summary', isAuthenticated, async (req: any, r
 // =========================================
 
 // Profit & Loss Reports - Comprehensive reporting system
-router.get('/reports/profit-loss/overall', isAuthenticated, profitLossController.getOverallReport as any);
-router.get('/reports/profit-loss/products', isAuthenticated, profitLossController.getProductWiseReport as any);
-router.get('/reports/profit-loss/variants', isAuthenticated, profitLossController.getVariantWiseReport as any);
-router.get('/reports/profit-loss/categories', isAuthenticated, profitLossController.getCategoryWiseReport as any);
-router.get('/reports/profit-loss/brands', isAuthenticated, profitLossController.getBrandWiseReport as any);
-router.get('/reports/profit-loss/daily', isAuthenticated, profitLossController.getDailyReport as any);
-router.get('/reports/profit-loss/monthly', isAuthenticated, profitLossController.getMonthlyReport as any);
-router.get('/reports/profit-loss/yearly', isAuthenticated, profitLossController.getYearlyReport as any);
-router.get('/reports/profit-loss/top-performers', isAuthenticated, profitLossController.getTopPerformers as any);
+// P&L Report routes with date parameters in path
+router.get('/reports/profit-loss/overall/:startDate/:endDate/', isAuthenticated, profitLossController.getOverallReport as any);
+router.get('/reports/profit-loss/products/:startDate/:endDate/:limit', isAuthenticated, profitLossController.getProductWiseReport as any);
+router.get('/reports/profit-loss/variants/:startDate/:endDate/:limit', isAuthenticated, profitLossController.getVariantWiseReport as any);
+router.get('/reports/profit-loss/categories/:startDate/:endDate/', isAuthenticated, profitLossController.getCategoryWiseReport as any);
+router.get('/reports/profit-loss/brands/:startDate/:endDate/', isAuthenticated, profitLossController.getBrandWiseReport as any);
+router.get('/reports/profit-loss/daily/:startDate/:endDate/', isAuthenticated, profitLossController.getDailyReport as any);
+router.get('/reports/profit-loss/monthly/:startDate/:endDate/', isAuthenticated, profitLossController.getMonthlyReport as any);
+router.get('/reports/profit-loss/yearly/:startDate/:endDate/', isAuthenticated, profitLossController.getYearlyReport as any);
+router.get('/reports/profit-loss/top-performers/:type/:startDate/:endDate/:limit/:sortBy', isAuthenticated, profitLossController.getTopPerformers as any);
 
 // =========================================
 

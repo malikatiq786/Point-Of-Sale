@@ -15,11 +15,8 @@ export class ProfitLossController {
    */
   getOverallReport = async (req: Request, res: Response) => {
     try {
-      const {
-        startDate,
-        endDate,
-        branchId
-      } = req.query;
+      const { startDate, endDate } = req.params;
+      const { branchId } = req.query;
 
       const start = startDate ? new Date(startDate as string) : undefined;
       const end = endDate ? new Date(endDate as string) : undefined;
@@ -45,13 +42,8 @@ export class ProfitLossController {
    */
   getProductWiseReport = async (req: Request, res: Response) => {
     try {
-      const {
-        startDate,
-        endDate,
-        branchId,
-        limit = '100',
-        offset = '0'
-      } = req.query;
+      const { startDate, endDate, limit = '100' } = req.params;
+      const { branchId, offset = '0' } = req.query;
 
       const start = startDate ? new Date(startDate as string) : undefined;
       const end = endDate ? new Date(endDate as string) : undefined;
@@ -83,13 +75,8 @@ export class ProfitLossController {
    */
   getVariantWiseReport = async (req: Request, res: Response) => {
     try {
-      const {
-        startDate,
-        endDate,
-        branchId,
-        limit = '100',
-        offset = '0'
-      } = req.query;
+      const { startDate, endDate, limit = '100' } = req.params;
+      const { branchId, offset = '0' } = req.query;
 
       const start = startDate ? new Date(startDate as string) : undefined;
       const end = endDate ? new Date(endDate as string) : undefined;
@@ -181,11 +168,8 @@ export class ProfitLossController {
    */
   getDailyReport = async (req: Request, res: Response) => {
     try {
-      const {
-        startDate,
-        endDate,
-        branchId
-      } = req.query;
+      const { startDate, endDate } = req.params;
+      const { branchId } = req.query;
 
       if (!startDate || !endDate) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -218,11 +202,8 @@ export class ProfitLossController {
    */
   getMonthlyReport = async (req: Request, res: Response) => {
     try {
-      const {
-        startDate,
-        endDate,
-        branchId
-      } = req.query;
+      const { startDate, endDate } = req.params;
+      const { branchId } = req.query;
 
       if (!startDate || !endDate) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -255,11 +236,8 @@ export class ProfitLossController {
    */
   getYearlyReport = async (req: Request, res: Response) => {
     try {
-      const {
-        startDate,
-        endDate,
-        branchId
-      } = req.query;
+      const { startDate, endDate } = req.params;
+      const { branchId } = req.query;
 
       if (!startDate || !endDate) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -292,14 +270,8 @@ export class ProfitLossController {
    */
   getTopPerformers = async (req: Request, res: Response) => {
     try {
-      const {
-        type = 'products',
-        startDate,
-        endDate,
-        branchId,
-        limit = '10',
-        sortBy = 'profit'
-      } = req.query;
+      const { type, startDate, endDate, limit, sortBy } = req.params;
+      const { branchId } = req.query;
 
       const validTypes = ['products', 'categories', 'brands', 'variants'];
       const validSortBy = ['revenue', 'profit', 'margin'];
