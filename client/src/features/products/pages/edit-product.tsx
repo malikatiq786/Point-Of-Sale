@@ -46,6 +46,7 @@ export default function EditProduct() {
   ]);
 
   const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
+  const [variantErrors, setVariantErrors] = useState<{ [key: number]: string }>({});
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -143,6 +144,27 @@ export default function EditProduct() {
     }));
   };
 
+  // Validate variant pricing
+  const validateVariantPrices = (variant: any, index: number) => {
+    const purchasePrice = parseFloat(variant.purchasePrice) || 0;
+    const salePrice = parseFloat(variant.salePrice) || 0;
+    
+    if (salePrice > 0 && purchasePrice > 0 && salePrice <= purchasePrice) {
+      setVariantErrors(prev => ({
+        ...prev,
+        [index]: "Sale price must be greater than purchase price"
+      }));
+      return false;
+    } else {
+      setVariantErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[index];
+        return newErrors;
+      });
+      return true;
+    }
+  };
+
   // Variant management functions
   const addVariant = () => {
     setVariants(prev => [...prev, { 
@@ -191,6 +213,12 @@ export default function EditProduct() {
         }));
       }
       
+      // Validate prices when purchase or sale price changes
+      if (field === 'purchasePrice' || field === 'salePrice') {
+        const updatedVariant = updated[index];
+        validateVariantPrices(updatedVariant, index);
+      }
+      
       return updated;
     });
   };
@@ -219,6 +247,23 @@ export default function EditProduct() {
       toast({
         title: "Validation Error",
         description: "Product name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate all variant prices before submission
+    let hasValidationErrors = false;
+    variants.forEach((variant, index) => {
+      if (!validateVariantPrices(variant, index)) {
+        hasValidationErrors = true;
+      }
+    });
+    
+    if (hasValidationErrors) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix price validation errors before submitting",
         variant: "destructive",
       });
       return;
@@ -481,7 +526,11 @@ export default function EditProduct() {
                           value={variant.salePrice}
                           onChange={(e) => updateVariant(index, 'salePrice', e.target.value)}
                           placeholder="0.00"
+                          className={variantErrors[index] ? "border-red-500" : ""}
                         />
+                        {variantErrors[index] && (
+                          <p className="text-sm text-red-500 mt-1">{variantErrors[index]}</p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor={`variant-wholesale-${index}`}>Wholesale Price</Label>
