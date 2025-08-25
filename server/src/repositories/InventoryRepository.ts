@@ -105,7 +105,16 @@ export class InventoryRepository {
     userId: string;
   }) {
     try {
-      // First, update the stock quantity
+      // First, get the product ID from the variant
+      const [variant] = await db.select({ productId: schema.productVariants.productId })
+        .from(schema.productVariants)
+        .where(eq(schema.productVariants.id, adjustmentData.productVariantId));
+
+      if (!variant) {
+        throw new Error('Product variant not found');
+      }
+
+      // Update the variant stock quantity
       await db.update(schema.stock)
         .set({
           quantity: sql`${schema.stock.quantity} + ${adjustmentData.quantityChange}`
@@ -115,7 +124,30 @@ export class InventoryRepository {
           eq(schema.stock.warehouseId, adjustmentData.warehouseId)
         ));
 
-      // Then, record the adjustment
+      // Calculate the new total product stock by summing all variant stocks for this product
+      const totalStockQuery = await db.select({
+        totalStock: sql`COALESCE(SUM(${schema.stock.quantity}), 0)`.as('totalStock')
+      })
+      .from(schema.stock)
+      .leftJoin(schema.productVariants, eq(schema.stock.productVariantId, schema.productVariants.id))
+      .where(and(
+        eq(schema.productVariants.productId, variant.productId),
+        eq(schema.stock.warehouseId, adjustmentData.warehouseId)
+      ));
+
+      const newTotalStock = totalStockQuery[0]?.totalStock || 0;
+
+      // Update the product's total stock
+      await db.update(schema.products)
+        .set({
+          stock: Number(newTotalStock),
+          updatedAt: new Date()
+        })
+        .where(eq(schema.products.id, variant.productId));
+
+      console.log(`Updated product ${variant.productId} total stock to: ${newTotalStock}`);
+
+      // Record the adjustment
       const adjustmentResults = await db.insert(schema.stockAdjustments)
         .values({
           warehouseId: adjustmentData.warehouseId,
