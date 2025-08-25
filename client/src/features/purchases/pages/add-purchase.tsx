@@ -39,7 +39,8 @@ export default function AddPurchase() {
     
     try {
       const response = await apiRequest('GET', `/api/products/${productId}/variants`);
-      const variants = Array.isArray(response) ? response : [];
+      const data = await response.json(); // Extract JSON data from Response object
+      const variants = Array.isArray(data) ? data : [];
       setProductVariantsMap(prev => ({ ...prev, [productId]: variants }));
       return variants;
     } catch (error) {
