@@ -18,18 +18,24 @@ export default function ViewProduct() {
   // Extract product ID from URL path (/products/view/:id)
   const productId = location.split('/').pop();
 
-  // Fetch product data
+  // Fetch product data with auto-refresh
   const { data: product, isLoading: isLoadingProduct, error } = useQuery<any>({
     queryKey: [`/api/products/${productId}`],
     enabled: !!productId,
     retry: false,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Data is immediately considered stale for fresh stock info
   });
 
-  // Fetch product variants
+  // Fetch product variants with auto-refresh
   const { data: variants = [], isLoading: isLoadingVariants } = useQuery<any[]>({
     queryKey: [`/api/products/${productId}/variants`],
     enabled: !!productId,
     retry: false,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Data is immediately considered stale for fresh stock info
   });
 
   if (isLoadingProduct) {
