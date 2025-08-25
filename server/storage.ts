@@ -910,36 +910,35 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
 
-    // For simplified stock management, we'll work directly with product stock
-    // instead of the complex product variants system for now
+    // Process each adjustment item properly for variant stock management
     if (adjustmentData.items && adjustmentData.items.length > 0) {
-      const item = adjustmentData.items[0];
-      
-      // Update product stock by ID if provided, otherwise by name (fallback)
-      if (item.productId) {
-        await db
-          .update(products)
-          .set({ 
-            stock: item.newQuantity,
-            updatedAt: new Date()
-          })
-          .where(eq(products.id, item.productId));
-      } else if (item.productName) {
-        // Fallback to name-based lookup (less reliable)
-        const [product] = await db
-          .select()
-          .from(products)
-          .where(eq(products.name, item.productName))
-          .limit(1);
+      for (const item of adjustmentData.items) {
+        if (item.productVariantId) {
+          // Calculate the quantity change
+          const quantityChange = item.newQuantity - item.previousQuantity;
+          
+          // Update the specific variant's stock
+          await db.execute(sql`
+            UPDATE stock 
+            SET quantity = quantity + ${quantityChange}
+            WHERE product_variant_id = ${item.productVariantId}
+              AND warehouse_id = ${adjustmentData.warehouseId}
+          `);
 
-        if (product) {
-          await db
-            .update(products)
-            .set({ 
-              stock: item.newQuantity,
-              updatedAt: new Date()
-            })
-            .where(eq(products.id, product.id));
+          // Recalculate and update the product's total stock
+          if (item.productId) {
+            await db.execute(sql`
+              UPDATE products 
+              SET stock = (
+                SELECT COALESCE(SUM(CAST(s.quantity AS INTEGER)), 0)
+                FROM product_variants pv
+                LEFT JOIN stock s ON pv.id = s.product_variant_id
+                WHERE pv.product_id = ${item.productId}
+              ),
+              updated_at = NOW()
+              WHERE id = ${item.productId}
+            `);
+          }
         }
       }
     }
