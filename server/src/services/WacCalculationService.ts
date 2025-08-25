@@ -207,7 +207,7 @@ export class WacCalculationService {
         runningValue: calculation.newTotalValue.toString(),
         wacAfterMovement: calculation.newWac.toString(),
         referenceType: movementData.referenceType || 'purchase',
-        referenceId: movementData.referenceId ? parseInt(movementData.referenceId) : null,
+        referenceId: movementData.referenceId ? parseInt(movementData.referenceId.toString()) : null,
         notes: movementData.notes || null,
         createdBy: movementData.createdBy,
         movementDate: movementData.movementDate || new Date(),

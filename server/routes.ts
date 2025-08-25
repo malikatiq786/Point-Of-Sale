@@ -2766,6 +2766,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/purchases", isAuthenticated, async (req, res) => {
+    try {
+      console.log('Creating purchase with data:', req.body);
+      
+      if (!req.body.supplierId) {
+        return res.status(400).json({ message: "Supplier is required" });
+      }
+
+      if (!req.body.items || req.body.items.length === 0) {
+        return res.status(400).json({ message: "Purchase items are required" });
+      }
+
+      // Transform the request data to match PurchaseOrderService format
+      const purchaseOrderData = {
+        supplierId: req.body.supplierId,
+        branchId: req.body.branchId || null,
+        warehouseId: req.body.warehouseId || null,
+        currency: req.body.currency || 'USD',
+        exchangeRate: req.body.exchangeRate || 1,
+        expectedDeliveryDate: req.body.expectedDeliveryDate || null,
+        notes: req.body.notes || null,
+        createdBy: req.user?.id || 'system',
+        items: req.body.items.map((item: any) => ({
+          productId: item.productId,
+          productVariantId: item.productVariantId || null,
+          orderedQuantity: item.quantity || 1,
+          unitCost: item.costPrice || 0,
+          discountPercent: item.discountPercent || 0,
+          taxPercent: item.taxPercent || 0,
+          notes: item.notes || null
+        }))
+      };
+
+      console.log('Transformed purchase order data:', purchaseOrderData);
+
+      // Import and use PurchaseOrderService
+      const { PurchaseOrderService } = await import('./src/services/PurchaseOrderService');
+      const purchaseOrder = await PurchaseOrderService.createPurchaseOrder(purchaseOrderData);
+
+      console.log('Purchase order created successfully:', purchaseOrder.id);
+      res.status(201).json(purchaseOrder);
+    } catch (error) {
+      console.error("Error creating purchase:", error);
+      res.status(500).json({ 
+        message: "Failed to create purchase", 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
   app.get("/api/employees", isAuthenticated, async (req, res) => {
     try {
       res.json([]);
