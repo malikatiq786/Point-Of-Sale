@@ -38,7 +38,8 @@ export default function AddPurchase() {
     }
     
     try {
-      const variants = await apiRequest('GET', `/api/products/${productId}/variants`);
+      const response = await apiRequest('GET', `/api/products/${productId}/variants`);
+      const variants = Array.isArray(response) ? response : [];
       setProductVariantsMap(prev => ({ ...prev, [productId]: variants }));
       return variants;
     } catch (error) {
@@ -181,9 +182,9 @@ export default function AddPurchase() {
     const loadVariants = async () => {
       setIsLoading(true);
       const productVariants = await fetchProductVariants(product.id);
-      setVariants(productVariants);
+      const variantsArray = Array.isArray(productVariants) ? productVariants : [];
+      setVariants(variantsArray);
       setIsLoading(false);
-      setShowVariants(true);
     };
 
     useEffect(() => {
