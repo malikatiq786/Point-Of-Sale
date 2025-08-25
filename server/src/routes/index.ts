@@ -11,7 +11,7 @@ import { FinancialReportController } from '../controllers/FinancialReportControl
 import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
-import { eq, sql, and, or, like } from 'drizzle-orm';
+import { eq, sql, and, or, like, desc, count, inArray } from 'drizzle-orm';
 import { isAuthenticated } from '../../replitAuth';
 import { WacCalculationService } from '../services/WacCalculationService';
 import { PurchaseOrderService } from '../services/PurchaseOrderService';
@@ -451,6 +451,7 @@ router.put('/users/:id/permissions', isAuthenticated, userController.updateUserP
 // Purchase routes
 router.get('/purchases', isAuthenticated, async (req: any, res: any) => {
   try {
+    // Get all purchases with supplier info, ordered by latest first
     const purchases = await db
       .select({
         id: schema.purchases.id,
@@ -459,17 +460,40 @@ router.get('/purchases', isAuthenticated, async (req: any, res: any) => {
         totalAmount: schema.purchases.totalAmount,
         purchaseDate: schema.purchases.purchaseDate,
         status: schema.purchases.status,
-        supplier: {
-          id: schema.suppliers.id,
-          name: schema.suppliers.name,
-        },
+        supplierName: schema.suppliers.name,
       })
       .from(schema.purchases)
       .leftJoin(schema.suppliers, eq(schema.purchases.supplierId, schema.suppliers.id))
-      .orderBy(schema.purchases.id)
+      .orderBy(desc(schema.purchases.id)) // Latest first
       .limit(50);
+
+    // Get item counts for each purchase
+    const purchaseIds = purchases.map(p => p.id);
+    const itemCounts = await db
+      .select({
+        purchaseId: schema.purchaseItems.purchaseId,
+        itemCount: count(schema.purchaseItems.id),
+      })
+      .from(schema.purchaseItems)
+      .where(inArray(schema.purchaseItems.purchaseId, purchaseIds))
+      .groupBy(schema.purchaseItems.purchaseId);
+
+    // Create a map for quick lookup
+    const itemCountMap = Object.fromEntries(
+      itemCounts.map(item => [item.purchaseId, parseInt(item.itemCount)])
+    );
+
+    // Format response with item counts and nested supplier object
+    const formattedPurchases = purchases.map(purchase => ({
+      ...purchase,
+      supplier: purchase.supplierName ? {
+        id: purchase.supplierId,
+        name: purchase.supplierName,
+      } : null,
+      itemCount: itemCountMap[purchase.id] || 0,
+    }));
     
-    res.json(purchases);
+    res.json(formattedPurchases);
   } catch (error) {
     console.error('Get purchases error:', error);
     res.status(500).json({ message: 'Failed to fetch purchases' });
