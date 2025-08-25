@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { purchases, purchaseItems } from '@shared/schema';
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { insertCustomerSchema, insertSaleSchema } from "@shared/schema";
@@ -2778,35 +2779,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Purchase items are required" });
       }
 
-      // Transform the request data to match PurchaseOrderService format
-      const purchaseOrderData = {
+      // Create the purchase record
+      const purchaseData = {
         supplierId: req.body.supplierId,
-        branchId: req.body.branchId || null,
-        warehouseId: req.body.warehouseId || null,
-        currency: req.body.currency || 'USD',
-        exchangeRate: req.body.exchangeRate || 1,
-        expectedDeliveryDate: req.body.expectedDeliveryDate || null,
-        notes: req.body.notes || null,
-        createdBy: req.user?.id || 'system',
-        items: req.body.items.map((item: any) => ({
-          productId: item.productId,
-          productVariantId: item.productVariantId || null,
-          orderedQuantity: item.quantity || 1,
-          unitCost: item.costPrice || 0,
-          discountPercent: item.discountPercent || 0,
-          taxPercent: item.taxPercent || 0,
-          notes: item.notes || null
-        }))
+        userId: req.user?.id || 'system',
+        totalAmount: req.body.totalAmount.toString(),
+        purchaseDate: new Date(),
+        status: 'approved' // Auto-approve to update stock immediately
       };
 
-      console.log('Transformed purchase order data:', purchaseOrderData);
+      const [purchase] = await db.insert(purchases).values(purchaseData).returning();
+      console.log('Purchase created:', purchase.id);
 
-      // Import and use PurchaseOrderService
-      const { PurchaseOrderService } = await import('./src/services/PurchaseOrderService');
-      const purchaseOrder = await PurchaseOrderService.createPurchaseOrder(purchaseOrderData);
+      // Create purchase items and update stock
+      for (const item of req.body.items) {
+        // Create purchase item
+        const purchaseItemData = {
+          purchaseId: purchase.id,
+          productVariantId: item.productVariantId,
+          quantity: item.quantity.toString(),
+          costPrice: item.costPrice.toString()
+        };
+        
+        await db.insert(purchaseItems).values(purchaseItemData);
+        console.log(`Purchase item created for variant ${item.productVariantId}`);
 
-      console.log('Purchase order created successfully:', purchaseOrder.id);
-      res.status(201).json(purchaseOrder);
+        // Update variant stock
+        if (item.productVariantId) {
+          const warehouseId = 1; // Default warehouse
+          
+          // Update stock table
+          await db.execute(sql`
+            UPDATE stock 
+            SET quantity = quantity + ${item.quantity}
+            WHERE product_variant_id = ${item.productVariantId}
+              AND warehouse_id = ${warehouseId}
+          `);
+          
+          console.log(`Updated variant ${item.productVariantId} stock by +${item.quantity}`);
+
+          // Sync product total stock from variants
+          await db.execute(sql`
+            UPDATE products 
+            SET stock = (
+              SELECT COALESCE(SUM(CAST(s.quantity AS INTEGER)), 0)
+              FROM product_variants pv
+              LEFT JOIN stock s ON pv.id = s.product_variant_id
+              WHERE pv.product_id = ${item.productId}
+            ),
+            updated_at = NOW()
+            WHERE id = ${item.productId}
+          `);
+          
+          console.log(`Synced product ${item.productId} total stock from variants`);
+        }
+      }
+
+      // Return the created purchase
+      const result = {
+        id: purchase.id,
+        supplierId: purchase.supplierId,
+        userId: purchase.userId,
+        totalAmount: purchase.totalAmount,
+        purchaseDate: purchase.purchaseDate,
+        status: purchase.status
+      };
+
+      console.log('Purchase created successfully with stock updates:', result.id);
+      res.status(201).json(result);
     } catch (error) {
       console.error("Error creating purchase:", error);
       res.status(500).json({ 
