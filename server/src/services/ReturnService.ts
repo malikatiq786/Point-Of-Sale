@@ -64,10 +64,9 @@ export class ReturnService {
         };
       }
 
-      // Prepare return data
+      // Prepare return data - only include userId if it exists in users table
       const finalReturnData = {
         ...returnInfo,
-        userId: userId || null,
         customerId: sale.customerId || null,
         customerName: returnInfo.customerName || sale.customerName || 'Walk-in Customer',
         totalAmount: returnInfo.totalAmount || sale.totalAmount,
