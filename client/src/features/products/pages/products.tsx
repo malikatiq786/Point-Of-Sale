@@ -210,23 +210,60 @@ export default function Products() {
     }
   };
 
+  // Check if any filters are active
+  const hasActiveFilters = searchQuery || 
+    (categoryFilter && categoryFilter !== "all") || 
+    (brandFilter && brandFilter !== "all") || 
+    (stockFilter && stockFilter !== "all") || 
+    (priceFilter && priceFilter !== "all");
 
-  // Fetch products with pagination
+  // Fetch products - use search API when searching, pagination when browsing
   const { data: productsResponse, isLoading, error } = useQuery({
-    queryKey: [`products-${currentPage}-${itemsPerPage}`],
+    queryKey: hasActiveFilters ? [`products-search-${searchQuery}-${categoryFilter}-${brandFilter}-${stockFilter}-${priceFilter}`] : [`products-${currentPage}-${itemsPerPage}`],
     queryFn: async () => {
-      // Add cache-busting timestamp to ensure fresh data
       const timestamp = new Date().getTime();
-      const response = await fetch(`/api/products/${currentPage}/${itemsPerPage}?_t=${timestamp}`, {
-        credentials: 'include',
-        cache: 'no-cache' // Disable browser caching
-      });
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch products: ${response.status}`);
+      if (hasActiveFilters) {
+        // When searching/filtering, get ALL matching products from database
+        const searchParams = new URLSearchParams();
+        if (searchQuery) searchParams.append('search', searchQuery);
+        if (categoryFilter && categoryFilter !== 'all') searchParams.append('categoryId', categoryFilter);
+        if (brandFilter && brandFilter !== 'all') searchParams.append('brandId', brandFilter);
+        searchParams.append('_t', timestamp.toString());
+        
+        const response = await fetch(`/api/products?${searchParams.toString()}`, {
+          credentials: 'include',
+          cache: 'no-cache'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to search products: ${response.status}`);
+        }
+        
+        const allProducts = await response.json();
+        // Return in the same format as paginated response for consistency
+        return {
+          products: allProducts,
+          pagination: {
+            page: 1,
+            limit: allProducts.length,
+            total: allProducts.length,
+            totalPages: 1
+          }
+        };
+      } else {
+        // When browsing without filters, use pagination
+        const response = await fetch(`/api/products/${currentPage}/${itemsPerPage}?_t=${timestamp}`, {
+          credentials: 'include',
+          cache: 'no-cache'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch products: ${response.status}`);
+        }
+        
+        return response.json();
       }
-      
-      return response.json();
     },
     retry: false,
     staleTime: 0, // Always consider data stale
@@ -257,28 +294,16 @@ export default function Products() {
     retry: false,
   });
 
-  // Filter products based on all filter criteria
+  // Filter products based on remaining filter criteria
+  // Note: search, category, and brand filters are handled by API when hasActiveFilters is true
   const filteredProducts = products.filter((product: any) => {
-    // Search query filter
-    const matchesSearch = !searchQuery || 
-      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.brand?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    // Category filter
-    const matchesCategory = !categoryFilter || categoryFilter === "all" || product.category?.id?.toString() === categoryFilter;
-
-    // Brand filter
-    const matchesBrand = !brandFilter || brandFilter === "all" || product.brand?.id?.toString() === brandFilter;
-
-    // Stock filter
+    // Stock filter (only applied on frontend as API doesn't handle it yet)
     const matchesStock = !stockFilter || stockFilter === "all" ||
       (stockFilter === "in-stock" && product.stock > 0) ||
       (stockFilter === "out-of-stock" && product.stock === 0) ||
       (stockFilter === "low-stock" && product.stock <= (product.lowStockAlert || 0) && product.stock > 0);
 
-    // Price filter
+    // Price filter (only applied on frontend as API doesn't handle it yet)
     const price = parseFloat(product.price || '0');
     const matchesPrice = !priceFilter || priceFilter === "all" ||
       (priceFilter === "under-10" && price < 10) ||
@@ -286,7 +311,23 @@ export default function Products() {
       (priceFilter === "50-100" && price > 50 && price <= 100) ||
       (priceFilter === "over-100" && price > 100);
 
-    return matchesSearch && matchesCategory && matchesBrand && matchesStock && matchesPrice;
+    // If we're using the search API (hasActiveFilters), search/category/brand are already filtered
+    // If we're using pagination (no active filters), apply all filters on frontend
+    if (hasActiveFilters) {
+      return matchesStock && matchesPrice;
+    } else {
+      // Apply all filters on frontend for paginated results
+      const matchesSearch = !searchQuery || 
+        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.category?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.brand?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory = !categoryFilter || categoryFilter === "all" || product.category?.id?.toString() === categoryFilter;
+      const matchesBrand = !brandFilter || brandFilter === "all" || product.brand?.id?.toString() === brandFilter;
+
+      return matchesSearch && matchesCategory && matchesBrand && matchesStock && matchesPrice;
+    }
   });
 
   // Check if all visible products are selected
@@ -308,13 +349,6 @@ export default function Products() {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
-
-  // Check if any filters are active
-  const hasActiveFilters = searchQuery || 
-    (categoryFilter && categoryFilter !== "all") || 
-    (brandFilter && brandFilter !== "all") || 
-    (stockFilter && stockFilter !== "all") || 
-    (priceFilter && priceFilter !== "all");
 
   return (
     <AppLayout>
