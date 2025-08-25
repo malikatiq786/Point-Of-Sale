@@ -85,7 +85,9 @@ export default function StockManagement() {
   const filteredStock = (stockData as any[]).filter((stock: any) =>
     stock.productName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     stock.variantName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    stock.warehouseName?.toLowerCase().includes(searchQuery.toLowerCase())
+    stock.warehouseName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    stock.categoryName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    stock.brandName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getStockStatus = (quantity: number) => {
@@ -135,7 +137,7 @@ export default function StockManagement() {
         <div className="relative flex-1">
           <Input 
             type="text" 
-            placeholder="Search products, variants, or warehouses..." 
+            placeholder="Search products, variants, warehouses, categories, or brands..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
