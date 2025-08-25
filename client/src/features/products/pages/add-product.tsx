@@ -25,17 +25,20 @@ export default function AddProduct() {
     categoryId: "",
     brandId: "",
     unitId: "",
-    purchasePrice: "",
-    salePrice: "",
-    wholesalePrice: "",
-    retailPrice: "",
     stock: "",
     lowStockAlert: "",
     image: ""
   });
 
   const [variants, setVariants] = useState([
-    { variantName: "Default", initialStock: "0" }
+    { 
+      variantName: "Default", 
+      initialStock: "0",
+      purchasePrice: "",
+      salePrice: "",
+      wholesalePrice: "",
+      retailPrice: ""
+    }
   ]);
 
   const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
@@ -82,15 +85,18 @@ export default function AddProduct() {
         categoryId: "",
         brandId: "",
         unitId: "",
-        purchasePrice: "",
-        salePrice: "",
-        wholesalePrice: "",
-        retailPrice: "",
         stock: "",
         lowStockAlert: "",
         image: ""
       });
-      setVariants([{ variantName: "Default", initialStock: "0" }]);
+      setVariants([{ 
+        variantName: "Default", 
+        initialStock: "0",
+        purchasePrice: "",
+        salePrice: "",
+        wholesalePrice: "",
+        retailPrice: ""
+      }]);
       setSelectedWarehouses([]);
     },
     onError: (error: any) => {
@@ -111,7 +117,14 @@ export default function AddProduct() {
 
   // Variant management functions
   const addVariant = () => {
-    setVariants(prev => [...prev, { variantName: "", initialStock: "0" }]);
+    setVariants(prev => [...prev, { 
+      variantName: "", 
+      initialStock: "0",
+      purchasePrice: "",
+      salePrice: "",
+      wholesalePrice: "",
+      retailPrice: ""
+    }]);
   };
 
   const removeVariant = (index: number) => {
@@ -194,21 +207,28 @@ export default function AddProduct() {
       return;
     }
 
+    // Calculate average prices from all variants (for main product price)
+    const avgSalePrice = variants.reduce((sum, v) => sum + (parseFloat(v.salePrice) || 0), 0) / variants.length;
+    
     const productData = {
       ...formData,
       categoryId: formData.categoryId ? parseInt(formData.categoryId) : null,
       brandId: formData.brandId ? parseInt(formData.brandId) : null,
       unitId: formData.unitId ? parseInt(formData.unitId) : null,
-      price: formData.salePrice ? parseFloat(formData.salePrice) : 0, // Use sale price as main price
-      purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : 0,
-      salePrice: formData.salePrice ? parseFloat(formData.salePrice) : 0,
-      wholesalePrice: formData.wholesalePrice ? parseFloat(formData.wholesalePrice) : 0,
-      retailPrice: formData.retailPrice ? parseFloat(formData.retailPrice) : 0,
+      price: avgSalePrice, // Use average sale price as main price
+      purchasePrice: 0, // Will be set per variant
+      salePrice: avgSalePrice,
+      wholesalePrice: 0, // Will be set per variant
+      retailPrice: 0, // Will be set per variant
       stock: formData.stock ? parseInt(formData.stock) : 0,
       lowStockAlert: formData.lowStockAlert ? parseInt(formData.lowStockAlert) : 0,
       variants: variants.map(variant => ({
         variantName: variant.variantName || "Default",
-        initialStock: parseInt(variant.initialStock) || 0
+        initialStock: parseInt(variant.initialStock) || 0,
+        purchasePrice: parseFloat(variant.purchasePrice) || 0,
+        salePrice: parseFloat(variant.salePrice) || 0,
+        wholesalePrice: parseFloat(variant.wholesalePrice) || 0,
+        retailPrice: parseFloat(variant.retailPrice) || 0
       })),
       selectedWarehouses: selectedWarehouses
     };
@@ -352,39 +372,93 @@ export default function AddProduct() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {variants.map((variant, index) => (
-                  <div key={index} className="flex items-end space-x-4 p-4 border rounded-lg">
-                    <div className="flex-1 space-y-2">
-                      <Label htmlFor={`variant-name-${index}`}>Variant Name</Label>
-                      <Input
-                        id={`variant-name-${index}`}
-                        type="text"
-                        value={variant.variantName}
-                        onChange={(e) => updateVariant(index, 'variantName', e.target.value)}
-                        placeholder={index === 0 ? "Default" : `Variant ${index + 1}`}
-                      />
+                  <div key={index} className="p-4 border rounded-lg space-y-4">
+                    <div className="flex items-end space-x-4">
+                      <div className="flex-1 space-y-2">
+                        <Label htmlFor={`variant-name-${index}`}>Variant Name</Label>
+                        <Input
+                          id={`variant-name-${index}`}
+                          type="text"
+                          value={variant.variantName}
+                          onChange={(e) => updateVariant(index, 'variantName', e.target.value)}
+                          placeholder={index === 0 ? "Default" : `Variant ${index + 1}`}
+                        />
+                      </div>
+                      <div className="w-32 space-y-2">
+                        <Label htmlFor={`variant-stock-${index}`}>Initial Stock</Label>
+                        <Input
+                          id={`variant-stock-${index}`}
+                          type="number"
+                          min="0"
+                          value={variant.initialStock}
+                          onChange={(e) => updateVariant(index, 'initialStock', e.target.value)}
+                          placeholder="0"
+                        />
+                      </div>
+                      {variants.length > 1 && (
+                        <Button
+                          type="button"
+                          onClick={() => removeVariant(index)}
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
-                    <div className="w-32 space-y-2">
-                      <Label htmlFor={`variant-stock-${index}`}>Initial Stock</Label>
-                      <Input
-                        id={`variant-stock-${index}`}
-                        type="number"
-                        min="0"
-                        value={variant.initialStock}
-                        onChange={(e) => updateVariant(index, 'initialStock', e.target.value)}
-                        placeholder="0"
-                      />
+                    
+                    {/* Variant Pricing */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor={`variant-purchase-${index}`}>Purchase Price *</Label>
+                        <Input
+                          id={`variant-purchase-${index}`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={variant.purchasePrice}
+                          onChange={(e) => updateVariant(index, 'purchasePrice', e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`variant-sale-${index}`}>Sale Price *</Label>
+                        <Input
+                          id={`variant-sale-${index}`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={variant.salePrice}
+                          onChange={(e) => updateVariant(index, 'salePrice', e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`variant-wholesale-${index}`}>Wholesale Price</Label>
+                        <Input
+                          id={`variant-wholesale-${index}`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={variant.wholesalePrice}
+                          onChange={(e) => updateVariant(index, 'wholesalePrice', e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`variant-retail-${index}`}>Shopkeeper Price</Label>
+                        <Input
+                          id={`variant-retail-${index}`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={variant.retailPrice}
+                          onChange={(e) => updateVariant(index, 'retailPrice', e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
                     </div>
-                    {variants.length > 1 && (
-                      <Button
-                        type="button"
-                        onClick={() => removeVariant(index)}
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                    )}
                   </div>
                 ))}
               </CardContent>
@@ -459,65 +533,13 @@ export default function AddProduct() {
             </Card>
           </div>
 
-          {/* Pricing & Stock */}
+          {/* Stock & Settings */}
           <div>
             <Card>
               <CardHeader>
-                <CardTitle>Pricing & Stock</CardTitle>
+                <CardTitle>Stock & Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="purchasePrice">Purchase Price ($) *</Label>
-                  <Input
-                    id="purchasePrice"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.purchasePrice}
-                    onChange={(e) => handleInputChange('purchasePrice', e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="salePrice">Sale Price ($) *</Label>
-                  <Input
-                    id="salePrice"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.salePrice}
-                    onChange={(e) => handleInputChange('salePrice', e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="wholesalePrice">Wholesale Qty Price ($)</Label>
-                  <Input
-                    id="wholesalePrice"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.wholesalePrice}
-                    onChange={(e) => handleInputChange('wholesalePrice', e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="retailPrice">Single Piece Shopkeeper Price ($)</Label>
-                  <Input
-                    id="retailPrice"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.retailPrice}
-                    onChange={(e) => handleInputChange('retailPrice', e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-                
                 <div className="space-y-2">
                   <Label htmlFor="stock">Total Stock (Auto-calculated)</Label>
                   <Input
