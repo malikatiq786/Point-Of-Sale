@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/layouts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Search, RotateCcw, Plus, Calendar, DollarSign, Package, User, FileText } from "lucide-react";
 
 // Currency formatting utility
@@ -34,6 +35,8 @@ export default function Returns() {
     reason: "",
     items: [{ productId: "", quantity: "", returnType: "refund" }]
   });
+  const [selectedSaleItems, setSelectedSaleItems] = useState<any[]>([]);
+  const [returnItems, setReturnItems] = useState<any[]>([]);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -82,6 +85,27 @@ export default function Returns() {
     queryKey: ["/api/sales"],
     retry: false,
   });
+
+  // Fetch sale items when a sale is selected
+  const { data: saleItemsData, isLoading: isLoadingSaleItems } = useQuery({
+    queryKey: ["/api/sales", returnData.saleId, "items"],
+    enabled: !!returnData.saleId,
+    retry: false,
+  });
+
+  // Update sale items when data changes
+  useEffect(() => {
+    if (saleItemsData && Array.isArray(saleItemsData)) {
+      setSelectedSaleItems(saleItemsData);
+      // Initialize return items with all items unchecked
+      setReturnItems(saleItemsData.map((item: any) => ({
+        ...item,
+        selected: false,
+        returnQuantity: 1,
+        returnType: "refund"
+      })));
+    }
+  }, [saleItemsData]);
 
   const createReturnMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -152,6 +176,40 @@ export default function Returns() {
     }
   };
 
+  // Calculate total return amount based on selected items
+  const calculateReturnAmount = () => {
+    return returnItems
+      .filter(item => item.selected)
+      .reduce((total, item) => total + (item.price * item.returnQuantity), 0);
+  };
+
+  // Handle item selection
+  const toggleItemSelection = (itemId: number, checked: boolean) => {
+    setReturnItems(prev => 
+      prev.map(item => 
+        item.id === itemId ? { ...item, selected: checked } : item
+      )
+    );
+  };
+
+  // Handle quantity change
+  const updateReturnQuantity = (itemId: number, quantity: number) => {
+    setReturnItems(prev => 
+      prev.map(item => 
+        item.id === itemId ? { ...item, returnQuantity: Math.max(1, Math.min(quantity, item.quantity)) } : item
+      )
+    );
+  };
+
+  // Handle return type change
+  const updateReturnType = (itemId: number, returnType: string) => {
+    setReturnItems(prev => 
+      prev.map(item => 
+        item.id === itemId ? { ...item, returnType } : item
+      )
+    );
+  };
+
   const handleSubmitReturn = (e: React.FormEvent) => {
     e.preventDefault();
     if (!returnData.saleId || !returnData.reason) {
@@ -163,7 +221,29 @@ export default function Returns() {
       return;
     }
 
-    createReturnMutation.mutate(returnData);
+    const selectedItems = returnItems.filter(item => item.selected);
+    if (selectedItems.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one item to return",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const returnSubmission = {
+      saleId: parseInt(returnData.saleId),
+      reason: returnData.reason,
+      totalAmount: calculateReturnAmount(),
+      items: selectedItems.map(item => ({
+        productVariantId: item.productVariantId,
+        quantity: item.returnQuantity,
+        price: item.price,
+        returnType: item.returnType
+      }))
+    };
+
+    createReturnMutation.mutate(returnSubmission);
   };
 
   return (
@@ -335,7 +415,10 @@ export default function Returns() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Sale Transaction</Label>
-                <Select value={returnData.saleId} onValueChange={(value) => setReturnData({ ...returnData, saleId: value })}>
+                <Select value={returnData.saleId} onValueChange={(value) => {
+                  setReturnData({ ...returnData, saleId: value });
+                  setReturnItems([]);
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select sale to return" />
                   </SelectTrigger>
@@ -350,22 +433,96 @@ export default function Returns() {
               </div>
               
               <div className="space-y-2">
-                <Label>Return Type</Label>
-                <Select value={returnData.items[0]?.returnType} onValueChange={(value) => setReturnData({ 
-                  ...returnData, 
-                  items: [{ ...returnData.items[0], returnType: value }] 
-                })}>
+                <Label>Default Return Type</Label>
+                <Select value="refund" disabled>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="refund">Full Refund</SelectItem>
+                    <SelectItem value="refund">Refund</SelectItem>
                     <SelectItem value="exchange">Exchange</SelectItem>
                     <SelectItem value="store_credit">Store Credit</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-gray-500">You can set individual return types for each item below</p>
               </div>
             </div>
+
+            {/* Sale Items Selection */}
+            {returnData.saleId && (
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Select Items to Return</Label>
+                {isLoadingSaleItems ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <span className="ml-2">Loading sale items...</span>
+                  </div>
+                ) : returnItems.length > 0 ? (
+                  <div className="space-y-3 max-h-64 overflow-y-auto border rounded-lg p-3">
+                    {returnItems.map((item: any) => (
+                      <div key={item.id} className="flex items-center space-x-3 p-2 border rounded bg-gray-50">
+                        <Checkbox
+                          checked={item.selected}
+                          onCheckedChange={(checked: boolean) => toggleItemSelection(item.id, checked)}
+                          data-testid={`checkbox-item-${item.id}`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {item.product?.name || item.productName || 'Unknown Product'}
+                            {item.variant?.variantName && ` (${item.variant.variantName})`}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            Price: {formatCurrency(item.price)} | Available: {item.quantity}
+                          </p>
+                        </div>
+                        {item.selected && (
+                          <div className="flex items-center space-x-2">
+                            <Label className="text-xs">Qty:</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max={item.quantity}
+                              value={item.returnQuantity}
+                              onChange={(e) => updateReturnQuantity(item.id, parseInt(e.target.value) || 1)}
+                              className="w-16 h-8 text-xs"
+                              data-testid={`input-quantity-${item.id}`}
+                            />
+                            <Select value={item.returnType} onValueChange={(value) => updateReturnType(item.id, value)}>
+                              <SelectTrigger className="w-24 h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="refund">Refund</SelectItem>
+                                <SelectItem value="exchange">Exchange</SelectItem>
+                                <SelectItem value="store_credit">Credit</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No items found for this sale</p>
+                  </div>
+                )}
+                
+                {returnItems.filter(item => item.selected).length > 0 && (
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-blue-800">
+                        Selected Items: {returnItems.filter(item => item.selected).length}
+                      </span>
+                      <span className="font-bold text-blue-800">
+                        Total Return Amount: {formatCurrency(calculateReturnAmount())}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             
             <div className="space-y-2">
               <Label>Return Reason</Label>
