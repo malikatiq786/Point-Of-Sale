@@ -159,13 +159,15 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
     }
   }
 
-  // Get sale items for a specific sale with product variant details
+  // Get sale items for a specific sale with product variant details and return information
   async getSaleItems(saleId: number) {
     try {
-      return await db.select({
+      // Get sale items with product details
+      const items = await db.select({
         id: saleItems.id,
         quantity: saleItems.quantity,
         price: saleItems.price,
+        productVariantId: saleItems.productVariantId,
         product: {
           id: products.id,
           name: products.name,
@@ -188,6 +190,40 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       .leftJoin(brands, eq(products.brandId, brands.id))
       .leftJoin(units, eq(products.unitId, units.id))
       .where(eq(saleItems.saleId, saleId));
+
+      // Get return information for this sale
+      const returnItemsQuery = await db.execute(sql`
+        SELECT 
+          ri.product_variant_id,
+          SUM(ri.quantity) as total_returned
+        FROM returns r
+        JOIN return_items ri ON r.id = ri.return_id
+        WHERE r.sale_id = ${saleId} 
+          AND r.status IN ('approved', 'processed')
+        GROUP BY ri.product_variant_id
+      `);
+
+      // Convert return data to a map for easy lookup
+      const returnedQuantities = new Map();
+      returnItemsQuery.rows.forEach((row: any) => {
+        returnedQuantities.set(row.product_variant_id, parseFloat(row.total_returned || '0'));
+      });
+
+      // Add return information to each item
+      return items.map(item => {
+        const originalQuantity = parseFloat(item.quantity || '0');
+        const returnedQuantity = returnedQuantities.get(item.productVariantId) || 0;
+        const netQuantity = originalQuantity - returnedQuantity;
+
+        return {
+          ...item,
+          originalQuantity: originalQuantity,
+          returnedQuantity: returnedQuantity,
+          netQuantity: netQuantity,
+          hasReturns: returnedQuantity > 0,
+          isFullyReturned: netQuantity <= 0,
+        };
+      });
     } catch (error) {
       console.error('Error getting sale items:', error);
       throw error;

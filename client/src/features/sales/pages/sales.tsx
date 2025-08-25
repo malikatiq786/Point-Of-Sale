@@ -585,6 +585,16 @@ export default function Sales() {
                                       <div className="flex items-center gap-2 mb-1">
                                         <h5 className="font-medium text-gray-900">
                                           {item.product?.name || 'Unknown Product'}
+                                          {item.hasReturns && !item.isFullyReturned && (
+                                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                                              Partially Returned
+                                            </span>
+                                          )}
+                                          {item.isFullyReturned && (
+                                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                              Fully Returned
+                                            </span>
+                                          )}
                                         </h5>
                                         {item.variant?.variantName && (
                                           <Badge variant="secondary" className="text-xs">
@@ -608,11 +618,33 @@ export default function Sales() {
                                     <div className="text-right">
                                       <div className="flex items-center gap-2 text-sm">
                                         <span className="text-gray-600">
-                                          {parseFloat(item.quantity || '0')} × {formatCurrencyValue(parseFloat(item.price || '0'))}
+                                          {item.hasReturns ? (
+                                            <div className="text-right">
+                                              <div className="font-semibold text-green-600">
+                                                {parseFloat(item.netQuantity || '0')} kept × {formatCurrencyValue(parseFloat(item.price || '0'))}
+                                              </div>
+                                              <div className="text-xs text-gray-500">
+                                                ({parseFloat(item.originalQuantity || '0')} sold, {parseFloat(item.returnedQuantity || '0')} returned)
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            `${parseFloat(item.quantity || '0')} × ${formatCurrencyValue(parseFloat(item.price || '0'))}`
+                                          )}
                                         </span>
                                       </div>
                                       <div className="font-semibold text-gray-900">
-                                        {formatCurrencyValue(parseFloat(item.quantity || '0') * parseFloat(item.price || '0'))}
+                                        {item.hasReturns ? (
+                                          <div className="text-right">
+                                            <div className="text-green-600">
+                                              {formatCurrencyValue(parseFloat(item.netQuantity || '0') * parseFloat(item.price || '0'))}
+                                            </div>
+                                            <div className="text-xs text-gray-500 line-through">
+                                              {formatCurrencyValue(parseFloat(item.originalQuantity || '0') * parseFloat(item.price || '0'))}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          formatCurrencyValue(parseFloat(item.quantity || '0') * parseFloat(item.price || '0'))
+                                        )}
                                       </div>
                                     </div>
                                   </div>
