@@ -1329,14 +1329,26 @@ router.post('/wac/process-existing-purchases', isAuthenticated, async (req: any,
         
         // Process each purchase item for WAC calculation
         for (const item of purchaseItems) {
-          // Validate item data
-          if (!item.productId) {
-            console.log(`Skipping item in purchase ${purchase.id} - missing productId`);
+          // For variant-based purchases, we need to get the product ID from the variant
+          if (!item.productVariantId) {
+            console.log(`Skipping item in purchase ${purchase.id} - missing productVariantId`);
+            continue;
+          }
+          
+          // Get the product ID from the variant
+          const [variant] = await db
+            .select({ productId: schema.productVariants.productId })
+            .from(schema.productVariants)
+            .where(eq(schema.productVariants.id, item.productVariantId))
+            .limit(1);
+          
+          if (!variant || !variant.productId) {
+            console.log(`Skipping item in purchase ${purchase.id} - variant ${item.productVariantId} not found or missing productId`);
             continue;
           }
           
           const quantity = parseFloat(item.quantity || '0');
-          const unitCost = parseFloat(item.unitPrice || '0');
+          const unitCost = parseFloat(item.costPrice || '0');
           
           if (quantity <= 0 || unitCost <= 0) {
             console.log(`Skipping item in purchase ${purchase.id} - invalid quantity (${quantity}) or cost (${unitCost})`);
@@ -1344,7 +1356,8 @@ router.post('/wac/process-existing-purchases', isAuthenticated, async (req: any,
           }
           
           const movementData = {
-            productId: item.productId,
+            productId: variant.productId,
+            productVariantId: item.productVariantId,
             quantity: quantity,
             unitCost: unitCost,
             movementType: 'purchase' as const,
@@ -1354,7 +1367,7 @@ router.post('/wac/process-existing-purchases', isAuthenticated, async (req: any,
             createdBy: req.session?.user?.id || req.user?.claims?.sub || 'system',
           };
           
-          console.log(`Processing item for product ${item.productId} with quantity ${quantity} and cost ${unitCost}`);
+          console.log(`Processing item for product ${variant.productId} (variant ${item.productVariantId}) with quantity ${quantity} and cost ${unitCost}`);
           
           // Process inventory movement and calculate WAC
           await WacCalculationService.processInventoryMovement(movementData);
