@@ -577,6 +577,43 @@ router.patch('/purchases/:id/status', isAuthenticated, async (req: any, res: any
       return res.status(404).json({ message: 'Purchase not found' });
     }
     
+    // If purchase is approved, process WAC calculations for all items
+    if (status === 'approved') {
+      try {
+        // Get purchase items
+        const purchaseItems = await db
+          .select()
+          .from(schema.purchaseItems)
+          .where(eq(schema.purchaseItems.purchaseId, purchaseId));
+        
+        console.log(`Processing WAC calculations for ${purchaseItems.length} items in purchase ${purchaseId}`);
+        
+        // Process each purchase item for WAC calculation
+        for (const item of purchaseItems) {
+          const movementData = {
+            productId: item.productId,
+            quantity: parseFloat(item.quantity),
+            unitCost: parseFloat(item.unitPrice),
+            movementType: 'purchase' as const,
+            referenceId: purchaseId.toString(),
+            branchId: undefined, // Use default branch
+            warehouseId: undefined, // Use default warehouse
+            createdBy: req.session?.user?.id || req.user?.claims?.sub || 'system',
+          };
+          
+          console.log(`Processing WAC for product ${item.productId}:`, movementData);
+          
+          // Process inventory movement and calculate WAC
+          await WacCalculationService.processInventoryMovement(movementData);
+        }
+        
+        console.log(`Successfully processed WAC calculations for purchase ${purchaseId}`);
+      } catch (wacError) {
+        console.error(`WAC calculation failed for purchase ${purchaseId}:`, wacError);
+        // Don't fail the approval if WAC calculation fails, just log the error
+      }
+    }
+    
     console.log(`Purchase ${purchaseId} status updated to: ${status}`);
     res.json({ message: 'Purchase status updated successfully', purchase: updatedPurchase });
   } catch (error) {
@@ -919,6 +956,55 @@ router.get('/wac/inventory-valuation', isAuthenticated, async (req: any, res: an
   } catch (error) {
     console.error('Get inventory valuation error:', error);
     res.status(500).json({ message: 'Failed to get inventory valuation' });
+  }
+});
+
+// Get enhanced inventory valuation with product/brand/category grouping
+router.get('/wac/inventory-valuation-enhanced', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { branchId, warehouseId } = req.query;
+    const branchIdNum = branchId ? parseInt(branchId) : undefined;
+    const warehouseIdNum = warehouseId ? parseInt(warehouseId) : undefined;
+    
+    const conditions = [];
+    if (branchIdNum) {
+      conditions.push(eq(schema.productWac.branchId, branchIdNum));
+    }
+    if (warehouseIdNum) {
+      conditions.push(eq(schema.productWac.warehouseId, warehouseIdNum));
+    }
+
+    const enhancedData = await db
+      .select({
+        productId: schema.productWac.productId,
+        productName: schema.products.name,
+        categoryId: schema.products.categoryId,
+        categoryName: schema.categories.name,
+        brandId: schema.products.brandId,
+        brandName: schema.brands.name,
+        currentQuantity: schema.productWac.currentQuantity,
+        weightedAverageCost: schema.productWac.weightedAverageCost,
+        totalValue: schema.productWac.totalValue,
+        lastCalculatedAt: schema.productWac.lastCalculatedAt,
+      })
+      .from(schema.productWac)
+      .leftJoin(schema.products, eq(schema.productWac.productId, schema.products.id))
+      .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+      .leftJoin(schema.brands, eq(schema.products.brandId, schema.brands.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(schema.products.name);
+
+    const formattedData = enhancedData.map(item => ({
+      ...item,
+      currentQuantity: parseFloat(item.currentQuantity || '0'),
+      weightedAverageCost: parseFloat(item.weightedAverageCost || '0'),
+      totalValue: parseFloat(item.totalValue || '0'),
+    }));
+
+    res.json(formattedData);
+  } catch (error) {
+    console.error('Get enhanced inventory valuation error:', error);
+    res.status(500).json({ message: 'Failed to get enhanced inventory valuation' });
   }
 });
 
