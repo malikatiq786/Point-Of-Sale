@@ -190,7 +190,7 @@ export default function StockManagement() {
     currentY += 15;
 
     // Process each product with its variants
-    for (const productGroup of groupedStockArray) {
+    for (const productGroup of groupedStockArray as any[]) {
       if (currentY > 250) { // Add new page if needed
         pdf.addPage();
         currentY = 20;
@@ -244,7 +244,7 @@ export default function StockManagement() {
   const printReport = () => {
     let productsHTML = '';
     
-    for (const productGroup of groupedStockArray) {
+    for (const productGroup of groupedStockArray as any[]) {
       productsHTML += `
         <div class="product-section">
           <div class="product-header">
@@ -319,7 +319,7 @@ export default function StockManagement() {
         <body>
           <h1>Stock Management Report</h1>
           <div class="summary">
-            <strong>Total Products:</strong> ${groupedStockArray.length} | <strong>Total Variants:</strong> ${totalVariants} | <strong>Total Stock Items:</strong> ${totalStockItems}
+            <strong>Total Products:</strong> ${(groupedStockArray as any[]).length} | <strong>Total Variants:</strong> ${totalVariants} | <strong>Total Stock Items:</strong> ${totalStockItems}
           </div>
           ${productsHTML}
         </body>
