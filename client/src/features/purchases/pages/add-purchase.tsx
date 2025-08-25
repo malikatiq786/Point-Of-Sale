@@ -181,23 +181,27 @@ export default function AddPurchase() {
 
     const loadVariants = async () => {
       setIsLoading(true);
+      console.log('Loading variants for product:', product.id);
       const productVariants = await fetchProductVariants(product.id);
+      console.log('Received variants:', productVariants);
       const variantsArray = Array.isArray(productVariants) ? productVariants : [];
+      console.log('Setting variants array:', variantsArray);
       setVariants(variantsArray);
       setIsLoading(false);
     };
 
-    useEffect(() => {
-      if (showVariants && variants.length === 0) {
+    const handleToggleVariants = () => {
+      setShowVariants(!showVariants);
+      if (!showVariants) {
         loadVariants();
       }
-    }, [showVariants]);
+    };
 
     return (
       <div className="border-b last:border-b-0">
         <div 
           className="p-3 hover:bg-gray-50 cursor-pointer"
-          onClick={() => setShowVariants(!showVariants)}
+          onClick={handleToggleVariants}
         >
           <div className="flex justify-between items-center">
             <div>
