@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Package, Save } from "lucide-react";
+import { ArrowLeft, Package, Save, Plus, Minus, List } from "lucide-react";
 import { Link } from "wouter";
 
 export default function AddProduct() {
@@ -33,6 +33,10 @@ export default function AddProduct() {
     lowStockAlert: "",
     image: ""
   });
+
+  const [variants, setVariants] = useState([
+    { variantName: "Default", initialStock: "0" }
+  ]);
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -78,6 +82,7 @@ export default function AddProduct() {
         lowStockAlert: "",
         image: ""
       });
+      setVariants([{ variantName: "Default", initialStock: "0" }]);
     },
     onError: (error: any) => {
       toast({
@@ -93,6 +98,25 @@ export default function AddProduct() {
       ...prev,
       [field]: value
     }));
+  };
+
+  // Variant management functions
+  const addVariant = () => {
+    setVariants(prev => [...prev, { variantName: "", initialStock: "0" }]);
+  };
+
+  const removeVariant = (index: number) => {
+    if (variants.length > 1) {
+      setVariants(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateVariant = (index: number, field: string, value: string) => {
+    setVariants(prev => 
+      prev.map((variant, i) => 
+        i === index ? { ...variant, [field]: value } : variant
+      )
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -119,6 +143,10 @@ export default function AddProduct() {
       retailPrice: formData.retailPrice ? parseFloat(formData.retailPrice) : 0,
       stock: formData.stock ? parseInt(formData.stock) : 0,
       lowStockAlert: formData.lowStockAlert ? parseInt(formData.lowStockAlert) : 0,
+      variants: variants.map(variant => ({
+        variantName: variant.variantName || "Default",
+        initialStock: parseInt(variant.initialStock) || 0
+      }))
     };
 
     createProductMutation.mutate(productData);
@@ -235,6 +263,66 @@ export default function AddProduct() {
                     </Select>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+            
+            {/* Product Variants */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <List className="mr-2 h-5 w-5" />
+                    Product Variants
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={addVariant}
+                    variant="outline"
+                    size="sm"
+                    className="text-blue-600 hover:text-blue-700"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Variant
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {variants.map((variant, index) => (
+                  <div key={index} className="flex items-end space-x-4 p-4 border rounded-lg">
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor={`variant-name-${index}`}>Variant Name</Label>
+                      <Input
+                        id={`variant-name-${index}`}
+                        type="text"
+                        value={variant.variantName}
+                        onChange={(e) => updateVariant(index, 'variantName', e.target.value)}
+                        placeholder={index === 0 ? "Default" : `Variant ${index + 1}`}
+                      />
+                    </div>
+                    <div className="w-32 space-y-2">
+                      <Label htmlFor={`variant-stock-${index}`}>Initial Stock</Label>
+                      <Input
+                        id={`variant-stock-${index}`}
+                        type="number"
+                        min="0"
+                        value={variant.initialStock}
+                        onChange={(e) => updateVariant(index, 'initialStock', e.target.value)}
+                        placeholder="0"
+                      />
+                    </div>
+                    {variants.length > 1 && (
+                      <Button
+                        type="button"
+                        onClick={() => removeVariant(index)}
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </div>

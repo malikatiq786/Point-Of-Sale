@@ -109,7 +109,7 @@ router.get('/products', isAuthenticated, async (req: any, res: any) => {
 });
 router.post('/products', isAuthenticated, async (req: any, res: any) => {
   try {
-    console.log('Direct product creation in route:', req.body);
+    console.log('Product creation with variants:', req.body);
     
     if (!req.body.name) {
       return res.status(400).json({ message: 'Product name is required' });
@@ -128,14 +128,55 @@ router.post('/products', isAuthenticated, async (req: any, res: any) => {
       image: req.body.image || null
     };
 
-    const [result] = await db.insert(schema.products)
+    // Create the product first
+    const [product] = await db.insert(schema.products)
       .values(productData)
       .returning();
       
-    console.log('Direct route result:', result);
-    res.status(201).json(result);
+    console.log('Product created:', product);
+
+    // Handle variants creation if provided
+    const variants = req.body.variants || [{ variantName: 'Default', initialStock: 0 }];
+    
+    // Get available warehouses for stock distribution
+    const warehouses = await db.select().from(schema.warehouses).limit(3);
+    
+    for (const variant of variants) {
+      // Create product variant
+      const [createdVariant] = await db.insert(schema.productVariants)
+        .values({
+          productId: product.id,
+          variantName: variant.variantName || 'Default'
+        })
+        .returning();
+        
+      console.log('Variant created:', createdVariant);
+      
+      // Create initial stock entries in warehouses if initial stock > 0
+      if (variant.initialStock > 0 && warehouses.length > 0) {
+        const stockPerWarehouse = Math.floor(variant.initialStock / warehouses.length);
+        const remainder = variant.initialStock % warehouses.length;
+        
+        for (let i = 0; i < warehouses.length; i++) {
+          const warehouseStock = stockPerWarehouse + (i < remainder ? 1 : 0);
+          
+          if (warehouseStock > 0) {
+            await db.insert(schema.stock).values({
+              productVariantId: createdVariant.id,
+              warehouseId: warehouses[i].id,
+              quantity: warehouseStock.toString()
+            });
+            
+            console.log(`Stock created: ${warehouseStock} units in warehouse ${warehouses[i].name}`);
+          }
+        }
+      }
+    }
+    
+    console.log('Product with variants created successfully:', product);
+    res.status(201).json(product);
   } catch (error) {
-    console.error('Direct route error:', error);
+    console.error('Product creation error:', error);
     res.status(500).json({ message: 'Failed to create product', error: error.message });
   }
 });
