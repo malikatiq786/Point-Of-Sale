@@ -78,16 +78,23 @@ export default function EditProduct() {
     retry: false,
   });
 
-  // Fetch product variants
-  const { data: existingVariants = [], isLoading: isLoadingVariants } = useQuery<any[]>({
-    queryKey: [`/api/products/${productId}/variants`],
-    enabled: !!productId,
-    retry: false,
-  });
+  // For now, we'll use mock variant data since the API endpoint doesn't exist yet
+  // TODO: Replace with actual API call when variants endpoint is created
+  const existingVariants = [
+    {
+      variantName: "Default",
+      stock: existingProduct?.stock || 0,
+      purchasePrice: existingProduct?.purchasePrice || 0,
+      salePrice: existingProduct?.salePrice || existingProduct?.price || 0,
+      wholesalePrice: existingProduct?.wholesalePrice || 0,
+      retailPrice: existingProduct?.retailPrice || 0
+    }
+  ];
+  const isLoadingVariants = false;
 
   // Update form data when product data is loaded
   useEffect(() => {
-    if (existingProduct && existingVariants.length > 0) {
+    if (existingProduct) {
       setFormData({
         name: existingProduct.name || "",
         description: existingProduct.description || "",
@@ -101,18 +108,16 @@ export default function EditProduct() {
       });
 
       // Set variants from existing data
-      if (existingVariants.length > 0) {
-        setVariants(existingVariants.map(variant => ({
-          variantName: variant.variantName || "Default",
-          initialStock: variant.stock?.toString() || "0",
-          purchasePrice: variant.purchasePrice?.toString() || "",
-          salePrice: variant.salePrice?.toString() || "",
-          wholesalePrice: variant.wholesalePrice?.toString() || "",
-          retailPrice: variant.retailPrice?.toString() || ""
-        })));
-      }
+      setVariants([{
+        variantName: "Default",
+        initialStock: existingProduct.stock?.toString() || "0",
+        purchasePrice: existingProduct.purchasePrice?.toString() || "",
+        salePrice: existingProduct.salePrice?.toString() || existingProduct.price?.toString() || "",
+        wholesalePrice: existingProduct.wholesalePrice?.toString() || "",
+        retailPrice: existingProduct.retailPrice?.toString() || ""
+      }]);
     }
-  }, [existingProduct, existingVariants]);
+  }, [existingProduct]);
 
   // Update product mutation
   const updateProductMutation = useMutation({
@@ -253,7 +258,7 @@ export default function EditProduct() {
     updateProductMutation.mutate(productData);
   };
 
-  if (isLoadingProduct || isLoadingVariants) {
+  if (isLoadingProduct) {
     return (
       <AppLayout>
         <div className="min-h-screen flex items-center justify-center">
