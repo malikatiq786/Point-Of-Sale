@@ -82,12 +82,15 @@ export class InventoryRepository {
       .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
       .leftJoin(schema.brands, eq(schema.products.brandId, schema.brands.id));
 
+      const conditions = [];
       if (warehouseId) {
-        query = query.where(eq(schema.stock.warehouseId, warehouseId));
+        conditions.push(eq(schema.stock.warehouseId, warehouseId));
       }
-
       if (lowStockOnly) {
-        query = query.where(sql`${schema.stock.quantity} <= 10`);
+        conditions.push(sql`${schema.stock.quantity} <= 10`);
+      }
+      if (conditions.length > 0) {
+        query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions));
       }
 
       return await query.orderBy(schema.products.name);
