@@ -117,15 +117,13 @@ export class InventoryRepository {
         throw new Error('Product variant not found');
       }
 
-      // Update the variant stock quantity
-      await db.update(schema.stock)
-        .set({
-          quantity: sql`${schema.stock.quantity} + ${adjustmentData.quantityChange}`
-        })
-        .where(and(
-          eq(schema.stock.productVariantId, adjustmentData.productVariantId),
-          eq(schema.stock.warehouseId, adjustmentData.warehouseId)
-        ));
+      // Update the variant stock quantity using raw SQL
+      await db.execute(sql`
+        UPDATE stock 
+        SET quantity = quantity + ${adjustmentData.quantityChange}
+        WHERE product_variant_id = ${adjustmentData.productVariantId}
+          AND warehouse_id = ${adjustmentData.warehouseId}
+      `);
 
       // Calculate and update the product's total stock
       const result = await db.execute(sql`
