@@ -31,7 +31,10 @@ export default function Products() {
   const [itemsPerPage] = useState(50);
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
+  const [productVariants, setProductVariants] = useState<any[]>([]);
   const [adjustment, setAdjustment] = useState({ type: "increase", quantity: "", reason: "" });
+  const [loadingVariants, setLoadingVariants] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const { formatCurrencyValue } = useCurrency();
 
@@ -110,10 +113,12 @@ export default function Products() {
           reason: adjustmentData.reason,
           items: [{
             productId: selectedProduct?.id,
+            productVariantId: selectedVariant?.id,
             productName: selectedProduct?.name,
+            variantName: selectedVariant?.variantName,
             quantity: adjustmentData.quantityChange,
-            previousQuantity: Math.round(parseFloat(selectedProduct?.stock || '0')),
-            newQuantity: Math.round(parseFloat(selectedProduct?.stock || '0')) + adjustmentData.quantityChange
+            previousQuantity: Math.round(parseFloat(selectedVariant?.stock || '0')),
+            newQuantity: Math.round(parseFloat(selectedVariant?.stock || '0')) + adjustmentData.quantityChange
           }]
         }),
       });
@@ -135,6 +140,8 @@ export default function Products() {
       setShowAdjustDialog(false);
       setAdjustment({ type: "increase", quantity: "", reason: "" });
       setSelectedProduct(null);
+      setSelectedVariant(null);
+      setProductVariants([]);
     },
     onError: (error: any) => {
       toast({
@@ -151,9 +158,31 @@ export default function Products() {
     }
   };
 
-  const handleAdjustStock = (product: any) => {
+  const handleAdjustStock = async (product: any) => {
     setSelectedProduct(product);
+    setLoadingVariants(true);
     setShowAdjustDialog(true);
+    
+    try {
+      // Fetch variants for this product
+      const response = await fetch(`/api/products/${product.id}/variants`);
+      if (response.ok) {
+        const variants = await response.json();
+        setProductVariants(variants);
+        // Auto-select first variant if available
+        if (variants.length > 0) {
+          setSelectedVariant(variants[0]);
+        }
+      } else {
+        console.error('Failed to fetch variants');
+        setProductVariants([]);
+      }
+    } catch (error) {
+      console.error('Error fetching variants:', error);
+      setProductVariants([]);
+    } finally {
+      setLoadingVariants(false);
+    }
   };
 
   const handleSubmitAdjustment = (e: React.FormEvent) => {
@@ -162,6 +191,15 @@ export default function Products() {
       toast({
         title: "Error",
         description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedVariant) {
+      toast({
+        title: "Error", 
+        description: "Please select a variant to adjust",
         variant: "destructive",
       });
       return;
@@ -832,22 +870,79 @@ export default function Products() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Current Stock</Label>
-                  <p className="text-lg font-bold text-blue-600">
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Total Product Stock</Label>
+                <p className="text-lg font-bold text-blue-600">
                   {selectedProduct?.stock || 0} {selectedProduct?.unit?.shortName || selectedProduct?.unit?.name || 'units'}
                 </p>
+              </div>
+            </div>
+
+            {/* Variant Selection */}
+            {loadingVariants ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-gray-600">Loading variants...</span>
+              </div>
+            ) : productVariants.length > 0 ? (
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-gray-900">Select Variant to Adjust</Label>
+                <div className="grid gap-2 max-h-40 overflow-y-auto">
+                  {productVariants.map((variant: any) => (
+                    <div 
+                      key={variant.id} 
+                      className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                        selectedVariant?.id === variant.id 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => setSelectedVariant(variant)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mr-3 ${
+                            selectedVariant?.id === variant.id 
+                              ? 'border-blue-500 bg-blue-500' 
+                              : 'border-gray-300'
+                          }`}>
+                            {selectedVariant?.id === variant.id && (
+                              <Check className="w-2.5 h-2.5 text-white" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{variant.variantName || 'Default'}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-blue-600">
+                            {variant.stock} {selectedProduct?.unit?.shortName || 'units'}
+                          </p>
+                          <p className="text-xs text-gray-500">Current Stock</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Warehouse</Label>
+                
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Selected Variant Stock:</span>
+                    <span className="text-lg font-bold text-blue-600">
+                      {selectedVariant?.stock || 0} {selectedProduct?.unit?.shortName || 'units'}
+                    </span>
+                  </div>
                   <div className="flex items-center mt-1">
                     <Warehouse className="w-4 h-4 text-gray-500 mr-1" />
                     <span className="text-sm text-gray-700">Main Warehouse</span>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-4 text-gray-500">
+                <p>No variants found for this product</p>
+                <p className="text-sm">Stock adjustment not available</p>
+              </div>
+            )}
 
             <div>
               <Label>Adjustment Type</Label>
@@ -872,9 +967,11 @@ export default function Products() {
                 min="1"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
-                New stock will be: {selectedProduct?.stock + (adjustment.type === "increase" ? parseInt(adjustment.quantity || '0') : -parseInt(adjustment.quantity || '0'))} {selectedProduct?.unit?.shortName || selectedProduct?.unit?.name || 'units'}
-              </p>
+              {selectedVariant && (
+                <p className="text-xs text-gray-500 mt-1">
+                  New stock will be: {(selectedVariant?.stock || 0) + (adjustment.type === "increase" ? parseInt(adjustment.quantity || '0') : -parseInt(adjustment.quantity || '0'))} {selectedProduct?.unit?.shortName || selectedProduct?.unit?.name || 'units'}
+                </p>
+              )}
             </div>
 
             <div>
@@ -896,13 +993,15 @@ export default function Products() {
                   setShowAdjustDialog(false);
                   setAdjustment({ type: "increase", quantity: "", reason: "" });
                   setSelectedProduct(null);
+                  setSelectedVariant(null);
+                  setProductVariants([]);
                 }}
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                disabled={adjustStockMutation.isPending}
+                disabled={adjustStockMutation.isPending || !selectedVariant || productVariants.length === 0}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {adjustStockMutation.isPending ? 'Adjusting...' : 'Adjust Stock'}
