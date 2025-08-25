@@ -42,6 +42,10 @@ export default function AddPurchase() {
     retry: false,
   });
 
+  // Type cast the data to ensure TypeScript compatibility
+  const typedProducts = (products as any[]);
+  const typedSuppliers = (suppliers as any[]);
+
   const createPurchaseMutation = useMutation({
     mutationFn: (purchaseData: any) => apiRequest("POST", "/api/purchases", purchaseData),
     onSuccess: () => {
@@ -141,7 +145,7 @@ export default function AddPurchase() {
     });
   };
 
-  const filteredProducts = products.filter((product: any) =>
+  const filteredProducts = typedProducts.filter((product: any) =>
     product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.category?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -175,7 +179,7 @@ export default function AddPurchase() {
                   <SelectValue placeholder="Select a supplier" />
                 </SelectTrigger>
                 <SelectContent>
-                  {suppliers.map((supplier: any) => (
+                  {typedSuppliers.map((supplier: any) => (
                     <SelectItem key={supplier.id} value={supplier.id.toString()}>
                       {supplier.name}
                     </SelectItem>
