@@ -1,9 +1,12 @@
 import { BaseRepository, eq, like, or } from './BaseRepository';
 import { suppliers } from '../../../shared/schema';
 
-export class SupplierRepository extends BaseRepository<typeof suppliers.$inferSelect> {
+type SupplierInsert = typeof suppliers.$inferInsert;
+type SupplierSelect = typeof suppliers.$inferSelect;
+
+export class SupplierRepository extends BaseRepository<typeof suppliers, SupplierInsert, SupplierSelect> {
   constructor() {
-    super('suppliers', suppliers);
+    super(suppliers);
   }
 
   // Search suppliers by name, email, or phone
