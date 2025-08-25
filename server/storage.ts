@@ -9,6 +9,7 @@ import {
   units,
   stock,
   stockAdjustments,
+  stockAdjustmentItems,
   warehouses,
   customers,
   sales,
@@ -21,6 +22,8 @@ import {
   currencies,
   deliveryRiders,
   riderAssignments,
+  purchaseOrderItems,
+  cogsTracking,
   type User,
   type UpsertUser,
   type Product,
@@ -272,9 +275,55 @@ export class DatabaseStorage implements IStorage {
     console.log(`STORAGE: Attempting to delete product with ID: ${id}`);
     
     try {
+      // First, get all product variants for this product
+      const variants = await db
+        .select({ id: productVariants.id })
+        .from(productVariants)
+        .where(eq(productVariants.productId, id));
+
+      console.log(`STORAGE: Found ${variants.length} variants to delete for product ${id}`);
+
+      // Delete variant-related records first
+      for (const variant of variants) {
+        // Delete stock records for this variant
+        await db.delete(stock).where(eq(stock.productVariantId, variant.id));
+        console.log(`STORAGE: Deleted stock records for variant ${variant.id}`);
+
+        // Delete sale items for this variant
+        await db.delete(saleItems).where(eq(saleItems.productVariantId, variant.id));
+        console.log(`STORAGE: Deleted sale items for variant ${variant.id}`);
+
+        // Delete product prices for this variant
+        await db.delete(productPrices).where(eq(productPrices.productVariantId, variant.id));
+        console.log(`STORAGE: Deleted product prices for variant ${variant.id}`);
+      }
+
+      // Delete product variants
+      await db.delete(productVariants).where(eq(productVariants.productId, id));
+      console.log(`STORAGE: Deleted ${variants.length} product variants for product ${id}`);
+
+      // Delete records that directly reference the product (not through variants)
+      // These don't have cascade delete configured, so we need to handle them manually
+
+      // Delete purchase order items for this product
+      await db.delete(purchaseOrderItems).where(eq(purchaseOrderItems.productId, id));
+      console.log(`STORAGE: Deleted purchase order items for product ${id}`);
+
+      // Delete stock adjustment items for this product
+      await db.delete(stockAdjustmentItems).where(eq(stockAdjustmentItems.productId, id));
+      console.log(`STORAGE: Deleted stock adjustment items for product ${id}`);
+
+      // Delete COGS tracking records for this product
+      await db.delete(cogsTracking).where(eq(cogsTracking.productId, id));
+      console.log(`STORAGE: Deleted COGS tracking records for product ${id}`);
+
+      // Note: inventoryMovements, productWac, and wacHistory have cascade delete configured,
+      // so they will be automatically deleted when the product is deleted
+
+      // Finally, delete the product itself
       const result = await db.delete(products).where(eq(products.id, id));
       console.log(`STORAGE: Delete result:`, result);
-      console.log(`STORAGE: Product ${id} delete operation completed`);
+      console.log(`STORAGE: Product ${id} delete operation completed successfully`);
     } catch (error) {
       console.error(`STORAGE: Error deleting product ${id}:`, error);
       throw error;
