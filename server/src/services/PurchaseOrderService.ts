@@ -23,6 +23,7 @@ export interface CreatePurchaseOrderData {
   createdBy: string;
   items: {
     productId: number;
+    productVariantId?: number;
     orderedQuantity: number;
     unitCost: number;
     discountPercent?: number;
@@ -107,6 +108,7 @@ export class PurchaseOrderService {
       const itemsData: InsertPurchaseOrderItem[] = itemsWithCalculations.map(item => ({
         purchaseOrderId: purchaseOrder.id,
         productId: item.productId,
+        productVariantId: item.productVariantId || null,
         orderedQuantity: item.orderedQuantity.toString(),
         unitCost: item.unitCost.toString(),
         totalCost: item.totalCost,
@@ -374,7 +376,7 @@ export class PurchaseOrderService {
     const stats = await db
       .select({
         status: purchaseOrders.status,
-        count: db.$count(),
+        count: db.$count(purchaseOrders.id),
         totalValue: purchaseOrders.grandTotal,
       })
       .from(purchaseOrders)

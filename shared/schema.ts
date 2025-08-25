@@ -604,6 +604,7 @@ export const purchaseOrderItems = pgTable("purchase_order_items", {
   id: serial("id").primaryKey(),
   purchaseOrderId: integer("purchase_order_id").references(() => purchaseOrders.id, { onDelete: "cascade" }).notNull(),
   productId: integer("product_id").references(() => products.id).notNull(),
+  productVariantId: integer("product_variant_id").references(() => productVariants.id),
   orderedQuantity: numeric("ordered_quantity", { precision: 15, scale: 4 }).notNull(),
   receivedQuantity: numeric("received_quantity", { precision: 15, scale: 4 }).default("0"),
   unitCost: numeric("unit_cost", { precision: 15, scale: 4 }).notNull(),
