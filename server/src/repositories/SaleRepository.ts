@@ -45,7 +45,7 @@ export class SaleRepository extends BaseRepository<typeof sales.$inferSelect> {
     }
   }
 
-  // Find sales with customer and items information
+  // Find sales with customer and user information
   async findAllWithDetails(limit: number = 10, offset: number = 0) {
     try {
       return await db.select({
@@ -54,14 +54,22 @@ export class SaleRepository extends BaseRepository<typeof sales.$inferSelect> {
         paidAmount: sales.paidAmount,
         status: sales.status,
         saleDate: sales.saleDate,
+        customerName: sales.customerName,
+        customerPhone: sales.customerPhone,
         customer: {
           id: customers.id,
           name: customers.name,
+          phone: customers.phone,
         },
+        user: {
+          id: users.id,
+          name: users.name,
+        }
       })
       .from(sales)
       .leftJoin(customers, eq(sales.customerId, customers.id))
-      .orderBy(sales.saleDate)
+      .leftJoin(users, eq(sales.userId, users.id))
+      .orderBy(desc(sales.saleDate))
       .limit(limit)
       .offset(offset);
     } catch (error) {
