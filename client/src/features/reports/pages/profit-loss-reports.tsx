@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { AppLayout } from "@/layouts";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -280,11 +281,12 @@ export default function ProfitLossReports() {
   );
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Profit & Loss Reports</h1>
-        <div className="flex gap-4 items-center">
-          <div className="flex gap-2">
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Profit & Loss Reports</h1>
+          <div className="flex gap-4 items-center">
+            <div className="flex gap-2">
             <Input
               type="date"
               value={filters.startDate || ''}
@@ -301,24 +303,24 @@ export default function ProfitLossReports() {
               data-testid="input-end-date"
             />
           </div>
-          <Button variant="outline" size="sm" data-testid="button-refresh">
-            Refresh Data
-          </Button>
+            <Button variant="outline" size="sm" data-testid="button-refresh">
+              Refresh Data
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-9 w-full" data-testid="tabs-list">
-          <TabsTrigger value="overall" data-testid="tab-overall">Overall</TabsTrigger>
-          <TabsTrigger value="products" data-testid="tab-products">Products</TabsTrigger>
-          <TabsTrigger value="variants" data-testid="tab-variants">Variants</TabsTrigger>
-          <TabsTrigger value="categories" data-testid="tab-categories">Categories</TabsTrigger>
-          <TabsTrigger value="brands" data-testid="tab-brands">Brands</TabsTrigger>
-          <TabsTrigger value="daily" data-testid="tab-daily">Daily</TabsTrigger>
-          <TabsTrigger value="monthly" data-testid="tab-monthly">Monthly</TabsTrigger>
-          <TabsTrigger value="yearly" data-testid="tab-yearly">Yearly</TabsTrigger>
-          <TabsTrigger value="top-performers" data-testid="tab-top-performers">Top</TabsTrigger>
-        </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-9 w-full" data-testid="tabs-list">
+            <TabsTrigger value="overall" data-testid="tab-overall">Overall</TabsTrigger>
+            <TabsTrigger value="products" data-testid="tab-products">Products</TabsTrigger>
+            <TabsTrigger value="variants" data-testid="tab-variants">Variants</TabsTrigger>
+            <TabsTrigger value="categories" data-testid="tab-categories">Categories</TabsTrigger>
+            <TabsTrigger value="brands" data-testid="tab-brands">Brands</TabsTrigger>
+            <TabsTrigger value="daily" data-testid="tab-daily">Daily</TabsTrigger>
+            <TabsTrigger value="monthly" data-testid="tab-monthly">Monthly</TabsTrigger>
+            <TabsTrigger value="yearly" data-testid="tab-yearly">Yearly</TabsTrigger>
+            <TabsTrigger value="top-performers" data-testid="tab-top-performers">Top</TabsTrigger>
+          </TabsList>
 
         <TabsContent value="overall" className="space-y-4">
           <ProfitLossCard 
@@ -462,7 +464,8 @@ export default function ProfitLossReports() {
                      filters.type === 'brands' ? 'brandName' : 'variantName'}
           />
         </TabsContent>
-      </Tabs>
-    </div>
+        </Tabs>
+      </div>
+    </AppLayout>
   );
 }
