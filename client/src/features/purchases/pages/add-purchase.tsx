@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/layouts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import { Link, useLocation } from "wouter";
 interface PurchaseItem {
   productId: number;
   productName: string;
+  productVariantId: number;
+  variantName: string;
   quantity: number;
   costPrice: number;
   total: number;
@@ -29,6 +31,21 @@ export default function AddPurchase() {
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showProductSearch, setShowProductSearch] = useState(false);
+  // Fetch variants for a specific product
+  const fetchProductVariants = async (productId: number) => {
+    if (productVariantsMap[productId]) {
+      return productVariantsMap[productId];
+    }
+    
+    try {
+      const variants = await apiRequest('GET', `/api/products/${productId}/variants`);
+      setProductVariantsMap(prev => ({ ...prev, [productId]: variants }));
+      return variants;
+    } catch (error) {
+      console.error('Error fetching variants:', error);
+      return [];
+    }
+  };
 
   // Fetch suppliers
   const { data: suppliers = [] } = useQuery({
@@ -41,6 +58,9 @@ export default function AddPurchase() {
     queryKey: ["/api/products"],
     retry: false,
   });
+
+  // Product variants state
+  const [productVariantsMap, setProductVariantsMap] = useState<{[key: number]: any[]}>({});
 
   // Type cast the data to ensure TypeScript compatibility
   const typedProducts = (products as any[]);
@@ -65,18 +85,22 @@ export default function AddPurchase() {
     },
   });
 
-  const addProduct = (product: any) => {
-    const existingItem = items.find(item => item.productId === product.id);
+  const addVariant = (variant: any, product: any) => {
+    const existingItem = items.find(item => 
+      item.productId === product.id && item.productVariantId === variant.id
+    );
     
     if (existingItem) {
-      updateQuantity(product.id, existingItem.quantity + 1);
+      updateQuantity(product.id, variant.id, existingItem.quantity + 1);
     } else {
       const newItem: PurchaseItem = {
         productId: product.id,
         productName: product.name,
+        productVariantId: variant.id,
+        variantName: variant.variantName,
         quantity: 1,
-        costPrice: parseFloat(product.price || '0'),
-        total: parseFloat(product.price || '0')
+        costPrice: parseFloat(variant.purchasePrice || '0'),
+        total: parseFloat(variant.purchasePrice || '0')
       };
       setItems([...items, newItem]);
     }
@@ -84,29 +108,31 @@ export default function AddPurchase() {
     setSearchQuery("");
   };
 
-  const updateQuantity = (productId: number, newQuantity: number) => {
+  const updateQuantity = (productId: number, variantId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
-      removeProduct(productId);
+      removeVariant(productId, variantId);
       return;
     }
 
     setItems(items.map(item => 
-      item.productId === productId 
+      item.productId === productId && item.productVariantId === variantId
         ? { ...item, quantity: newQuantity, total: newQuantity * item.costPrice }
         : item
     ));
   };
 
-  const updateCostPrice = (productId: number, newCostPrice: number) => {
+  const updateCostPrice = (productId: number, variantId: number, newCostPrice: number) => {
     setItems(items.map(item => 
-      item.productId === productId 
+      item.productId === productId && item.productVariantId === variantId
         ? { ...item, costPrice: newCostPrice, total: item.quantity * newCostPrice }
         : item
     ));
   };
 
-  const removeProduct = (productId: number) => {
-    setItems(items.filter(item => item.productId !== productId));
+  const removeVariant = (productId: number, variantId: number) => {
+    setItems(items.filter(item => 
+      !(item.productId === productId && item.productVariantId === variantId)
+    ));
   };
 
   const getTotalAmount = () => {
@@ -138,11 +164,87 @@ export default function AddPurchase() {
       supplierId: parseInt(supplierId),
       items: items.map(item => ({
         productId: item.productId,
+        productVariantId: item.productVariantId,
         quantity: item.quantity,
         costPrice: item.costPrice
       })),
       totalAmount: getTotalAmount()
     });
+  };
+
+  // ProductWithVariants component
+  const ProductWithVariants = ({ product, onAddVariant }: any) => {
+    const [variants, setVariants] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [showVariants, setShowVariants] = useState(false);
+
+    const loadVariants = async () => {
+      setIsLoading(true);
+      const productVariants = await fetchProductVariants(product.id);
+      setVariants(productVariants);
+      setIsLoading(false);
+      setShowVariants(true);
+    };
+
+    useEffect(() => {
+      if (showVariants && variants.length === 0) {
+        loadVariants();
+      }
+    }, [showVariants]);
+
+    return (
+      <div className="border-b last:border-b-0">
+        <div 
+          className="p-3 hover:bg-gray-50 cursor-pointer"
+          onClick={() => setShowVariants(!showVariants)}
+        >
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="font-medium">{product.name}</h3>
+              <p className="text-sm text-gray-500">
+                {product.category?.name} • Total Stock: {product.stock}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-400">View Variants</p>
+              <Button variant="outline" size="sm">
+                {showVariants ? 'Hide' : 'Show'} Variants
+              </Button>
+            </div>
+          </div>
+        </div>
+        
+        {showVariants && (
+          <div className="bg-gray-50 border-t">
+            {isLoading ? (
+              <div className="p-3 text-center text-gray-500">Loading variants...</div>
+            ) : variants.length > 0 ? (
+              variants.map((variant: any) => (
+                <div 
+                  key={variant.id}
+                  className="p-3 border-b last:border-b-0 hover:bg-gray-100 cursor-pointer"
+                  onClick={() => onAddVariant(variant, product)}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium text-sm">{variant.variantName}</h4>
+                      <p className="text-xs text-gray-500">
+                        Stock: {variant.stock} • Purchase: ${parseFloat(variant.purchasePrice || '0').toFixed(2)}
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <Plus className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-3 text-center text-gray-500">No variants found</div>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const filteredProducts = typedProducts.filter((product: any) =>
@@ -214,26 +316,11 @@ export default function AddPurchase() {
               {showProductSearch && filteredProducts.length > 0 && (
                 <div className="border rounded-lg max-h-64 overflow-y-auto">
                   {filteredProducts.slice(0, 10).map((product: any) => (
-                    <div 
-                      key={product.id}
-                      className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                      onClick={() => addProduct(product)}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="font-medium">{product.name}</h3>
-                          <p className="text-sm text-gray-500">
-                            {product.category?.name} • Current Stock: {product.stock}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">${parseFloat(product.price || '0').toFixed(2)}</p>
-                          <Button variant="outline" size="sm">
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                    <ProductWithVariants 
+                      key={product.id} 
+                      product={product} 
+                      onAddVariant={addVariant}
+                    />
                   ))}
                 </div>
               )}
@@ -269,22 +356,29 @@ export default function AddPurchase() {
                 </TableHeader>
                 <TableBody>
                   {items.map((item) => (
-                    <TableRow key={item.productId}>
-                      <TableCell className="font-medium">{item.productName}</TableCell>
+                    <TableRow key={`${item.productId}-${item.productVariantId}`}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{item.productName}</div>
+                          <div className="text-sm text-gray-500">
+                            Variant: {item.variantName} • ID: {item.productId}
+                          </div>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.productId, item.productVariantId, item.quantity - 1)}
                           >
                             <Minus className="w-3 h-3" />
                           </Button>
                           <Input
                             type="number"
                             value={item.quantity}
-                            onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 0)}
+                            onChange={(e) => updateQuantity(item.productId, item.productVariantId, parseInt(e.target.value) || 0)}
                             className="w-20 text-center"
                             min="1"
                           />
@@ -292,7 +386,7 @@ export default function AddPurchase() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.productId, item.productVariantId, item.quantity + 1)}
                           >
                             <Plus className="w-3 h-3" />
                           </Button>
@@ -302,7 +396,7 @@ export default function AddPurchase() {
                         <Input
                           type="number"
                           value={item.costPrice}
-                          onChange={(e) => updateCostPrice(item.productId, parseFloat(e.target.value) || 0)}
+                          onChange={(e) => updateCostPrice(item.productId, item.productVariantId, parseFloat(e.target.value) || 0)}
                           className="w-24"
                           step="0.01"
                           min="0"
@@ -316,7 +410,7 @@ export default function AddPurchase() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => removeProduct(item.productId)}
+                          onClick={() => removeVariant(item.productId, item.productVariantId)}
                           className="text-red-600 hover:text-red-700"
                         >
                           Remove
