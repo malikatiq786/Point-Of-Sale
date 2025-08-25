@@ -179,9 +179,8 @@ export class ReturnRepository extends BaseRepository<typeof returns, any, typeof
         updatedAt: new Date(),
       };
 
-      if (updatedBy) {
-        updateData.userId = updatedBy;
-      }
+      // Don't update userId to avoid foreign key constraint issues
+      // The updatedBy information is logged in activity logs instead
 
       return await db.update(returns)
         .set(updateData)
