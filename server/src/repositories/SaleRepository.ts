@@ -1,6 +1,6 @@
 import { BaseRepository, eq, and, gte, lte, sql } from './BaseRepository';
 import { desc, inArray } from 'drizzle-orm';
-import { sales, saleItems, customers, products, productVariants, categories, brands, units, users } from '../../../shared/schema';
+import { sales, saleItems, customers, products, productVariants, categories, brands, units, users, returns, returnItems } from '../../../shared/schema';
 import { db } from './BaseRepository';
 
 export class SaleRepository extends BaseRepository<typeof sales, any, typeof sales.$inferSelect> {
@@ -264,28 +264,25 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       .where(inArray(saleItems.saleId, saleIds));
 
       // Get all return information for these sales
-      let returnItemsQuery = { rows: [] };
-      if (saleIds.length > 0) {
-        const saleIdsPlaceholders = saleIds.map((_, index) => `$${index + 1}`).join(', ');
-        returnItemsQuery = await db.execute(sql`
-          SELECT 
-            r.sale_id,
-            ri.product_variant_id,
-            SUM(ri.quantity) as total_returned
-          FROM returns r
-          JOIN return_items ri ON r.id = ri.return_id
-          WHERE r.sale_id IN (${sql.raw(saleIdsPlaceholders)}) 
-            AND r.status IN ('approved', 'processed')
-          GROUP BY r.sale_id, ri.product_variant_id
-        `, saleIds);
-      }
+      const returnItemsData = await db.select({
+        saleId: returns.saleId,
+        productVariantId: returnItems.productVariantId,
+        totalReturned: sql<number>`SUM(${returnItems.quantity})`.as('total_returned')
+      })
+      .from(returns)
+      .innerJoin(returnItems, eq(returns.id, returnItems.returnId))
+      .where(and(
+        inArray(returns.saleId, saleIds),
+        inArray(returns.status, ['approved', 'processed'])
+      ))
+      .groupBy(returns.saleId, returnItems.productVariantId);
 
       // Convert return data to a nested map for easy lookup: [saleId][variantId] = returnedQuantity
       const returnedQuantities = new Map();
-      returnItemsQuery.rows.forEach((row: any) => {
-        const saleId = row.sale_id;
-        const variantId = row.product_variant_id;
-        const returnedQty = parseFloat(row.total_returned || '0');
+      returnItemsData.forEach((row) => {
+        const saleId = row.saleId;
+        const variantId = row.productVariantId;
+        const returnedQty = parseFloat(row.totalReturned?.toString() || '0');
         
         if (!returnedQuantities.has(saleId)) {
           returnedQuantities.set(saleId, new Map());
