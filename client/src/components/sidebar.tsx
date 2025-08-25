@@ -117,6 +117,7 @@ export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) 
         { name: "Accounts", href: "/accounts", icon: CreditCard, roles: ["Super Admin", "Admin/Owner", "Accountant"] },
         { name: "Transactions", href: "/transactions", icon: Receipt, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
         { name: "Reports", href: "/reports", icon: PieChart, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
+        { name: "Profit & Loss Reports", href: "/reports/profit-loss", icon: TrendingUp, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
       ]
     },
     {

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -284,19 +284,23 @@ export default function ProfitLossReports() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Profit & Loss Reports</h1>
         <div className="flex gap-4 items-center">
-          <DateRangePicker
-            from={filters.startDate ? new Date(filters.startDate) : undefined}
-            to={filters.endDate ? new Date(filters.endDate) : undefined}
-            onSelect={(range) => {
-              if (range?.from && range?.to) {
-                setFilters(prev => ({
-                  ...prev,
-                  startDate: range.from.toISOString().split('T')[0],
-                  endDate: range.to.toISOString().split('T')[0],
-                }));
-              }
-            }}
-          />
+          <div className="flex gap-2">
+            <Input
+              type="date"
+              value={filters.startDate || ''}
+              onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+              className="w-40"
+              data-testid="input-start-date"
+            />
+            <span className="flex items-center text-sm text-muted-foreground">to</span>
+            <Input
+              type="date"
+              value={filters.endDate || ''}
+              onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+              className="w-40"
+              data-testid="input-end-date"
+            />
+          </div>
           <Button variant="outline" size="sm" data-testid="button-refresh">
             Refresh Data
           </Button>
@@ -319,7 +323,7 @@ export default function ProfitLossReports() {
         <TabsContent value="overall" className="space-y-4">
           <ProfitLossCard 
             title="Overall Performance" 
-            data={overallReport?.data} 
+            data={(overallReport as any)?.data} 
             loading={overallLoading}
             icon={BarChart}
           />
@@ -328,7 +332,7 @@ export default function ProfitLossReports() {
         <TabsContent value="products" className="space-y-4">
           <ListReportCard 
             title="Product-wise P&L" 
-            data={productsReport?.data} 
+            data={(productsReport as any)?.data} 
             loading={productsLoading}
             icon={Package}
             nameField="productName"
@@ -338,7 +342,7 @@ export default function ProfitLossReports() {
         <TabsContent value="variants" className="space-y-4">
           <ListReportCard 
             title="Product Variant-wise P&L" 
-            data={variantsReport?.data} 
+            data={(variantsReport as any)?.data} 
             loading={variantsLoading}
             icon={Tag}
             nameField="variantName"
@@ -348,7 +352,7 @@ export default function ProfitLossReports() {
         <TabsContent value="categories" className="space-y-4">
           <ListReportCard 
             title="Category-wise P&L" 
-            data={categoriesReport?.data} 
+            data={(categoriesReport as any)?.data} 
             loading={categoriesLoading}
             icon={Tag}
             nameField="categoryName"
@@ -358,7 +362,7 @@ export default function ProfitLossReports() {
         <TabsContent value="brands" className="space-y-4">
           <ListReportCard 
             title="Brand-wise P&L" 
-            data={brandsReport?.data} 
+            data={(brandsReport as any)?.data} 
             loading={brandsLoading}
             icon={Building}
             nameField="brandName"
@@ -368,7 +372,7 @@ export default function ProfitLossReports() {
         <TabsContent value="daily" className="space-y-4">
           <TimeSeriesCard 
             title="Daily P&L Trend" 
-            data={dailyReport?.data} 
+            data={(dailyReport as any)?.data} 
             loading={dailyLoading}
             icon={Calendar}
           />
@@ -377,7 +381,7 @@ export default function ProfitLossReports() {
         <TabsContent value="monthly" className="space-y-4">
           <TimeSeriesCard 
             title="Monthly P&L Trend" 
-            data={monthlyReport?.data} 
+            data={(monthlyReport as any)?.data} 
             loading={monthlyLoading}
             icon={Calendar}
           />
@@ -386,7 +390,7 @@ export default function ProfitLossReports() {
         <TabsContent value="yearly" className="space-y-4">
           <TimeSeriesCard 
             title="Yearly P&L Trend" 
-            data={yearlyReport?.data} 
+            data={(yearlyReport as any)?.data} 
             loading={yearlyLoading}
             icon={Calendar}
           />
@@ -449,8 +453,8 @@ export default function ProfitLossReports() {
           </Card>
           
           <ListReportCard 
-            title={`Top ${filters.limit} ${filters.type?.charAt(0).toUpperCase() + filters.type?.slice(1)} by ${filters.sortBy?.charAt(0).toUpperCase() + filters.sortBy?.slice(1)}`}
-            data={topPerformersReport?.data} 
+            title={`Top ${filters.limit} ${filters.type?.charAt(0)?.toUpperCase() + (filters.type?.slice(1) || '')} by ${filters.sortBy?.charAt(0)?.toUpperCase() + (filters.sortBy?.slice(1) || '')}`}
+            data={(topPerformersReport as any)?.data} 
             loading={topPerformersLoading}
             icon={TrendingUp}
             nameField={filters.type === 'products' ? 'productName' : 

@@ -37,6 +37,7 @@ import CustomerLedgers from "@/features/customers/pages/customer-ledgers";
 import SupplierLedgers from "@/features/suppliers/pages/supplier-ledgers";
 import KitchenPOS from "@/features/kitchen/pages/kitchen-pos";
 import RestaurantApp from "@/pages/restaurant";
+import ProfitLossReports from "@/features/reports/pages/profit-loss-reports";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -104,6 +105,7 @@ function Router() {
           <Route path="/accounts" component={Accounts} />
           <Route path="/transactions" component={Transactions} />
           <Route path="/reports" component={Reports} />
+          <Route path="/reports/profit-loss" component={ProfitLossReports} />
           <Route path="/employees" component={Employees} />
           <Route path="/attendance" component={Attendance} />
           <Route path="/payroll" component={Payroll} />
