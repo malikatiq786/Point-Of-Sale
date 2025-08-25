@@ -173,7 +173,7 @@ export default function Sales() {
       pdf.text(`Cashier: ${sale.user?.name || 'Unknown'}`, 110, currentY);
       currentY += 6;
       pdf.text(`Status: ${sale.status || 'Unknown'}`, 15, currentY);
-      pdf.text(`Total: ${formatCurrencyValue(parseFloat(sale.totalAmount || '0'))}`, 110, currentY);
+      pdf.text(`Stored Total: ${formatCurrencyValue(parseFloat(sale.totalAmount || '0'))}`, 110, currentY);
       currentY += 10;
 
       // Sale items table
@@ -199,7 +199,23 @@ export default function Sales() {
           tableWidth: 'auto'
         });
 
-        currentY = (pdf as any).lastAutoTable.finalY + 15;
+        // Calculate actual sale total from items
+        const calculatedTotal = saleItems.reduce((sum: number, item: any) => 
+          sum + (parseFloat(item.quantity || '0') * parseFloat(item.price || '0')), 0);
+        
+        currentY = (pdf as any).lastAutoTable.finalY + 5;
+        pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(`Calculated Sale Total: ${formatCurrencyValue(calculatedTotal)}`, 15, currentY);
+        
+        // Show stored total if different
+        const storedTotal = parseFloat(sale.totalAmount || '0');
+        if (Math.abs(calculatedTotal - storedTotal) > 0.01) {
+          pdf.setTextColor(255, 0, 0); // Red color for discrepancy
+          pdf.text(`⚠ Stored Total (may be incorrect): ${formatCurrencyValue(storedTotal)}`, 15, currentY + 6);
+          pdf.setTextColor(0, 0, 0); // Reset to black
+        }
+        currentY += 15;
       } else {
         pdf.text('No items found for this sale', 15, currentY);
         currentY += 10;
@@ -282,7 +298,7 @@ export default function Sales() {
               <div><strong>Customer:</strong> ${sale.customerName || sale.customer?.name || 'Walk-in Customer'}</div>
               <div><strong>Cashier:</strong> ${sale.user?.name || 'Unknown'}</div>
               <div><strong>Status:</strong> ${sale.status || 'Unknown'}</div>
-              <div><strong>Total:</strong> ${formatCurrencyValue(parseFloat(sale.totalAmount || '0'))}</div>
+              <div><strong>Stored Total:</strong> ${formatCurrencyValue(parseFloat(sale.totalAmount || '0'))}</div>
             </div>
           </div>
           
@@ -315,6 +331,14 @@ export default function Sales() {
                 `).join('')}
               </tbody>
             </table>
+            <div style="margin-top: 10px; padding: 5px; background-color: #f0f9ff; border-radius: 3px;">
+              <strong>Calculated Total: ${formatCurrencyValue(saleItems.reduce((sum: number, item: any) => 
+                sum + (parseFloat(item.quantity || '0') * parseFloat(item.price || '0')), 0))}</strong>
+              ${Math.abs(saleItems.reduce((sum: number, item: any) => 
+                sum + (parseFloat(item.quantity || '0') * parseFloat(item.price || '0')), 0) - 
+                parseFloat(sale.totalAmount || '0')) > 0.01 ? 
+                '<br><span style="color: red;">⚠ Discrepancy with stored total!</span>' : ''}
+            </div>
           ` : '<p class="no-items">No items found for this sale</p>'}
         </div>
       `;
