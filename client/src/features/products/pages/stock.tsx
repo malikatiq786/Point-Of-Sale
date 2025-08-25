@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Warehouse, AlertTriangle, Plus, Minus, Edit } from "lucide-react";
+import { Search, Warehouse, AlertTriangle, Plus, Minus, Edit, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function Stock() {
   const { user } = useAuth();
@@ -19,21 +19,58 @@ export default function Stock() {
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [selectedStock, setSelectedStock] = useState<any>(null);
   const [adjustment, setAdjustment] = useState({ type: "increase", quantity: "", reason: "", productName: "" });
+  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [isAddMode, setIsAddMode] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch stock data
-  const { data: stockItems = [], isLoading } = useQuery({
+  const { data: stockItems = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/stock"],
     retry: false,
   });
 
   const filteredStock = stockItems.filter((stock: any) =>
     stock.productName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    stock.warehouseName?.toLowerCase().includes(searchQuery.toLowerCase())
+    stock.variantName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    stock.warehouseName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    stock.categoryName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    stock.brandName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Group stock by product name (since productId is not available in API response)
+  const groupedStock = filteredStock.reduce((groups: any, stock: any) => {
+    const key = stock.productName; // Use just product name as key
+    if (!groups[key]) {
+      groups[key] = {
+        productName: stock.productName,
+        categoryName: stock.categoryName,
+        brandName: stock.brandName,
+        unitName: stock.unitName,
+        unitShortName: stock.unitShortName,
+        variants: [],
+        totalStock: 0
+      };
+    }
+    
+    groups[key].variants.push(stock);
+    groups[key].totalStock += parseFloat(stock.quantity || '0');
+    
+    return groups;
+  }, {});
+
+  const groupedStockArray = Object.values(groupedStock);
+
+  const toggleProductExpand = (productName: string) => {
+    const newExpanded = new Set(expandedProducts);
+    if (newExpanded.has(productName)) {
+      newExpanded.delete(productName);
+    } else {
+      newExpanded.add(productName);
+    }
+    setExpandedProducts(newExpanded);
+  };
 
   const getStockStatus = (quantity: number) => {
     if (quantity <= 0) return { status: 'Out of Stock', color: 'bg-red-100 text-red-800' };
@@ -198,7 +235,7 @@ export default function Stock() {
                 </Card>
               ))}
             </div>
-          ) : filteredStock.length === 0 ? (
+          ) : groupedStockArray.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Warehouse className="w-16 h-16 text-gray-400 mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No stock records found</h3>
@@ -208,81 +245,124 @@ export default function Stock() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredStock.map((stock: any) => {
-                const stockStatus = getStockStatus(parseFloat(stock.quantity || '0'));
+              {groupedStockArray.map((product: any) => {
+                const productKey = product.productName; // Use product name as key
+                const isExpanded = expandedProducts.has(productKey);
+                const stockStatus = getStockStatus(product.totalStock);
                 
                 return (
-                  <Card key={stock.id} className="hover:shadow-md transition-shadow">
+                  <Card key={productKey} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-6">
+                      {/* Main Product Row */}
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-4 mb-3">
                             <h3 className="text-lg font-semibold text-gray-900">
-                              {stock.productName || 'Unknown Product'}
+                              {product.productName}
+                              <span className="text-gray-500 ml-2 text-sm">
+                                ({product.variants.length} variant{product.variants.length !== 1 ? 's' : ''})
+                              </span>
                             </h3>
                             <Badge className={`${stockStatus.color} px-2 py-1 text-xs font-medium`}>
                               {stockStatus.status}
                             </Badge>
-                            {parseFloat(stock.quantity || '0') <= 10 && (
+                            {product.totalStock <= 10 && (
                               <AlertTriangle className="w-5 h-5 text-yellow-500" />
                             )}
                           </div>
                           
                           <div className="space-y-3">
                             <div className="flex items-center flex-wrap gap-2 mb-2">
-                              {stock.categoryName && (
+                              {product.categoryName && (
                                 <Badge variant="secondary" className="text-xs">
-                                  {stock.categoryName}
+                                  {product.categoryName}
                                 </Badge>
                               )}
-                              {stock.brandName && (
+                              {product.brandName && (
                                 <Badge variant="outline" className="text-xs">
-                                  {stock.brandName}
+                                  {product.brandName}
                                 </Badge>
                               )}
-                              {stock.unitName && (
+                              {product.unitName && (
                                 <Badge variant="default" className="text-xs bg-green-100 text-green-800">
-                                  {stock.unitShortName || stock.unitName}
+                                  {product.unitShortName || product.unitName}
                                 </Badge>
                               )}
                             </div>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                              <div className="flex items-center space-x-2">
-                                <Warehouse className="w-4 h-4" />
-                                <span>{stock.warehouseName || 'Main Warehouse'}</span>
-                              </div>
-                              
-                              <div>
-                                <span className="font-medium">Current Stock: </span>
-                                <span className="font-bold text-gray-900">
-                                  {parseFloat(stock.quantity || '0').toFixed(0)} {stock.unitShortName || stock.unitName || 'units'}
-                                </span>
-                              </div>
-                              
-                              <div>
-                                <span className="font-medium">SKU: </span>
-                                <span>{stock.sku || stock.id}</span>
-                              </div>
-                              
-                              <div className="text-xs text-gray-500">
-                                Last Updated: Today
-                              </div>
-                            </div>
                           </div>
                         </div>
                         
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-4">
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-gray-900">
+                              {Math.round(product.totalStock)} 
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {product.unitShortName || product.unitName || 'units'}
+                            </div>
+                          </div>
+                          
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => handleAdjustStock(stock)}
+                            onClick={() => toggleProductExpand(productKey)}
+                            className="flex items-center"
                           >
-                            <Edit className="w-4 h-4 mr-1" />
-                            Adjust
+                            {isExpanded ? <ChevronUp className="w-3 h-3 mr-1" /> : <ChevronDown className="w-3 h-3 mr-1" />}
+                            {isExpanded ? 'Hide' : 'View'} Variants
                           </Button>
                         </div>
                       </div>
+
+                      {/* Expanded Variant Details */}
+                      {isExpanded && (
+                        <div className="mt-4 pt-4 border-t bg-gray-50 rounded-lg p-4">
+                          <h4 className="text-sm font-medium text-gray-700 mb-3">Variant Details</h4>
+                          <div className="space-y-3">
+                            {product.variants.map((variant: any) => (
+                              <div key={`${variant.productVariantId}-${variant.warehouseId}`} 
+                                   className="flex items-center justify-between p-3 bg-white rounded border">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center text-sm font-medium text-gray-600">
+                                    {variant.variantName?.charAt(0) || 'V'}
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-sm text-gray-900">
+                                      {variant.variantName}
+                                    </div>
+                                    <div className="flex items-center text-xs text-gray-500">
+                                      <Warehouse className="w-3 h-3 mr-1" />
+                                      {variant.warehouseName}
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center space-x-3">
+                                  <div className="text-right">
+                                    <div className="font-bold text-gray-900">
+                                      {Math.round(parseFloat(variant.quantity || '0'))}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {variant.unitShortName || variant.unitName || 'units'}
+                                    </div>
+                                  </div>
+                                  
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleAdjustStock(variant)}
+                                    className="text-xs px-2 py-1 flex items-center"
+                                  >
+                                    <Edit className="w-3 h-3 mr-1" />
+                                    Adjust
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
