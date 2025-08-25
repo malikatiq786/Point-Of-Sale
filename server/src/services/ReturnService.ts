@@ -11,11 +11,23 @@ const returnCreateSchema = z.object({
   reason: z.string().min(1, 'Return reason is required'),
   customerId: z.number().optional(),
   customerName: z.string().optional(),
-  totalAmount: z.number().optional(),
+  totalAmount: z.union([z.number(), z.string()]).optional().transform((val) => {
+    if (typeof val === 'string') {
+      const parsed = parseFloat(val);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return val || 0;
+  }),
   items: z.array(z.object({
     productVariantId: z.number().optional(),
     quantity: z.number().positive(),
-    price: z.number().optional(),
+    price: z.union([z.number(), z.string()]).optional().transform((val) => {
+      if (typeof val === 'string') {
+        const parsed = parseFloat(val);
+        return isNaN(parsed) ? 0 : parsed;
+      }
+      return val || 0;
+    }),
     returnType: z.enum(['refund', 'exchange', 'store_credit']).default('refund'),
   })).optional().default([]),
 });
