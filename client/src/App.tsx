@@ -25,6 +25,7 @@ import RestaurantManagement from "@/features/restaurant-management/pages/restaur
 import Categories, { Brands, Units } from "@/features/categories";
 import Purchases from "@/features/purchases";
 import AddPurchase from "@/features/purchases/pages/add-purchase";
+import { PurchaseDetail } from "@/features/purchases/pages/purchase-detail";
 import { Warehouses, StockManagement, StockTransfers, StockAdjustments } from "@/features/inventory";
 import InventoryValuation from "@/features/inventory/pages/inventory-valuation";
 import AddProduct from "@/features/products/pages/add-product";
@@ -95,6 +96,7 @@ function Router() {
           <Route path="/supplier-ledgers" component={SupplierLedgers} />
           <Route path="/purchases" component={Purchases} />
           <Route path="/purchases/add" component={AddPurchase} />
+          <Route path="/purchases/:id" component={PurchaseDetail} />
           <Route path="/sales" component={Sales} />
           <Route path="/returns" component={Returns} />
           <Route path="/expenses" component={Expenses} />

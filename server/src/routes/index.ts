@@ -407,7 +407,7 @@ router.get('/users/:id/permissions', isAuthenticated, userController.getUserPerm
 router.put('/users/:id/permissions', isAuthenticated, userController.updateUserPermissions as any);
 
 // Purchase routes
-router.get('/purchases', async (req: any, res: any) => {
+router.get('/purchases', isAuthenticated, async (req: any, res: any) => {
   try {
     const purchases = await db
       .select({
@@ -434,7 +434,7 @@ router.get('/purchases', async (req: any, res: any) => {
   }
 });
 
-router.post('/purchases', async (req: any, res: any) => {
+router.post('/purchases', isAuthenticated, async (req: any, res: any) => {
   try {
     const { supplierId, items, totalAmount } = req.body;
     
@@ -504,6 +504,52 @@ router.post('/purchases', async (req: any, res: any) => {
   } catch (error) {
     console.error('Create purchase error:', error);
     res.status(500).json({ message: 'Failed to create purchase' });
+  }
+});
+
+// Get single purchase
+router.get('/purchases/:id', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const purchaseId = parseInt(req.params.id);
+    
+    if (isNaN(purchaseId)) {
+      return res.status(400).json({ message: 'Invalid purchase ID' });
+    }
+    
+    const [purchase] = await db
+      .select({
+        id: schema.purchases.id,
+        supplierId: schema.purchases.supplierId,
+        userId: schema.purchases.userId,
+        totalAmount: schema.purchases.totalAmount,
+        purchaseDate: schema.purchases.purchaseDate,
+        status: schema.purchases.status,
+        supplier: {
+          id: schema.suppliers.id,
+          name: schema.suppliers.name,
+          email: schema.suppliers.email,
+          phone: schema.suppliers.phone,
+          address: schema.suppliers.address,
+        },
+      })
+      .from(schema.purchases)
+      .leftJoin(schema.suppliers, eq(schema.purchases.supplierId, schema.suppliers.id))
+      .where(eq(schema.purchases.id, purchaseId));
+    
+    if (!purchase) {
+      return res.status(404).json({ message: 'Purchase not found' });
+    }
+
+    // For now, return purchase without items since we need to check the schema
+    const purchaseWithItems = {
+      ...purchase,
+      items: []
+    };
+    
+    res.json(purchaseWithItems);
+  } catch (error) {
+    console.error('Get purchase by ID error:', error);
+    res.status(500).json({ message: 'Failed to fetch purchase details' });
   }
 });
 

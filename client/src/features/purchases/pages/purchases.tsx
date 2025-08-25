@@ -14,10 +14,17 @@ export default function Purchases() {
   const [dateFilter, setDateFilter] = useState("");
 
   // Fetch purchases
-  const { data: purchases = [], isLoading } = useQuery({
+  const { data: purchases = [], isLoading, error } = useQuery({
     queryKey: ["/api/purchases"],
     retry: false,
+    staleTime: 0, // Always refetch on mount
+    refetchOnWindowFocus: true,
   });
+
+  // Debug logging
+  console.log('Purchases query data:', purchases);
+  console.log('Purchases query loading:', isLoading);
+  console.log('Purchases query error:', error);
 
   const filteredPurchases = purchases.filter((purchase: any) => {
     const matchesSearch = purchase.id?.toString().includes(searchQuery) ||
@@ -141,7 +148,12 @@ export default function Purchases() {
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => window.open(`/purchases/${purchase.id}`, '_self')}
+                          data-testid={`button-view-purchase-${purchase.id}`}
+                        >
                           <Eye className="w-4 h-4" />
                           View Details
                         </Button>
