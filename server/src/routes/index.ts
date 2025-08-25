@@ -800,7 +800,7 @@ router.patch('/purchases/:id/status', isAuthenticated, async (req: any, res: any
       return res.status(404).json({ message: 'Purchase not found' });
     }
     
-    // If purchase is approved, process WAC calculations for all items
+    // If purchase is approved, update variant stocks directly
     if (status === 'approved') {
       try {
         // Get purchase items
@@ -809,31 +809,54 @@ router.patch('/purchases/:id/status', isAuthenticated, async (req: any, res: any
           .from(schema.purchaseItems)
           .where(eq(schema.purchaseItems.purchaseId, purchaseId));
         
-        console.log(`Processing WAC calculations for ${purchaseItems.length} items in purchase ${purchaseId}`);
+        console.log(`Processing stock updates for ${purchaseItems.length} items in purchase ${purchaseId}`);
         
-        // Process each purchase item for WAC calculation
+        // Process each purchase item for stock update
         for (const item of purchaseItems) {
-          const movementData = {
-            productId: item.productId,
-            quantity: parseFloat(item.quantity),
-            unitCost: parseFloat(item.unitPrice),
-            movementType: 'purchase' as const,
-            referenceId: purchaseId.toString(),
-            branchId: undefined, // Use default branch
-            warehouseId: undefined, // Use default warehouse
-            createdBy: req.session?.user?.id || req.user?.claims?.sub || 'system',
-          };
-          
-          console.log(`Processing WAC for product ${item.productId}:`, movementData);
-          
-          // Process inventory movement and calculate WAC
-          await WacCalculationService.processInventoryMovement(movementData);
+          if (item.productVariantId) {
+            const quantity = parseFloat(item.quantity);
+            const warehouseId = 1; // Default warehouse
+            
+            console.log(`Updating variant ${item.productVariantId} stock by +${quantity}`);
+            
+            // Update variant stock directly
+            await db.execute(sql`
+              UPDATE stock 
+              SET quantity = quantity + ${quantity}
+              WHERE product_variant_id = ${item.productVariantId}
+                AND warehouse_id = ${warehouseId}
+            `);
+            
+            // Get product ID from variant and sync product total
+            const [variant] = await db
+              .select({ productId: schema.productVariants.productId })
+              .from(schema.productVariants)
+              .where(eq(schema.productVariants.id, item.productVariantId))
+              .limit(1);
+            
+            if (variant) {
+              // Sync product total stock from variants
+              await db.execute(sql`
+                UPDATE products 
+                SET stock = (
+                  SELECT COALESCE(SUM(CAST(s.quantity AS INTEGER)), 0)
+                  FROM product_variants pv
+                  LEFT JOIN stock s ON pv.id = s.product_variant_id
+                  WHERE pv.product_id = ${variant.productId}
+                ),
+                updated_at = NOW()
+                WHERE id = ${variant.productId}
+              `);
+              
+              console.log(`✓ Updated variant ${item.productVariantId} and synced product ${variant.productId} total stock`);
+            }
+          }
         }
         
-        console.log(`Successfully processed WAC calculations for purchase ${purchaseId}`);
-      } catch (wacError) {
-        console.error(`WAC calculation failed for purchase ${purchaseId}:`, wacError);
-        // Don't fail the approval if WAC calculation fails, just log the error
+        console.log(`Successfully processed stock updates for purchase ${purchaseId}`);
+      } catch (stockError) {
+        console.error(`Stock update failed for purchase ${purchaseId}:`, stockError);
+        // Don't fail the approval if stock update fails, just log the error
       }
     }
     
