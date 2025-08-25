@@ -25,20 +25,12 @@ export default function ViewProduct() {
     retry: false,
   });
 
-  // For now, we'll use mock variant data since the API endpoint doesn't exist yet
-  // TODO: Replace with actual API call when variants endpoint is created
-  const variants = [
-    {
-      id: 1,
-      variantName: "Default",
-      stock: product?.stock || 0,
-      purchasePrice: product?.purchasePrice || "0",
-      salePrice: product?.salePrice || product?.price || "0",
-      wholesalePrice: product?.wholesalePrice || "0",
-      retailPrice: product?.retailPrice || "0"
-    }
-  ];
-  const isLoadingVariants = false;
+  // Fetch product variants
+  const { data: variants = [], isLoading: isLoadingVariants } = useQuery<any[]>({
+    queryKey: [`/api/products/${productId}/variants`],
+    enabled: !!productId,
+    retry: false,
+  });
 
   if (isLoadingProduct) {
     return (

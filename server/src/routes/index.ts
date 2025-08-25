@@ -153,11 +153,15 @@ router.post('/products', isAuthenticated, async (req: any, res: any) => {
     }
     
     for (const variant of variants) {
-      // Create product variant
+      // Create product variant with pricing
       const [createdVariant] = await db.insert(schema.productVariants)
         .values({
           productId: product.id,
-          variantName: variant.variantName || 'Default'
+          variantName: variant.variantName || 'Default',
+          purchasePrice: variant.purchasePrice?.toString() || "0",
+          salePrice: variant.salePrice?.toString() || "0", 
+          wholesalePrice: variant.wholesalePrice?.toString() || "0",
+          retailPrice: variant.retailPrice?.toString() || "0"
         })
         .returning();
         
@@ -206,6 +210,57 @@ router.post('/products', isAuthenticated, async (req: any, res: any) => {
 });
 router.get('/products/low-stock', isAuthenticated, productController.getLowStockProducts as any);
 router.get('/products/:id', isAuthenticated, productController.getProductById as any);
+
+// Get product variants with pricing and stock
+router.get('/products/:id/variants', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const productId = parseInt(req.params.id);
+    
+    if (!productId) {
+      return res.status(400).json({ message: 'Invalid product ID' });
+    }
+
+    // Fetch variants with their total stock (summed from all warehouses)
+    const variantsWithStock = await db
+      .select({
+        id: schema.productVariants.id,
+        variantName: schema.productVariants.variantName,
+        purchasePrice: schema.productVariants.purchasePrice,
+        salePrice: schema.productVariants.salePrice,
+        wholesalePrice: schema.productVariants.wholesalePrice,
+        retailPrice: schema.productVariants.retailPrice,
+        totalStock: sql<number>`COALESCE(SUM(CAST(${schema.stock.quantity} AS INTEGER)), 0)`
+      })
+      .from(schema.productVariants)
+      .leftJoin(schema.stock, eq(schema.productVariants.id, schema.stock.productVariantId))
+      .where(eq(schema.productVariants.productId, productId))
+      .groupBy(
+        schema.productVariants.id,
+        schema.productVariants.variantName,
+        schema.productVariants.purchasePrice,
+        schema.productVariants.salePrice,
+        schema.productVariants.wholesalePrice,
+        schema.productVariants.retailPrice
+      );
+
+    // Map to frontend format
+    const variants = variantsWithStock.map(variant => ({
+      id: variant.id,
+      variantName: variant.variantName || 'Default',
+      stock: variant.totalStock || 0,
+      purchasePrice: variant.purchasePrice || '0',
+      salePrice: variant.salePrice || '0',
+      wholesalePrice: variant.wholesalePrice || '0',
+      retailPrice: variant.retailPrice || '0'
+    }));
+
+    console.log(`Found ${variants.length} variants for product ${productId}:`, variants);
+    res.json(variants);
+  } catch (error) {
+    console.error('Error fetching product variants:', error);
+    res.status(500).json({ message: 'Failed to fetch product variants' });
+  }
+});
 // Categories route disabled - using main routes.ts version for database integration
 // router.get('/categories', isAuthenticated, async (req: any, res: any) => {
 //   try {
