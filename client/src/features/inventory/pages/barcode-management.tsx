@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Printer, FileText, Package, QrCode, Eye, Plus } from "lucide-react";
+import { Search, Printer, FileText, Package, QrCode, Eye, Plus, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { useCurrency } from "@/hooks/useCurrency";
 import { formatBarcodeForDisplay, validateEAN13Barcode } from "@/utils/barcode";
@@ -21,6 +21,7 @@ import JsBarcode from 'jsbarcode';
 export default function BarcodeManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState("all");
@@ -28,16 +29,57 @@ export default function BarcodeManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
+  const [refreshing, setRefreshing] = useState(false);
   const { formatCurrencyValue } = useCurrency();
+
+  // Manual refresh function
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Invalidate all relevant queries to force fresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey[0]?.toString() || '';
+            return key.startsWith('products-barcodes-') || key.startsWith('product-variants');
+          }
+        }),
+        queryClient.refetchQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey[0]?.toString() || '';
+            return key.startsWith('products-barcodes-') || key.startsWith('product-variants');
+          }
+        })
+      ]);
+      toast({
+        title: "Data Refreshed",
+        description: "Product and barcode data has been updated.",
+      });
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      toast({
+        title: "Refresh Failed",
+        description: "Could not refresh data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Fetch products with barcode information
   const { data: productsResponse, isLoading } = useQuery({
-    queryKey: [`products-barcodes-${currentPage}-${itemsPerPage}`],
+    queryKey: [`products-barcodes-${currentPage}-${itemsPerPage}`, new Date().toISOString().split('T')[0]], // Add date to ensure fresh data
     queryFn: async () => {
       const timestamp = new Date().getTime();
       const response = await fetch(`/api/products/${currentPage}/${itemsPerPage}?_t=${timestamp}`, {
         credentials: 'include',
-        cache: 'no-cache'
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
       
       if (!response.ok) {
@@ -49,18 +91,25 @@ export default function BarcodeManagement() {
     retry: false,
     staleTime: 0,
     gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const products = productsResponse?.products || [];
 
   // Fetch product variants data
   const { data: variantsData = [] } = useQuery({
-    queryKey: [`product-variants-barcodes`],
+    queryKey: [`product-variants-barcodes`, new Date().toISOString().split('T')[0]], // Add date to ensure fresh data
     queryFn: async () => {
       const timestamp = new Date().getTime();
       const response = await fetch(`/api/stock?_t=${timestamp}`, {
         credentials: 'include',
-        cache: 'no-cache'
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
       
       if (!response.ok) {
@@ -72,6 +121,8 @@ export default function BarcodeManagement() {
     retry: false,
     staleTime: 0,
     gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   // Transform variants data to include product info and create separate items for each variant
@@ -482,12 +533,24 @@ export default function BarcodeManagement() {
             <p className="text-gray-600">Manage and print product barcodes</p>
           </div>
           
-          <Link href="/products/add">
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Product
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
             </Button>
-          </Link>
+            
+            <Link href="/products/add">
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Product
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 

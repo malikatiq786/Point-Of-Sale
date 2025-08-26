@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, Package, Eye, Filter, X, ChevronLeft, ChevronRight, Settings, Warehouse, Check, FileText, Printer } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, Eye, Filter, X, ChevronLeft, ChevronRight, Settings, Warehouse, Check, FileText, Printer, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { useCurrency } from "@/hooks/useCurrency";
 import jsPDF from 'jspdf';
@@ -39,7 +39,43 @@ export default function Products() {
   const [adjustment, setAdjustment] = useState({ type: "increase", quantity: "", reason: "" });
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const { formatCurrencyValue } = useCurrency();
+
+  // Manual refresh function
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Invalidate all relevant queries to force fresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey[0]?.toString() || '';
+            return key.startsWith('products-') || key.startsWith('products-search-');
+          }
+        }),
+        queryClient.refetchQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey[0]?.toString() || '';
+            return key.startsWith('products-') || key.startsWith('products-search-');
+          }
+        })
+      ]);
+      toast({
+        title: "Data Refreshed",
+        description: "Product data has been updated.",
+      });
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      toast({
+        title: "Refresh Failed",
+        description: "Could not refresh data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
@@ -260,7 +296,9 @@ export default function Products() {
 
   // Fetch products - use search API when searching, pagination when browsing
   const { data: productsResponse, isLoading, error } = useQuery({
-    queryKey: hasActiveFilters ? [`products-search-${searchQuery}-${categoryFilter}-${brandFilter}-${stockFilter}-${priceFilter}`] : [`products-${currentPage}-${itemsPerPage}`],
+    queryKey: hasActiveFilters ? 
+      [`products-search-${searchQuery}-${categoryFilter}-${brandFilter}-${stockFilter}-${priceFilter}`, new Date().toISOString().split('T')[0]] : 
+      [`products-${currentPage}-${itemsPerPage}`, new Date().toISOString().split('T')[0]], // Add date to ensure fresh data
     queryFn: async () => {
       const timestamp = new Date().getTime();
       
@@ -274,7 +312,12 @@ export default function Products() {
         
         const response = await fetch(`/api/products?${searchParams.toString()}`, {
           credentials: 'include',
-          cache: 'no-cache'
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
         });
         
         if (!response.ok) {
@@ -296,7 +339,12 @@ export default function Products() {
         // When browsing without filters, use pagination
         const response = await fetch(`/api/products/${currentPage}/${itemsPerPage}?_t=${timestamp}`, {
           credentials: 'include',
-          cache: 'no-cache'
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
         });
         
         if (!response.ok) {
@@ -309,6 +357,8 @@ export default function Products() {
     retry: false,
     staleTime: 0, // Always consider data stale
     gcTime: 0, // Don't cache the data
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   console.log('Products Query:', {
@@ -602,12 +652,24 @@ export default function Products() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
         </div>
         
-        <Link href="/products/add">
-          <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Product
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
-        </Link>
+          
+          <Link href="/products/add">
+            <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Product
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

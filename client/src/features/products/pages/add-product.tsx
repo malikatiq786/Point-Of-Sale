@@ -77,9 +77,35 @@ export default function AddProduct() {
         title: "Success",
         description: "Product created successfully",
       });
+      // Invalidate all product-related queries
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       queryClient.invalidateQueries({ queryKey: ['pos-products'] }); // Invalidate POS products cache
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      
+      // Invalidate all paginated product queries (products page)
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0]?.toString() || '';
+          return key.startsWith('products-') || key.startsWith('products-search-');
+        }
+      });
+      
+      // Invalidate barcode management queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0]?.toString() || '';
+          return key.startsWith('products-barcodes-');
+        }
+      });
+      
+      // Invalidate stock/variants queries
+      queryClient.invalidateQueries({ queryKey: ['/api/stock'] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0]?.toString() || '';
+          return key.startsWith('product-variants');
+        }
+      });
       setFormData({
         name: "",
         description: "",
