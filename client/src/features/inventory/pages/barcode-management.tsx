@@ -948,7 +948,6 @@ export default function BarcodeManagement() {
                       />
                     </TableHead>
                     <TableHead className="w-12">#</TableHead>
-                    <TableHead className="w-24">Actions</TableHead>
                     <TableHead>Product & Variant</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Brand</TableHead>
@@ -973,18 +972,6 @@ export default function BarcodeManagement() {
                       </TableCell>
                       <TableCell className="font-medium text-gray-500">
                         {index + 1}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => printSingleVariant(variant)}
-                          className="h-8 w-8 p-0"
-                          title="Print single barcode"
-                          data-testid={`button-print-single-${variant.variantId}`}
-                        >
-                          <Printer className="w-3 h-3" />
-                        </Button>
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center space-x-3">
@@ -1053,14 +1040,36 @@ export default function BarcodeManagement() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={getQuantity(variant.variantId)}
-                          onChange={(e) => handleQuantityChange(variant.variantId, parseInt(e.target.value) || 0)}
-                          className="w-20 h-8 text-center"
-                          data-testid={`input-quantity-${variant.variantId}`}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={getQuantity(variant.variantId)}
+                            onChange={(e) => handleQuantityChange(variant.variantId, parseInt(e.target.value) || 0)}
+                            className="w-16 h-8 text-center"
+                            data-testid={`input-quantity-${variant.variantId}`}
+                            placeholder="0"
+                            onFocus={(e) => e.target.select()}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleQuantityChange(variant.variantId, getQuantity(variant.variantId) + 1)}
+                            className="h-8 w-8 p-0"
+                            title="Increase quantity"
+                          >
+                            +
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleQuantityChange(variant.variantId, Math.max(0, getQuantity(variant.variantId) - 1))}
+                            className="h-8 w-8 p-0"
+                            title="Decrease quantity"
+                          >
+                            -
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Button
