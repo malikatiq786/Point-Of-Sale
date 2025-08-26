@@ -699,6 +699,8 @@ router.get('/purchases/:id', isAuthenticated, async (req: any, res: any) => {
         productName: schema.products.name,
         productDescription: schema.products.description,
         productBarcode: schema.products.barcode,
+        // Variant details
+        variantName: schema.productVariants.variantName,
       })
       .from(schema.purchaseItems)
       .leftJoin(schema.productVariants, eq(schema.purchaseItems.productVariantId, schema.productVariants.id))
@@ -714,6 +716,7 @@ router.get('/purchases/:id', isAuthenticated, async (req: any, res: any) => {
         productVariantId: item.productVariantId,
         productId: item.productId,
         productName: item.productName,
+        variantName: item.variantName,
         quantity: parseFloat(item.quantity || '0'),
         costPrice: parseFloat(item.costPrice || '0'),
         unitPrice: parseFloat(item.costPrice || '0'), // Frontend expects unitPrice

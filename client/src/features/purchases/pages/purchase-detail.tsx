@@ -30,7 +30,7 @@ export function PurchaseDetail() {
   // Status update mutation
   const statusUpdateMutation = useMutation({
     mutationFn: ({ purchaseId, status }: { purchaseId: number; status: string }) =>
-      apiRequest('PATCH', `/api/purchases/${purchaseId}/status`, { status }),
+      apiRequest(`/api/purchases/${purchaseId}/status`, { method: 'PATCH', body: JSON.stringify({ status }), headers: { 'Content-Type': 'application/json' } }),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -211,6 +211,9 @@ export function PurchaseDetail() {
                         <TableCell>
                           <div>
                             <p className="font-medium">{item.productName}</p>
+                            {item.variantName && (
+                              <p className="text-sm text-blue-600 font-medium">Variant: {item.variantName}</p>
+                            )}
                             {item.productId && (
                               <p className="text-sm text-gray-500">ID: {item.productId}</p>
                             )}
