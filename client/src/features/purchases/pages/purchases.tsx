@@ -25,15 +25,12 @@ export default function Purchases() {
     refetchOnWindowFocus: true,
   });
 
-  // Debug logging
-  console.log('Purchases query data:', purchases);
-  console.log('Purchases query loading:', isLoading);
-  console.log('Purchases query error:', error);
+
 
   // Status update mutation
   const statusUpdateMutation = useMutation({
     mutationFn: ({ purchaseId, status }: { purchaseId: number; status: string }) =>
-      apiRequest('PATCH', `/api/purchases/${purchaseId}/status`, { status }),
+      apiRequest(`/api/purchases/${purchaseId}/status`, { method: 'PATCH', body: JSON.stringify({ status }), headers: { 'Content-Type': 'application/json' } }),
     onSuccess: () => {
       toast({
         title: "Success",
