@@ -33,14 +33,25 @@ export default function AddPurchase() {
   const [showProductSearch, setShowProductSearch] = useState(false);
   // Fetch variants for a specific product
   const fetchProductVariants = async (productId: number) => {
+    console.log('fetchProductVariants called for productId:', productId);
+    
     if (productVariantsMap[productId]) {
+      console.log('Using cached variants for product:', productId, productVariantsMap[productId]);
       return productVariantsMap[productId];
     }
     
     try {
+      console.log('Fetching variants from API for product:', productId);
       const response = await apiRequest('GET', `/api/products/${productId}/variants`);
-      const data = await response.json(); // Extract JSON data from Response object
+      console.log('API response received:', response);
+      console.log('Response status:', response.status, response.statusText);
+      
+      const data = await response.json(); 
+      console.log('JSON data parsed:', data);
+      
       const variants = Array.isArray(data) ? data : [];
+      console.log('Processed variants:', variants);
+      
       setProductVariantsMap(prev => ({ ...prev, [productId]: variants }));
       return variants;
     } catch (error) {
@@ -183,11 +194,18 @@ export default function AddPurchase() {
     const loadVariants = async () => {
       setIsLoading(true);
       console.log('Loading variants for product:', product.id);
-      const productVariants = await fetchProductVariants(product.id);
-      console.log('Received variants:', productVariants);
-      const variantsArray = Array.isArray(productVariants) ? productVariants : [];
-      console.log('Setting variants array:', variantsArray);
-      setVariants(variantsArray);
+      try {
+        const productVariants = await fetchProductVariants(product.id);
+        console.log('Received variants:', productVariants);
+        console.log('Variants type:', typeof productVariants);
+        console.log('Variants length:', productVariants?.length);
+        const variantsArray = Array.isArray(productVariants) ? productVariants : [];
+        console.log('Setting variants array:', variantsArray);
+        setVariants(variantsArray);
+      } catch (error) {
+        console.error('Error in loadVariants:', error);
+        setVariants([]);
+      }
       setIsLoading(false);
     };
 
