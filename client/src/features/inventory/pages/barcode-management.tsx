@@ -216,7 +216,7 @@ export default function BarcodeManagement() {
   };
 
   const getQuantity = (variantId: number) => {
-    return quantities[variantId] || 1; // Default to 1 if not set
+    return quantities[variantId] || 0; // Default to 0 if not set
   };
 
   // Generate barcode images
@@ -524,6 +524,146 @@ export default function BarcodeManagement() {
     });
   };
 
+  // Print single variant function
+  const printSingleVariant = async (variant: any) => {
+    const expandedProductData = [{
+      ...variant,
+      copyNumber: 1
+    }];
+
+    let productsHTML = '';
+    
+    // Generate barcode label
+    productsHTML += '<div class="barcode-row">';
+    
+    const barcodeImage = await generateBarcodeImage(variant.barcode || 'NO_BARCODE', 'CODE128');
+    
+    productsHTML += `
+      <div class="barcode-label">
+        <div class="label-header">
+          <h4>${variant.displayName}</h4>
+        </div>
+        <div class="barcode-visual">
+          ${barcodeImage ? `<img src="${barcodeImage}" alt="Barcode" class="barcode-img" />` : '<div>No barcode available</div>'}
+        </div>
+        <div class="barcode-number">${formatBarcodeForDisplay(variant.barcode || 'NO_BARCODE')}</div>
+        <div class="product-info">
+          <div class="price">${formatCurrencyValue(parseFloat(variant.price || '0'))}</div>
+          <div class="category">${variant.category?.name || 'N/A'}</div>
+        </div>
+      </div>
+    `;
+    
+    productsHTML += '</div>';
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Single Product Barcode Label</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 0; 
+              padding: 20px; 
+              font-size: 10px; 
+              background: white;
+            }
+            h1 { 
+              text-align: center; 
+              color: #333; 
+              margin-bottom: 30px; 
+              font-size: 18px;
+            }
+            .barcode-row { 
+              display: flex; 
+              justify-content: center;
+              margin-bottom: 20px; 
+              gap: 10px;
+            }
+            .barcode-label { 
+              width: 300px;
+              border: 2px solid #333; 
+              padding: 20px; 
+              text-align: center; 
+              background: white;
+              min-height: 200px;
+              page-break-inside: avoid;
+            }
+            .label-header h4 { 
+              margin: 0 0 15px 0; 
+              font-size: 14px; 
+              font-weight: bold; 
+              color: #333;
+              text-transform: uppercase;
+            }
+            .barcode-visual { 
+              margin: 15px 0; 
+              min-height: 70px;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            }
+            .barcode-img { 
+              max-width: 100%; 
+              height: auto;
+            }
+            .barcode-number { 
+              font-size: 12px; 
+              font-weight: bold; 
+              font-family: 'Courier New', monospace; 
+              letter-spacing: 1px; 
+              margin: 15px 0;
+              color: #000;
+            }
+            .product-info { 
+              margin: 15px 0; 
+              font-size: 10px;
+            }
+            .price { 
+              font-weight: bold; 
+              color: #22c55e; 
+              font-size: 14px;
+              margin-bottom: 8px;
+            }
+            .category { 
+              color: #666; 
+              margin-top: 5px;
+            }
+            @media print { 
+              body { margin: 0; padding: 10px; } 
+              .barcode-label { page-break-inside: avoid; }
+              @page { margin: 0.5in; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Product Barcode Label</h1>
+          ${productsHTML}
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Wait a bit for images to load before printing
+      setTimeout(() => {
+        printWindow.print();
+      }, 1000);
+    }
+
+    toast({
+      title: "Print Dialog Opened",
+      description: `Barcode label prepared for ${variant.displayName}.`,
+    });
+  };
+
   return (
     <AppLayout>
       <div className="mb-6">
@@ -650,6 +790,7 @@ export default function BarcodeManagement() {
                       />
                     </TableHead>
                     <TableHead className="w-12">#</TableHead>
+                    <TableHead className="w-24">Actions</TableHead>
                     <TableHead>Product & Variant</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Brand</TableHead>
@@ -673,6 +814,18 @@ export default function BarcodeManagement() {
                       </TableCell>
                       <TableCell className="font-medium text-gray-500">
                         {index + 1}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => printSingleVariant(variant)}
+                          className="h-8 w-8 p-0"
+                          title="Print single barcode"
+                          data-testid={`button-print-single-${variant.variantId}`}
+                        >
+                          <Printer className="w-3 h-3" />
+                        </Button>
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center space-x-3">
