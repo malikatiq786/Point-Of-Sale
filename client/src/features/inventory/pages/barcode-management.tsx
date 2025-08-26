@@ -1040,7 +1040,16 @@ export default function BarcodeManagement() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleQuantityChange(variant.variantId, Math.max(0, getQuantity(variant.variantId) - 1))}
+                            className="h-8 w-8 p-0"
+                            title="Decrease quantity"
+                          >
+                            -
+                          </Button>
                           <Input
                             type="number"
                             min="0"
@@ -1059,15 +1068,6 @@ export default function BarcodeManagement() {
                             title="Increase quantity"
                           >
                             +
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleQuantityChange(variant.variantId, Math.max(0, getQuantity(variant.variantId) - 1))}
-                            className="h-8 w-8 p-0"
-                            title="Decrease quantity"
-                          >
-                            -
                           </Button>
                         </div>
                       </TableCell>
