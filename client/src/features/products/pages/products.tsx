@@ -80,7 +80,7 @@ export default function Products() {
   // Delete product mutation
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: number) => {
-      const response = await apiRequest('DELETE', `/api/products/${productId}`);
+      const response = await apiRequest(`/api/products/${productId}`, { method: 'DELETE' });
       return response;
     },
     onSuccess: () => {
@@ -110,7 +110,7 @@ export default function Products() {
   // Bulk delete product mutation
   const bulkDeleteProductMutation = useMutation({
     mutationFn: async (productIds: number[]) => {
-      const response = await apiRequest('DELETE', '/api/products/bulk', { productIds });
+      const response = await apiRequest('/api/products/bulk', { method: 'DELETE', body: JSON.stringify({ productIds }), headers: { 'Content-Type': 'application/json' } });
       return response.json();
     },
     onSuccess: (data: any) => {

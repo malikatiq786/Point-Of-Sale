@@ -71,7 +71,7 @@ export default function AddProduct() {
 
   // Create product mutation
   const createProductMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/products', data),
+    mutationFn: (data: any) => apiRequest('/api/products', { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -244,7 +244,7 @@ export default function AddProduct() {
   };
 
   const selectAllWarehouses = () => {
-    setSelectedWarehouses(warehouses.map((w: any) => w.id.toString()));
+    setSelectedWarehouses((warehouses as any[]).map((w: any) => w.id.toString()));
   };
 
   const deselectAllWarehouses = () => {

@@ -309,7 +309,7 @@ export default function BarcodeManagement() {
           
           // Generate and add barcode image
           try {
-            const barcodeImage = await generateBarcodeImage(variant.barcode || '', 'CODE128');
+            const barcodeImage = await generateBarcodeImage(variant.barcode || 'NO_BARCODE', 'CODE128');
             if (barcodeImage) {
               pdf.addImage(barcodeImage, 'PNG', x + 10, y + 18, labelWidth - 20, 25);
             }
@@ -320,7 +320,7 @@ export default function BarcodeManagement() {
           // Barcode number
           pdf.setFontSize(8);
           pdf.setFont(undefined, 'normal');
-          pdf.text(formatBarcodeForDisplay(variant.barcode || ''), x + labelWidth/2, y + 50, { align: 'center' });
+          pdf.text(formatBarcodeForDisplay(variant.barcode || 'NO_BARCODE'), x + labelWidth/2, y + 50, { align: 'center' });
           
           // Price and category
           pdf.setFontSize(7);
@@ -382,7 +382,7 @@ export default function BarcodeManagement() {
         const canvas = document.createElement('canvas');
         let barcodeImageData = '';
         try {
-          JsBarcode(canvas, variant.barcode || '', {
+          JsBarcode(canvas, variant.barcode || 'NO_BARCODE', {
             format: 'CODE128',
             width: 2,
             height: 60,
