@@ -33,7 +33,7 @@ The application employs a modern full-stack architecture with distinct frontend,
     - **Business Setup**: Modules for Business Profile, Branches, and Registers, including mandatory register opening balance validation for POS terminals.
     - **Stock Management**: Capabilities for Stock Transfers and Stock Adjustments.
     - **Units Management**: Complete CRUD operations for product units with full field support (name, shortName, type, description) and database persistence.
-    - **Barcode Management**: QR code-free barcode system with variant-based barcode generation, quantity-based label printing, and real-time data synchronization between products and barcode management pages.
+    - **Barcode Management**: QR code-free barcode system with variant-based barcode generation, quantity-based label printing with individual action buttons, default zero quantities, and real-time data synchronization between products and barcode management pages.
 
 ### System Design Choices
 - **Data Flow**: Authentication flows are handled via Replit OIDC, leading to session creation in PostgreSQL. Sales transactions involve product selection, cart management, payment processing, and automatic inventory updates. Data synchronization uses React Query for real-time updates and optimistic UI.

@@ -664,6 +664,164 @@ export default function BarcodeManagement() {
     });
   };
 
+  // Print variant with specified quantity
+  const printVariantWithQuantity = async (variant: any) => {
+    const quantity = getQuantity(variant.variantId);
+    
+    if (quantity === 0) {
+      toast({
+        title: "No labels to print",
+        description: "Please enter a quantity greater than 0 in the Labels column.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create multiple copies based on quantity
+    const expandedProductData: any[] = [];
+    for (let i = 0; i < quantity; i++) {
+      expandedProductData.push({
+        ...variant,
+        copyNumber: i + 1
+      });
+    }
+
+    let productsHTML = '';
+    
+    // Generate barcode labels in grid format (3 columns)
+    for (let i = 0; i < expandedProductData.length; i += 3) {
+      productsHTML += '<div class="barcode-row">';
+      
+      for (let j = i; j < Math.min(i + 3, expandedProductData.length); j++) {
+        const currentVariant = expandedProductData[j];
+        const barcodeImage = await generateBarcodeImage(currentVariant.barcode || 'NO_BARCODE', 'CODE128');
+        
+        productsHTML += `
+          <div class="barcode-label">
+            <div class="label-header">
+              <h4>${currentVariant.displayName}</h4>
+            </div>
+            <div class="barcode-visual">
+              ${barcodeImage ? `<img src="${barcodeImage}" alt="Barcode" class="barcode-img" />` : '<div>No barcode available</div>'}
+            </div>
+            <div class="barcode-number">${formatBarcodeForDisplay(currentVariant.barcode || 'NO_BARCODE')}</div>
+            <div class="product-info">
+              <div class="price">${formatCurrencyValue(parseFloat(currentVariant.price || '0'))}</div>
+              <div class="category">${currentVariant.category?.name || 'N/A'}</div>
+            </div>
+          </div>
+        `;
+      }
+      
+      productsHTML += '</div>';
+    }
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Product Barcode Labels (${quantity})</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 0; 
+              padding: 20px; 
+              font-size: 10px; 
+              background: white;
+            }
+            h1 { 
+              text-align: center; 
+              color: #333; 
+              margin-bottom: 30px; 
+              font-size: 18px;
+            }
+            .barcode-row { 
+              display: flex; 
+              margin-bottom: 20px; 
+              gap: 10px;
+            }
+            .barcode-label { 
+              flex: 1; 
+              border: 2px solid #333; 
+              padding: 10px; 
+              text-align: center; 
+              background: white;
+              min-height: 200px;
+              page-break-inside: avoid;
+            }
+            .label-header h4 { 
+              margin: 0 0 8px 0; 
+              font-size: 12px; 
+              font-weight: bold; 
+              color: #333;
+              text-transform: uppercase;
+            }
+            .barcode-visual { 
+              margin: 10px 0; 
+              min-height: 70px;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            }
+            .barcode-img { 
+              max-width: 100%; 
+              height: auto;
+            }
+            .barcode-number { 
+              font-size: 11px; 
+              font-weight: bold; 
+              font-family: 'Courier New', monospace; 
+              letter-spacing: 1px; 
+              margin: 8px 0;
+              color: #000;
+            }
+            .product-info { 
+              margin: 8px 0; 
+              font-size: 9px;
+            }
+            .price { 
+              font-weight: bold; 
+              color: #22c55e; 
+              font-size: 11px;
+            }
+            .category { 
+              color: #666; 
+              margin-top: 2px;
+            }
+            @media print { 
+              body { margin: 0; padding: 10px; } 
+              .barcode-label { page-break-inside: avoid; }
+              @page { margin: 0.5in; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Product Barcode Labels (${quantity} copies)</h1>
+          ${productsHTML}
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Wait a bit for images to load before printing
+      setTimeout(() => {
+        printWindow.print();
+      }, 1000);
+    }
+
+    toast({
+      title: "Print Dialog Opened",
+      description: `${quantity} barcode label(s) prepared for ${variant.displayName}.`,
+    });
+  };
+
   return (
     <AppLayout>
       <div className="mb-6">
@@ -799,6 +957,7 @@ export default function BarcodeManagement() {
                     <TableHead>Price</TableHead>
                     <TableHead>Quantity</TableHead>
                     <TableHead>Labels</TableHead>
+                    <TableHead>Print</TableHead>
                     <TableHead>Warehouse</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -902,6 +1061,20 @@ export default function BarcodeManagement() {
                           className="w-20 h-8 text-center"
                           data-testid={`input-quantity-${variant.variantId}`}
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => printVariantWithQuantity(variant)}
+                          className="h-8 px-3"
+                          title={`Print ${getQuantity(variant.variantId)} label(s)`}
+                          disabled={getQuantity(variant.variantId) === 0}
+                          data-testid={`button-print-quantity-${variant.variantId}`}
+                        >
+                          <Printer className="w-3 h-3 mr-1" />
+                          Print
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-gray-600">
