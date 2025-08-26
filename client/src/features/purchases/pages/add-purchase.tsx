@@ -69,7 +69,7 @@ export default function AddPurchase() {
   const typedSuppliers = (suppliers as any[]);
 
   const createPurchaseMutation = useMutation({
-    mutationFn: (purchaseData: any) => apiRequest("POST", "/api/purchases", purchaseData),
+    mutationFn: (purchaseData: any) => apiRequest("/api/purchases", { method: "POST", body: JSON.stringify(purchaseData), headers: { "Content-Type": "application/json" } }),
     onSuccess: () => {
       toast({
         title: "Success",
