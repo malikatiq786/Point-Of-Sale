@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import passport from 'passport';
 import { hashPassword } from './customAuth';
 import { db } from './db';
-import { users } from '@shared/schema';
+import { users, roles } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -106,6 +106,7 @@ router.post('/api/auth/login', (req: Request, res: Response, next) => {
             name: user.name,
             firstName: user.firstName,
             lastName: user.lastName,
+            role: user.role || 'user',
           }
         });
       });
@@ -138,11 +139,38 @@ router.post('/api/auth/logout', (req: Request, res: Response) => {
 });
 
 // Get current user
-router.get('/api/auth/user', (req: Request, res: Response) => {
+router.get('/api/auth/user', async (req: Request, res: Response) => {
   if (req.isAuthenticated && req.isAuthenticated()) {
-    res.json({
-      user: req.user
-    });
+    try {
+      // Get user with role information
+      const userId = (req.user as any).id;
+      const userWithRole = await db.select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        roleName: roles.name,
+      }).from(users)
+        .leftJoin(roles, eq(users.roleId, roles.id))
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (userWithRole[0]) {
+        res.json({
+          user: {
+            ...userWithRole[0],
+            role: userWithRole[0].roleName || 'user',
+          }
+        });
+      } else {
+        res.status(401).json({ message: 'User not found' });
+      }
+    } catch (error) {
+      console.error('Error fetching user with role:', error);
+      res.status(500).json({ message: 'Error fetching user information' });
+    }
   } else {
     res.status(401).json({ message: 'Not authenticated' });
   }

@@ -6,7 +6,7 @@ import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { pool } from "./db";
-import { users } from "@shared/schema";
+import { users, roles } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 
@@ -48,8 +48,21 @@ passport.use(new LocalStrategy({
   passwordField: 'password'
 }, async (email: string, password: string, done) => {
   try {
-    // Find user by email
-    const userResults = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    // Find user by email with role information
+    const userResults = await db.select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      profileImageUrl: users.profileImageUrl,
+      password: users.password,
+      roleName: roles.name,
+    }).from(users)
+      .leftJoin(roles, eq(users.roleId, roles.id))
+      .where(eq(users.email, email))
+      .limit(1);
+    
     const user = userResults[0];
 
     if (!user) {
@@ -73,6 +86,7 @@ passport.use(new LocalStrategy({
       firstName: user.firstName,
       lastName: user.lastName,
       profileImageUrl: user.profileImageUrl,
+      role: user.roleName || 'user',
     });
   } catch (error) {
     return done(error);
