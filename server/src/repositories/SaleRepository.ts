@@ -59,15 +59,13 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
         customerPhone: sales.customerPhone,
         paymentMethod: sales.paymentMethod,
         customerId: sales.customerId,
-        customer: {
-          id: customers.id,
-          name: customers.name,
-          phone: customers.phone,
-        },
-        user: {
-          id: users.id,
-          name: users.name,
-        }
+        // Customer info
+        customerId_joined: customers.id,
+        customerName_joined: customers.name,
+        customerPhone_joined: customers.phone,
+        // User info
+        userId: users.id,
+        userName: users.name,
       })
       .from(sales)
       .leftJoin(customers, eq(sales.customerId, customers.id))
@@ -76,13 +74,36 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       .limit(limit)
       .offset(offset);
 
-      // Get items for each sale
+      // Get items for each sale and format the response
       const salesWithItems = await Promise.all(
         salesData.map(async (sale) => {
           try {
             const items = await this.getSaleItems(sale.id);
+            
+            // Format customer and user objects properly
+            const customer = sale.customerId_joined ? {
+              id: sale.customerId_joined,
+              name: sale.customerName_joined,
+              phone: sale.customerPhone_joined,
+            } : null;
+            
+            const user = sale.userId ? {
+              id: sale.userId,
+              name: sale.userName,
+            } : null;
+            
             return {
-              ...sale,
+              id: sale.id,
+              totalAmount: sale.totalAmount,
+              paidAmount: sale.paidAmount,
+              status: sale.status,
+              saleDate: sale.saleDate,
+              customerName: sale.customerName,
+              customerPhone: sale.customerPhone,
+              paymentMethod: sale.paymentMethod,
+              customerId: sale.customerId,
+              customer,
+              user,
               items: items.map((item: any) => ({
                 id: item.id,
                 productId: item.product?.id,
@@ -100,7 +121,17 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
           } catch (error) {
             console.error(`Error getting items for sale ${sale.id}:`, error);
             return {
-              ...sale,
+              id: sale.id,
+              totalAmount: sale.totalAmount,
+              paidAmount: sale.paidAmount,
+              status: sale.status,
+              saleDate: sale.saleDate,
+              customerName: sale.customerName,
+              customerPhone: sale.customerPhone,
+              paymentMethod: sale.paymentMethod,
+              customerId: sale.customerId,
+              customer: null,
+              user: null,
               items: []
             };
           }

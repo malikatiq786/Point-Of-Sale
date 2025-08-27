@@ -1609,94 +1609,74 @@ export default function POSTerminal() {
         <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-3xl shadow-2xl border border-slate-200/50 p-8 mb-6 backdrop-blur-sm">
           {/* Simplified Header - Only Action Buttons */}
 
-          {/* Main Header Info - Total, Customer, Mode */}
-          <div className="flex items-center justify-center space-x-6 mb-6">
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
-              <span className="text-sm font-semibold text-slate-600">
-                Total: <span className="text-blue-700 font-bold">{formatCurrencyValue(getGrandTotal())}</span>
-              </span>
-            </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
-              <span className="text-sm font-semibold text-slate-600">
-                Customer: <span className="text-indigo-700 font-bold">
-                  {selectedCustomerId ? customers?.find(c => c.id === selectedCustomerId)?.name : 'Walk-in'}
-                </span>
-              </span>
-            </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
-              <span className="text-sm font-semibold text-slate-600">
-                Mode: <span className="text-purple-700 font-bold">{posLayout === 'grid' ? 'Grid View' : 'Search View'}</span>
-              </span>
-            </div>
-            
-            {/* Right: Layout Controls & Actions */}
+          {/* Header with Register Info, Staff, and Action Buttons */}
+          <div className="flex items-center justify-between mb-6">
+            {/* Left: Register and Staff Info */}
             <div className="flex items-center space-x-4">
-              {/* Layout Switcher */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 border border-white/40 shadow-lg">
-                <div className="flex bg-slate-100/50 rounded-xl p-1">
-                  <Button
-                    variant={posLayout === 'grid' ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setPosLayout('grid')}
-                    className={`px-5 py-3 text-sm font-bold rounded-xl transition-all duration-300 ${
-                      posLayout === 'grid' 
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:from-blue-700 hover:to-indigo-700 transform scale-105' 
-                        : 'text-slate-700 hover:text-slate-900 hover:bg-white/70'
-                    }`}
-                  >
-                    <Package className="w-5 h-5 mr-2" />
-                    Grid View
-                  </Button>
-                  <Button
-                    variant={posLayout === 'search' ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setPosLayout('search')}
-                    className={`px-5 py-3 text-sm font-bold rounded-xl transition-all duration-300 ${
-                      posLayout === 'search' 
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:from-blue-700 hover:to-indigo-700 transform scale-105' 
-                        : 'text-slate-700 hover:text-slate-900 hover:bg-white/70'
-                    }`}
-                  >
-                    <Search className="w-5 h-5 mr-2" />
-                    Search View
-                  </Button>
-                </div>
+              <div className="bg-green-100 backdrop-blur-sm rounded-xl px-4 py-2 border border-green-200">
+                <span className="text-sm font-semibold text-green-800">
+                  Main Register - {formatCurrencyValue(selectedRegister?.openingBalance || 0)}
+                </span>
               </div>
-              
-              {/* Clear Cart */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 border border-white/40 shadow-lg">
-                <Button 
-                  variant="outline" 
-                  onClick={clearCart}
-                  className="text-red-600 border-red-300 hover:bg-red-50 bg-white/90 rounded-xl px-5 py-3 font-bold shadow-sm hover:shadow-md transition-all duration-200"
+              <Button 
+                variant="outline" 
+                onClick={closeRegister}
+                className="text-red-600 border-red-300 hover:bg-red-50 bg-white rounded-xl px-4 py-2 font-medium"
+              >
+                Close Register
+              </Button>
+              <div className="bg-blue-100 backdrop-blur-sm rounded-xl px-4 py-2 border border-blue-200">
+                <span className="text-sm font-semibold text-blue-800">
+                  {(user as any)?.name || 'System User'} • Staff
+                </span>
+              </div>
+            </div>
+
+            {/* Center: Layout Controls */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 border border-white/40 shadow-lg">
+              <div className="flex bg-slate-100/50 rounded-xl p-1">
+                <Button
+                  variant={posLayout === 'grid' ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setPosLayout('grid')}
+                  className={`px-5 py-3 text-sm font-bold rounded-xl transition-all duration-300 ${
+                    posLayout === 'grid' 
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:from-blue-700 hover:to-indigo-700 transform scale-105' 
+                      : 'text-slate-700 hover:text-slate-900 hover:bg-white/70'
+                  }`}
                 >
-                  <X className="w-5 h-5 mr-2" />
-                  Clear All
+                  <Package className="w-5 h-5 mr-2" />
+                  Grid View
+                </Button>
+                <Button
+                  variant={posLayout === 'search' ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setPosLayout('search')}
+                  className={`px-5 py-3 text-sm font-bold rounded-xl transition-all duration-300 ${
+                    posLayout === 'search' 
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:from-blue-700 hover:to-indigo-700 transform scale-105' 
+                      : 'text-slate-700 hover:text-slate-900 hover:bg-white/70'
+                  }`}
+                >
+                  <Search className="w-5 h-5 mr-2" />
+                  Search View
                 </Button>
               </div>
             </div>
+
+            {/* Right: Clear All */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 border border-white/40 shadow-lg">
+              <Button 
+                variant="outline" 
+                onClick={clearCart}
+                className="text-red-600 border-red-300 hover:bg-red-50 bg-white/90 rounded-xl px-5 py-3 font-bold shadow-sm hover:shadow-md transition-all duration-200"
+              >
+                <X className="w-5 h-5 mr-2" />
+                Clear All
+              </Button>
+            </div>
           </div>
 
-          {/* Bottom Row - Quick Stats */}
-          <div className="flex items-center justify-center space-x-6">
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
-              <span className="text-sm font-semibold text-slate-600">
-                Total: <span className="text-blue-700 font-bold">{formatCurrencyValue(getGrandTotal())}</span>
-              </span>
-            </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
-              <span className="text-sm font-semibold text-slate-600">
-                Customer: <span className="text-indigo-700 font-bold">
-                  {selectedCustomerId ? customers?.find(c => c.id === selectedCustomerId)?.name : 'Walk-in'}
-                </span>
-              </span>
-            </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
-              <span className="text-sm font-semibold text-slate-600">
-                Mode: <span className="text-purple-700 font-bold">{posLayout === 'grid' ? 'Grid View' : 'Search View'}</span>
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* Traditional POS Layout - Full Width */}
@@ -2309,8 +2289,10 @@ export default function POSTerminal() {
                                   <circle cx="70" cy="60" r="2" fill="white" opacity="0.7"/>
                                 </svg>
                                 <div className="text-center">
-                                  <h3 className="text-2xl font-bold text-gray-700">Universal POS</h3>
-                                  <p className="text-sm text-gray-500">Professional Point of Sale System</p>
+                                  <div className="flex items-center justify-center space-x-2">
+                                    <QrCode className="w-6 h-6 text-gray-600" />
+                                    <span className="text-lg font-medium text-gray-700">Scan to add items</span>
+                                  </div>
                                 </div>
                               </div>
                               <div className="text-gray-500 text-sm">
