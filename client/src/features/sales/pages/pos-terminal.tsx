@@ -137,6 +137,7 @@ export default function POSTerminal() {
   const [editingQuantityItem, setEditingQuantityItem] = useState<number | null>(null);
   const [editPrice, setEditPrice] = useState<string>("");
   const [editQuantity, setEditQuantity] = useState<string>("");
+  const [isTabPressed, setIsTabPressed] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState<number | null>(null);
   const [editDiscountValue, setEditDiscountValue] = useState<string>("");
   const [editingGlobalDiscount, setEditingGlobalDiscount] = useState<boolean>(false);
@@ -2086,14 +2087,18 @@ export default function POSTerminal() {
                                 setEditQuantity(item.quantity.toString());
                               }}
                               onBlur={() => {
-                                const newQty = parseInt(editQuantity) || 1;
-                                setAbsoluteQuantity(item.id, newQty);
-                                setEditingQuantityItem(null);
-                                setEditQuantity('');
+                                if (!isTabPressed) {
+                                  const newQty = parseInt(editQuantity) || 1;
+                                  setAbsoluteQuantity(item.id, newQty);
+                                  setEditingQuantityItem(null);
+                                  setEditQuantity('');
+                                }
+                                setIsTabPressed(false);
                               }}
                               onKeyDown={(e) => {
                                 if (e.key === 'Tab') {
                                   e.preventDefault();
+                                  setIsTabPressed(true);
                                   const newQty = parseInt(editQuantity) || 1;
                                   setAbsoluteQuantity(item.id, newQty);
                                   setEditingQuantityItem(null);
@@ -2109,7 +2114,7 @@ export default function POSTerminal() {
                                 } else if (e.key === 'Enter') {
                                   e.preventDefault();
                                   const newQty = parseInt(editQuantity) || 1;
-                                  updateQuantity(item.id, newQty - item.quantity);
+                                  setAbsoluteQuantity(item.id, newQty);
                                   setEditingQuantityItem(null);
                                   setEditQuantity('');
                                 }
