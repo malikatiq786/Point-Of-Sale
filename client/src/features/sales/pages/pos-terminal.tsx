@@ -784,7 +784,11 @@ export default function POSTerminal() {
   // Add customer mutation
   const addCustomerMutation = useMutation({
     mutationFn: async (customerData: any) => {
-      return await apiRequest("POST", "/api/customers", customerData);
+      const response = await apiRequest("/api/customers", {
+        method: "POST",
+        body: JSON.stringify(customerData)
+      });
+      return response.json();
     },
     onSuccess: (data: any) => {
       toast({
