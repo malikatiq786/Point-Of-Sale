@@ -154,6 +154,9 @@ export default function POSTerminal() {
   // Hold invoice state
   const [heldInvoices, setHeldInvoices] = useState<Array<{id: string, cart: CartItem[], customer?: Customer, timestamp: Date}>>([]);
   const [showHoldInvoicesDialog, setShowHoldInvoicesDialog] = useState(false);
+  
+  // All sales dialog state
+  const [showAllSalesDialog, setShowAllSalesDialog] = useState(false);
 
   // Customer search functionality with autocomplete
   const handleCustomerSearchChange = (value: string) => {
@@ -1916,7 +1919,7 @@ export default function POSTerminal() {
                             title: "All Sales",
                             description: `Showing ${sales?.length || 0} total sales`,
                           });
-                          setShowCustomerHistoryDialog(true); // Use existing dialog for now
+                          setShowAllSalesDialog(true); // Show all sales dialog
                         }}
                       >
                         <Receipt className="w-3 h-3 mr-1" />
@@ -2276,9 +2279,13 @@ export default function POSTerminal() {
                                   setEditPrice(e.target.value);
                                 }
                               }}
-                              onFocus={() => {
+                              onFocus={(e) => {
                                 setEditingItem(item.id);
                                 setEditPrice(item.price.toString());
+                                // Set cursor to beginning
+                                setTimeout(() => {
+                                  e.target.setSelectionRange(0, 0);
+                                }, 0);
                               }}
                               onBlur={() => {
                                 const newPrice = parseFloat(editPrice) || item.price;
@@ -2838,6 +2845,13 @@ export default function POSTerminal() {
                                   ref={(el) => priceInputRefs.current[item.id] = el}
                                   value={editPrice}
                                   onChange={(e) => setEditPrice(e.target.value)}
+                                  onFocus={(e) => {
+                                    // Set cursor to beginning after focus
+                                    setTimeout(() => {
+                                      const input = e.target as HTMLInputElement;
+                                      input.setSelectionRange(0, 0);
+                                    }, 10);
+                                  }}
                                   onBlur={() => {
                                     const newPrice = parseFloat(editPrice) || item.price;
                                     updateItemPrice(item.id, newPrice);
@@ -3867,7 +3881,7 @@ export default function POSTerminal() {
               </DialogTitle>
             </DialogHeader>
             
-            <CustomerHistoryContent customerId={selectedCustomerId} />
+            <CustomerHistoryContent customerId={selectedCustomerId} showAllSales={false} />
           </DialogContent>
         </Dialog>
 
@@ -3886,6 +3900,20 @@ export default function POSTerminal() {
               customerLedger={customerLedger}
               onClose={() => setShowPaymentOnAccountDialog(false)}
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* All Sales Dialog */}
+        <Dialog open={showAllSalesDialog} onOpenChange={setShowAllSalesDialog}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <Receipt className="w-5 h-5 mr-2" />
+                All Sales ({sales?.length || 0})
+              </DialogTitle>
+            </DialogHeader>
+            
+            <CustomerHistoryContent customerId={null} showAllSales={true} />
           </DialogContent>
         </Dialog>
 
@@ -4063,17 +4091,17 @@ export default function POSTerminal() {
 }
 
 // Customer History Component
-function CustomerHistoryContent({ customerId }: { customerId: number | null }) {
+function CustomerHistoryContent({ customerId, showAllSales }: { customerId: number | null; showAllSales?: boolean }) {
   const { formatCurrencyValue } = useCurrency();
   
-  // Fetch customer sales history
+  // Fetch customer sales history or all sales
   const { data: customerSales = [], isLoading } = useQuery<any[]>({
-    queryKey: [`/api/customers/${customerId}/sales`],
-    enabled: !!customerId,
+    queryKey: showAllSales ? ['/api/sales'] : [`/api/customers/${customerId}/sales`],
+    enabled: showAllSales || !!customerId,
     retry: false,
   });
 
-  if (!customerId) {
+  if (!showAllSales && !customerId) {
     return (
       <div className="text-center py-8">
         <User className="w-12 h-12 mx-auto text-gray-400 mb-4" />
