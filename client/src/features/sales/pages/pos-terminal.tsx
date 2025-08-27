@@ -150,6 +150,10 @@ export default function POSTerminal() {
   const [orderType, setOrderType] = useState<'sale' | 'dine-in' | 'takeaway' | 'delivery'>('sale');
   const [tableNumber, setTableNumber] = useState<string>("");
   const [specialInstructions, setSpecialInstructions] = useState<string>("");
+  
+  // Hold invoice state
+  const [heldInvoices, setHeldInvoices] = useState<Array<{id: string, cart: CartItem[], customer?: Customer, timestamp: Date}>>([]);
+  const [showHoldInvoicesDialog, setShowHoldInvoicesDialog] = useState(false);
 
   // Customer search functionality with autocomplete
   const handleCustomerSearchChange = (value: string) => {
@@ -2258,14 +2262,19 @@ export default function POSTerminal() {
                                 setEditPrice('');
                               }}
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
+                                if (e.key === 'Enter' || e.key === 'Tab') {
                                   e.preventDefault();
                                   const newPrice = parseFloat(editPrice) || item.price;
                                   updateItemPrice(item.id, newPrice);
                                   setEditingItem(null);
                                   setEditPrice('');
                                   // Focus back to search input for next product
-                                  setTimeout(() => searchInputRef.current?.focus(), 100);
+                                  setTimeout(() => {
+                                    if (searchInputRef.current) {
+                                      searchInputRef.current.focus();
+                                      searchInputRef.current.select();
+                                    }
+                                  }, 100);
                                 }
                               }}
                               className="w-16 h-5 text-xs text-center rounded"
@@ -2527,61 +2536,54 @@ export default function POSTerminal() {
                   </div>
                 </div>
 
-                {/* Second Row of Buttons */}
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {/* Help Buttons F2-F7 */}
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="text-xs px-1 py-0.5 h-5 flex items-center hover:bg-blue-50"
-                    onClick={() => setShowDiscountDialog(true)}
-                  >
-                    <div className="w-2 h-2 bg-blue-600 mr-1"></div>
-                    F2
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="text-xs px-1 py-0.5 h-5 flex items-center hover:bg-red-50"
-                    onClick={() => cart.length > 0 && removeFromCart(cart[cart.length - 1].id)}
-                  >
-                    <X className="w-2 h-2 mr-1 text-red-600" />
-                    F3
-                  </Button>
-                  <Button size="sm" variant="outline" className="text-xs px-1 py-0.5 h-5 flex items-center hover:bg-green-50">
-                    <RotateCcw className="w-2 h-2 mr-1 text-green-600" />
-                    F4
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="text-xs px-1 py-0.5 h-5 flex items-center hover:bg-orange-50"
-                    onClick={resetAll}
-                  >
-                    <Tag className="w-2 h-2 mr-1 text-orange-600" />
-                    F5
-                  </Button>
-                  <Button size="sm" variant="outline" className="text-xs px-1 py-0.5 h-5 flex items-center hover:bg-green-50">
-                    <DollarSign className="w-2 h-2 mr-1 text-green-600" />
-                    F6
-                  </Button>
-                  <Button size="sm" variant="outline" className="text-xs px-1 py-0.5 h-5 flex items-center hover:bg-blue-50">
-                    <Calculator className="w-2 h-2 mr-1 text-blue-600" />
-                    F7
-                  </Button>
-                  
+                {/* Action Buttons Row */}
+                <div className="flex space-x-1 mt-2">
                   {/* Main Action Buttons */}
                   <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-blue-50">
                     <Gift className="w-3 h-3 mr-1 text-blue-600" />
                     F9-Gift Card
                   </Button>
-                  <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-green-50">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-xs px-2 py-1 h-6 flex items-center hover:bg-green-50"
+                    onClick={() => {
+                      if (cart.length > 0) {
+                        const holdId = `HOLD-${Date.now()}`;
+                        const newHeldInvoice = {
+                          id: holdId,
+                          cart: [...cart],
+                          customer: selectedCustomerId ? customers?.find(c => c.id === selectedCustomerId) : undefined,
+                          timestamp: new Date()
+                        };
+                        setHeldInvoices(prev => [...prev, newHeldInvoice]);
+                        setCart([]);
+                        setSelectedCustomerId(null);
+                        toast({
+                          title: "Invoice Held",
+                          description: `Invoice ${holdId} has been saved for later`,
+                          variant: "default",
+                        });
+                      } else {
+                        toast({
+                          title: "Empty Cart",
+                          description: "Add items to cart before holding invoice",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
                     <Receipt className="w-3 h-3 mr-1 text-green-600" />
                     F10-Hold Invoice
                   </Button>
-                  <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-blue-50">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-xs px-2 py-1 h-6 flex items-center hover:bg-blue-50"
+                    onClick={() => setShowHoldInvoicesDialog(true)}
+                  >
                     <CheckCircle className="w-3 h-3 mr-1 text-blue-600" />
-                    F11-Get Hold
+                    F11-Get Hold ({heldInvoices.length})
                   </Button>
                   <Button 
                     size="sm" 
@@ -3825,6 +3827,106 @@ export default function POSTerminal() {
               customerLedger={customerLedger}
               onClose={() => setShowPaymentOnAccountDialog(false)}
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Held Invoices Dialog */}
+        <Dialog open={showHoldInvoicesDialog} onOpenChange={setShowHoldInvoicesDialog}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <Receipt className="w-5 h-5 mr-2" />
+                Held Invoices ({heldInvoices.length})
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {heldInvoices.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Receipt className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No held invoices found</p>
+                  <p className="text-xs">Use F10 to hold current invoice</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {heldInvoices.map((heldInvoice) => (
+                    <div key={heldInvoice.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="font-semibold">{heldInvoice.id}</div>
+                          <div className="text-sm text-gray-600">
+                            {heldInvoice.timestamp.toLocaleString()}
+                          </div>
+                          {heldInvoice.customer && (
+                            <div className="text-sm text-blue-600">
+                              Customer: {heldInvoice.customer.name}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              // Load the held invoice back to cart
+                              setCart([...heldInvoice.cart]);
+                              if (heldInvoice.customer) {
+                                setSelectedCustomerId(heldInvoice.customer.id);
+                              }
+                              // Remove from held invoices
+                              setHeldInvoices(prev => prev.filter(inv => inv.id !== heldInvoice.id));
+                              setShowHoldInvoicesDialog(false);
+                              toast({
+                                title: "Invoice Loaded",
+                                description: `Invoice ${heldInvoice.id} has been loaded for editing`,
+                              });
+                            }}
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            Load & Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setHeldInvoices(prev => prev.filter(inv => inv.id !== heldInvoice.id));
+                              toast({
+                                title: "Invoice Deleted",
+                                description: `Held invoice ${heldInvoice.id} has been removed`,
+                              });
+                            }}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="text-xs font-semibold mb-2">Items ({heldInvoice.cart.length}):</div>
+                        {heldInvoice.cart.slice(0, 3).map((item, index) => (
+                          <div key={index} className="flex justify-between text-xs">
+                            <span>{item.name} × {item.quantity}</span>
+                            <span>{formatCurrencyValue(item.total)}</span>
+                          </div>
+                        ))}
+                        {heldInvoice.cart.length > 3 && (
+                          <div className="text-xs text-gray-500">
+                            ... and {heldInvoice.cart.length - 3} more items
+                          </div>
+                        )}
+                        <div className="border-t pt-2 mt-2">
+                          <div className="flex justify-between text-sm font-semibold">
+                            <span>Total:</span>
+                            <span>{formatCurrencyValue(heldInvoice.cart.reduce((sum, item) => sum + item.total, 0))}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
 
