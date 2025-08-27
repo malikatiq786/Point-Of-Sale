@@ -988,13 +988,13 @@ export default function POSTerminal() {
           ? baseTotal * (item.discount || 0) / 100
           : (item.discount || 0);
         const afterDiscount = baseTotal - discountAmount;
-        const taxAmount = afterDiscount * (taxRate / 100);
+
         
         return { 
           ...item, 
           quantity: newQuantity, 
-          total: afterDiscount + taxAmount,
-          tax: taxAmount
+          total: afterDiscount
+
         };
       }
       return item;
@@ -1011,13 +1011,13 @@ export default function POSTerminal() {
           ? baseTotal * (item.discount || 0) / 100
           : (item.discount || 0);
         const afterDiscount = baseTotal - discountAmount;
-        const taxAmount = afterDiscount * (taxRate / 100);
+
         
         return { 
           ...item, 
           quantity: newQuantity, 
-          total: afterDiscount + taxAmount,
-          tax: taxAmount
+          total: afterDiscount
+
         };
       }
       return item;
@@ -1032,13 +1032,13 @@ export default function POSTerminal() {
           ? baseTotal * (item.discount || 0) / 100
           : (item.discount || 0);
         const afterDiscount = baseTotal - discountAmount;
-        const taxAmount = afterDiscount * (taxRate / 100);
+
         
         return { 
           ...item, 
           price: newPrice,
-          total: afterDiscount + taxAmount,
-          tax: taxAmount
+          total: afterDiscount
+
         };
       }
       return item;
@@ -1053,14 +1053,14 @@ export default function POSTerminal() {
           ? baseTotal * discountValue / 100
           : discountValue;
         const afterDiscount = Math.max(0, baseTotal - discountAmount);
-        const taxAmount = afterDiscount * (taxRate / 100);
+
         
         return { 
           ...item, 
           discount: discountValue,
           discountType,
-          total: afterDiscount + taxAmount,
-          tax: taxAmount
+          total: afterDiscount
+
         };
       }
       return item;
