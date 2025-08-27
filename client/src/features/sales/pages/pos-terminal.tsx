@@ -2095,7 +2095,7 @@ export default function POSTerminal() {
                                 if (e.key === 'Tab') {
                                   e.preventDefault();
                                   const newQty = parseInt(editQuantity) || 1;
-                                  updateQuantity(item.id, newQty - item.quantity);
+                                  setAbsoluteQuantity(item.id, newQty);
                                   setEditingQuantityItem(null);
                                   setEditQuantity('');
                                   // Move to discount field
@@ -2249,8 +2249,8 @@ export default function POSTerminal() {
                             )}
                           </td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">{item.total.toFixed(2)}</td>
-                          <td className="py-1 px-2 text-center border-r border-gray-200">{(item.total * 0.1).toFixed(2)}</td>
-                          <td className="py-1 px-2 text-center">{(item.total + item.total * 0.1).toFixed(2)}</td>
+                          <td className="py-1 px-2 text-center border-r border-gray-200">{(item.tax || (item.total * (taxRate / 100))).toFixed(2)}</td>
+                          <td className="py-1 px-2 text-center">{(item.total + (item.tax || (item.total * (taxRate / 100)))).toFixed(2)}</td>
                           <td className="py-1 px-2 text-center">
                             <Button
                               variant="ghost"
@@ -2276,8 +2276,8 @@ export default function POSTerminal() {
                             <td className="py-1 px-2 text-center border-r border-gray-200">0.00</td>
                             <td className="py-1 px-2 text-center border-r border-gray-200">{price.toFixed(2)}</td>
                             <td className="py-1 px-2 text-center border-r border-gray-200">{price.toFixed(2)}</td>
-                            <td className="py-1 px-2 text-center border-r border-gray-200">{(price * 0.1).toFixed(2)}</td>
-                            <td className="py-1 px-2 text-center">{(price + price * 0.1).toFixed(2)}</td>
+                            <td className="py-1 px-2 text-center border-r border-gray-200">{(price * (taxRate / 100)).toFixed(2)}</td>
+                            <td className="py-1 px-2 text-center">{(price + (price * (taxRate / 100))).toFixed(2)}</td>
                             <td className="py-1 px-2 text-center">
                               <Button
                                 variant="ghost"
