@@ -157,6 +157,8 @@ export default function POSTerminal() {
   
   // All sales dialog state
   const [showAllSalesDialog, setShowAllSalesDialog] = useState(false);
+  const [showSaleDetailDialog, setShowSaleDetailDialog] = useState(false);
+  const [selectedSaleForView, setSelectedSaleForView] = useState<any>(null);
 
   // Customer search functionality with autocomplete
   const handleCustomerSearchChange = (value: string) => {
@@ -2241,7 +2243,7 @@ export default function POSTerminal() {
                     ) : null}
                     
                     {/* Empty rows for better UX - always show 8 rows */}
-                    {Array.from({ length: Math.max(8 - Math.max(cart.length, searchResults.length), 0) }).map((_, index) => (
+                    {Array.from({ length: Math.max(8 - Math.max(cart.length, searchResults.length), 1) }).map((_, index) => (
                       <tr key={`empty-${index}`} className="border-b border-gray-200">
                         <td className="py-1 px-2 text-center border-r border-gray-200 text-gray-300">{cart.length + searchResults.length + index + 1}</td>
                         <td className="py-1 px-2 border-r border-gray-200 text-gray-300">-</td>
@@ -3934,6 +3936,123 @@ export default function POSTerminal() {
           </DialogContent>
         </Dialog>
 
+        {/* Sale Detail Modal */}
+        <Dialog open={showSaleDetailDialog} onOpenChange={setShowSaleDetailDialog}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Receipt className="w-5 h-5 mr-2" />
+                  Sale #{selectedSaleForView?.id} - Invoice Details
+                </div>
+                <Badge variant={selectedSaleForView?.status === 'completed' ? 'default' : selectedSaleForView?.status === 'pending' ? 'destructive' : 'secondary'}>
+                  {selectedSaleForView?.status}
+                </Badge>
+              </DialogTitle>
+            </DialogHeader>
+            
+            {selectedSaleForView && (
+              <div className="space-y-6">
+                {/* Sale Summary */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-semibold mb-2">Sale Information</h3>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span>Date:</span>
+                          <span>{new Date(selectedSaleForView.saleDate).toLocaleDateString()} at {new Date(selectedSaleForView.saleDate).toLocaleTimeString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Payment Method:</span>
+                          <span className="capitalize">{selectedSaleForView.paymentMethod}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total Amount:</span>
+                          <span className="font-semibold">{formatCurrencyValue(selectedSaleForView.totalAmount)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Amount Paid:</span>
+                          <span>{formatCurrencyValue(selectedSaleForView.paidAmount)}</span>
+                        </div>
+                        {parseFloat(selectedSaleForView.totalAmount) > parseFloat(selectedSaleForView.paidAmount) && (
+                          <div className="flex justify-between text-red-600">
+                            <span>Outstanding:</span>
+                            <span>{formatCurrencyValue(parseFloat(selectedSaleForView.totalAmount) - parseFloat(selectedSaleForView.paidAmount))}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">Customer Information</h3>
+                      <div className="space-y-1 text-sm">
+                        {selectedSaleForView.customerName ? (
+                          <>
+                            <div className="flex justify-between">
+                              <span>Name:</span>
+                              <span>{selectedSaleForView.customerName}</span>
+                            </div>
+                            {selectedSaleForView.customerPhone && (
+                              <div className="flex justify-between">
+                                <span>Phone:</span>
+                                <span>{selectedSaleForView.customerPhone}</span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-gray-500">Walk-in Customer</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Items Table */}
+                <div>
+                  <h3 className="font-semibold mb-3">Sale Items ({selectedSaleForView.items?.length || 0})</h3>
+                  {selectedSaleForView.items && selectedSaleForView.items.length > 0 ? (
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            <th className="text-left py-3 px-4 font-semibold">#</th>
+                            <th className="text-left py-3 px-4 font-semibold">Item Name</th>
+                            <th className="text-center py-3 px-4 font-semibold">Quantity</th>
+                            <th className="text-center py-3 px-4 font-semibold">Unit Price</th>
+                            <th className="text-center py-3 px-4 font-semibold">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedSaleForView.items.map((item: any, index: number) => (
+                            <tr key={index} className="border-t">
+                              <td className="py-3 px-4">{index + 1}</td>
+                              <td className="py-3 px-4">{item.productName}</td>
+                              <td className="py-3 px-4 text-center">{item.quantity}</td>
+                              <td className="py-3 px-4 text-center">{formatCurrencyValue(item.price)}</td>
+                              <td className="py-3 px-4 text-center font-semibold">{formatCurrencyValue(item.total)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-gray-50">
+                          <tr>
+                            <td colSpan={4} className="py-3 px-4 text-right font-semibold">Total:</td>
+                            <td className="py-3 px-4 text-center font-bold">{formatCurrencyValue(selectedSaleForView.totalAmount)}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No items found in this sale</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
         {/* Add Customer Dialog - Shared between both layouts */}
         <Dialog open={showAddCustomerDialog} onOpenChange={setShowAddCustomerDialog}>
           <DialogContent className="max-w-md rounded-2xl">
@@ -4096,10 +4215,8 @@ function CustomerHistoryContent({ customerId, showAllSales, onEditLoadSale }: { 
                   variant="outline"
                   className="text-xs px-2 py-1 h-6 bg-blue-50 border-blue-300 hover:bg-blue-100"
                   onClick={() => {
-                    toast({
-                      title: "View Sale Invoice",
-                      description: `Sale #${sale.id} - ${formatCurrencyValue(sale.totalAmount)} - ${sale.items?.length || 0} items`,
-                    });
+                    setSelectedSaleForView(sale);
+                    setShowSaleDetailDialog(true);
                   }}
                 >
                   <Eye className="w-3 h-3 mr-1" />
