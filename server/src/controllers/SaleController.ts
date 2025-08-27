@@ -200,4 +200,32 @@ export class SaleController {
       });
     }
   };
+
+  // Get customer sales history
+  getCustomerSales = async (req: Request, res: Response) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      
+      if (isNaN(customerId)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: 'Invalid customer ID'
+        });
+      }
+
+      const result = await this.saleService.getCustomerSales(customerId);
+
+      if (result.success) {
+        res.status(HTTP_STATUS.OK).json(result.data);
+      } else {
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+          message: result.error || ERROR_MESSAGES.INTERNAL_ERROR
+        });
+      }
+    } catch (error) {
+      console.error('SaleController: Error in getCustomerSales:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
 }

@@ -251,4 +251,25 @@ export class SaleService {
       };
     }
   }
+
+  // Get customer sales history
+  async getCustomerSales(customerId: number): Promise<DatabaseResult> {
+    try {
+      const sales = await this.saleRepository.findByCustomerId(customerId);
+      
+      return {
+        success: true,
+        data: sales.map(sale => ({
+          ...sale,
+          formattedTotal: formatCurrency(sale.totalAmount),
+        })),
+      };
+    } catch (error) {
+      console.error('SaleService: Error getting customer sales:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch customer sales',
+      };
+    }
+  }
 }

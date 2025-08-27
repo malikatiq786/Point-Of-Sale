@@ -49,7 +49,7 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
   // Find sales with customer and user information
   async findAllWithDetails(limit: number = 10, offset: number = 0) {
     try {
-      return await db.select({
+      const salesData = await db.select({
         id: sales.id,
         totalAmount: sales.totalAmount,
         paidAmount: sales.paidAmount,
@@ -57,6 +57,8 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
         saleDate: sales.saleDate,
         customerName: sales.customerName,
         customerPhone: sales.customerPhone,
+        paymentMethod: sales.paymentMethod,
+        customerId: sales.customerId,
         customer: {
           id: customers.id,
           name: customers.name,
@@ -73,6 +75,39 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       .orderBy(desc(sales.saleDate))
       .limit(limit)
       .offset(offset);
+
+      // Get items for each sale
+      const salesWithItems = await Promise.all(
+        salesData.map(async (sale) => {
+          try {
+            const items = await this.getSaleItems(sale.id);
+            return {
+              ...sale,
+              items: items.map((item: any) => ({
+                id: item.id,
+                productId: item.product?.id,
+                variantId: item.productVariantId,
+                productName: item.variant?.variantName ? 
+                  `${item.product?.name} - ${item.variant.variantName}` : 
+                  item.product?.name,
+                quantity: item.quantity,
+                price: item.price,
+                unitPrice: item.price,
+                total: parseFloat(item.quantity) * parseFloat(item.price),
+                discount: 0
+              }))
+            };
+          } catch (error) {
+            console.error(`Error getting items for sale ${sale.id}:`, error);
+            return {
+              ...sale,
+              items: []
+            };
+          }
+        })
+      );
+
+      return salesWithItems;
     } catch (error) {
       console.error('Error finding sales with details:', error);
       throw error;
@@ -82,7 +117,7 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
   // Get sales by date range with details
   async findByDateRange(startDate: Date, endDate: Date) {
     try {
-      return await db.select({
+      const salesData = await db.select({
         id: sales.id,
         totalAmount: sales.totalAmount,
         paidAmount: sales.paidAmount,
@@ -90,6 +125,8 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
         saleDate: sales.saleDate,
         customerName: sales.customerName,
         customerPhone: sales.customerPhone,
+        paymentMethod: sales.paymentMethod,
+        customerId: sales.customerId,
         customer: {
           id: customers.id,
           name: customers.name,
@@ -108,6 +145,39 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
         lte(sales.saleDate, endDate)
       ))
       .orderBy(desc(sales.saleDate));
+
+      // Get items for each sale
+      const salesWithItems = await Promise.all(
+        salesData.map(async (sale) => {
+          try {
+            const items = await this.getSaleItems(sale.id);
+            return {
+              ...sale,
+              items: items.map((item: any) => ({
+                id: item.id,
+                productId: item.product?.id,
+                variantId: item.productVariantId,
+                productName: item.variant?.variantName ? 
+                  `${item.product?.name} - ${item.variant.variantName}` : 
+                  item.product?.name,
+                quantity: item.quantity,
+                price: item.price,
+                unitPrice: item.price,
+                total: parseFloat(item.quantity) * parseFloat(item.price),
+                discount: 0
+              }))
+            };
+          } catch (error) {
+            console.error(`Error getting items for sale ${sale.id}:`, error);
+            return {
+              ...sale,
+              items: []
+            };
+          }
+        })
+      );
+
+      return salesWithItems;
     } catch (error) {
       console.error('Error finding sales by date range:', error);
       throw error;
@@ -317,6 +387,73 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       return groupedItems;
     } catch (error) {
       console.error('Error getting bulk sale items:', error);
+      throw error;
+    }
+  }
+
+  // Get customer sales history with items
+  async findByCustomerId(customerId: number) {
+    try {
+      const salesData = await db.select({
+        id: sales.id,
+        totalAmount: sales.totalAmount,
+        paidAmount: sales.paidAmount,
+        status: sales.status,
+        saleDate: sales.saleDate,
+        customerName: sales.customerName,
+        customerPhone: sales.customerPhone,
+        paymentMethod: sales.paymentMethod,
+        customerId: sales.customerId,
+        customer: {
+          id: customers.id,
+          name: customers.name,
+          phone: customers.phone,
+        },
+        user: {
+          id: users.id,
+          name: users.name,
+        }
+      })
+      .from(sales)
+      .leftJoin(customers, eq(sales.customerId, customers.id))
+      .leftJoin(users, eq(sales.userId, users.id))
+      .where(eq(sales.customerId, customerId))
+      .orderBy(desc(sales.saleDate));
+
+      // Get items for each sale
+      const salesWithItems = await Promise.all(
+        salesData.map(async (sale) => {
+          try {
+            const items = await this.getSaleItems(sale.id);
+            return {
+              ...sale,
+              items: items.map((item: any) => ({
+                id: item.id,
+                productId: item.product?.id,
+                variantId: item.productVariantId,
+                productName: item.variant?.variantName ? 
+                  `${item.product?.name} - ${item.variant.variantName}` : 
+                  item.product?.name,
+                quantity: item.quantity,
+                price: item.price,
+                unitPrice: item.price,
+                total: parseFloat(item.quantity) * parseFloat(item.price),
+                discount: 0
+              }))
+            };
+          } catch (error) {
+            console.error(`Error getting items for sale ${sale.id}:`, error);
+            return {
+              ...sale,
+              items: []
+            };
+          }
+        })
+      );
+
+      return salesWithItems;
+    } catch (error) {
+      console.error('Error finding sales by customer ID:', error);
       throw error;
     }
   }

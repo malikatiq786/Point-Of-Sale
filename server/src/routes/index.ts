@@ -1188,6 +1188,7 @@ router.post('/stock/adjustments', isAuthenticated, inventoryController.adjustSto
 router.get('/customers', isAuthenticated, customerController.getCustomers as any);
 router.get('/customers/search', isAuthenticated, customerController.searchCustomers as any);
 router.get('/customers/:id', isAuthenticated, customerController.getCustomerById as any);
+router.get('/customers/:id/sales', isAuthenticated, saleController.getCustomerSales as any);
 router.post('/customers', isAuthenticated, customerController.createCustomer as any);
 router.put('/customers/:id', isAuthenticated, customerController.updateCustomer as any);
 router.delete('/customers/bulk-delete', isAuthenticated, customerController.bulkDeleteCustomers as any);

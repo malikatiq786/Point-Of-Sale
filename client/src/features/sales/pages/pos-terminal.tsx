@@ -1609,43 +1609,24 @@ export default function POSTerminal() {
         <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-3xl shadow-2xl border border-slate-200/50 p-8 mb-6 backdrop-blur-sm">
           {/* Simplified Header - Only Action Buttons */}
 
-          {/* Middle Row - Main Controls */}
-          <div className="flex items-center justify-between mb-6">
-            {/* Left: Register & Staff Info */}
-            <div className="flex items-center space-x-4">
-              {/* Register Status */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-white/40 shadow-lg">
-                <div className="flex items-center space-x-3">
-                  {registerStatus === 'open' && selectedRegister ? (
-                    <Badge variant="default" className="bg-gradient-to-r from-emerald-500 to-green-500 text-white px-4 py-2 rounded-xl font-semibold shadow-md">
-                      <CheckCircle className="w-5 h-5 mr-2" />
-                      {selectedRegister.name} - {formatCurrencyValue(cashDrawerBalance)}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-gradient-to-r from-red-50 to-rose-50 text-red-700 border-red-300 px-4 py-2 rounded-xl font-semibold">
-                      <AlertCircle className="w-5 h-5 mr-2" />
-                      Register Closed
-                    </Badge>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => registerStatus === 'open' ? closeRegister() : setIsRegisterSetupOpen(true)}
-                    className="bg-white/90 border-slate-300 hover:bg-slate-50 rounded-xl px-4 py-2 font-semibold shadow-sm"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    <span>{registerStatus === 'open' ? 'Close Register' : 'Open Register'}</span>
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Staff Info */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-white/40 shadow-lg">
-                <Badge variant="outline" className="bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-800 border-emerald-300 px-5 py-2 rounded-xl font-bold shadow-sm">
-                  <User className="w-5 h-5 mr-2" />
-                  {(user as any)?.name || 'Cashier'} • Staff
-                </Badge>
-              </div>
+          {/* Main Header Info - Total, Customer, Mode */}
+          <div className="flex items-center justify-center space-x-6 mb-6">
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
+              <span className="text-sm font-semibold text-slate-600">
+                Total: <span className="text-blue-700 font-bold">{formatCurrencyValue(getGrandTotal())}</span>
+              </span>
+            </div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
+              <span className="text-sm font-semibold text-slate-600">
+                Customer: <span className="text-indigo-700 font-bold">
+                  {selectedCustomerId ? customers?.find(c => c.id === selectedCustomerId)?.name : 'Walk-in'}
+                </span>
+              </span>
+            </div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
+              <span className="text-sm font-semibold text-slate-600">
+                Mode: <span className="text-purple-700 font-bold">{posLayout === 'grid' ? 'Grid View' : 'Search View'}</span>
+              </span>
             </div>
             
             {/* Right: Layout Controls & Actions */}
@@ -2277,15 +2258,39 @@ export default function POSTerminal() {
                           </tr>
                         );
                       })
-                    ) : (
+                    ) : null}
+                    
+                    {/* Empty rows for better UX - always show 8 rows */}
+                    {Array.from({ length: Math.max(8 - Math.max(cart.length, searchResults.length), 0) }).map((_, index) => (
+                      <tr key={`empty-${index}`} className="border-b border-gray-200">
+                        <td className="py-1 px-2 text-center border-r border-gray-200 text-gray-300">{cart.length + searchResults.length + index + 1}</td>
+                        <td className="py-1 px-2 border-r border-gray-200 text-gray-300">-</td>
+                        <td className="py-1 px-2 border-r border-gray-200 text-center text-gray-300">-</td>
+                        <td className="py-1 px-2 text-center border-r border-gray-200 text-gray-300">-</td>
+                        <td className="py-1 px-2 text-center border-r border-gray-200 text-gray-300">-</td>
+                        <td className="py-1 px-2 text-center border-r border-gray-200 text-gray-300">-</td>
+                        <td className="py-1 px-2 text-center border-r border-gray-200 text-gray-300">-</td>
+                        <td className="py-1 px-2 text-center border-r border-gray-200 text-gray-300">-</td>
+                        <td className="py-1 px-2 text-center text-gray-300">-</td>
+                        <td className="py-1 px-2 text-center text-gray-300">-</td>
+                      </tr>
+                    ))}
+                    
+                    {/* No items message only when no cart items and no search results */}
+                    {cart.length === 0 && searchResults.length === 0 && searchQuery && (
                       <tr>
                         <td colSpan={10} className="py-12 text-center">
-                          {searchQuery ? (
-                            <div className="text-gray-500">No items found. Try different search terms.</div>
-                          ) : (
-                            <div className="flex flex-col items-center justify-center space-y-4">
-                              {/* Company Logo in Empty Table Space */}
-                              <div className="flex items-center space-x-4 mb-2">
+                          <div className="text-gray-500">No items found. Try different search terms.</div>
+                        </td>
+                      </tr>
+                    )}
+                    
+                    {cart.length === 0 && searchResults.length === 0 && !searchQuery && (
+                      <tr>
+                        <td colSpan={10} className="py-12 text-center">
+                          <div className="flex flex-col items-center justify-center space-y-4">
+                            {/* Company Logo in Empty Table Space */}
+                            <div className="flex items-center space-x-4 mb-2">
                                 <svg width="60" height="60" viewBox="0 0 80 80" className="drop-shadow-lg">
                                   <defs>
                                     <linearGradient id="tableLogoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -2318,7 +2323,6 @@ export default function POSTerminal() {
                                 </div>
                               </div>
                             </div>
-                          )}
                         </td>
                       </tr>
                     )}
