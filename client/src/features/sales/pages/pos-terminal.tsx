@@ -568,6 +568,18 @@ export default function POSTerminal() {
     // Focus on any key press that's not in an input field (only for grid layout)
     const handleKeyPress = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
+      
+      // Handle F2 key to focus search input (works in any layout)
+      if (e.key === 'F2') {
+        e.preventDefault();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+          searchInputRef.current.select();
+        }
+        return;
+      }
+      
+      // Other key handling only for grid layout
       if (posLayout === 'grid' && !target.matches('input, textarea, select') && searchInputRef.current) {
         searchInputRef.current.focus();
       }
