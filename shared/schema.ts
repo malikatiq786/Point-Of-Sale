@@ -381,6 +381,15 @@ export const suppliers = pgTable("suppliers", {
   address: text("address"),
 });
 
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  userId: varchar("user_id").references(() => users.id),
+  totalAmount: numeric("total_amount", { precision: 12, scale: 2 }),
+  orderDate: timestamp("order_date"),
+  status: varchar("status", { length: 50 }),
+});
+
 export const purchases = pgTable("purchases", {
   id: serial("id").primaryKey(),
   supplierId: integer("supplier_id").references(() => suppliers.id),
@@ -388,6 +397,15 @@ export const purchases = pgTable("purchases", {
   totalAmount: numeric("total_amount", { precision: 12, scale: 2 }),
   purchaseDate: timestamp("purchase_date"),
   status: varchar("status", { length: 50 }),
+});
+
+export const purchaseOrderItems = pgTable("purchase_order_items", {
+  id: serial("id").primaryKey(),
+  purchaseOrderId: integer("purchase_order_id"),
+  productId: integer("product_id").references(() => products.id),
+  quantity: numeric("quantity", { precision: 12, scale: 2 }),
+  unitPrice: numeric("unit_price", { precision: 12, scale: 2 }),
+  totalPrice: numeric("total_price", { precision: 12, scale: 2 }),
 });
 
 export const purchaseItems = pgTable("purchase_items", {
@@ -453,9 +471,37 @@ export const expenseCategories = pgTable("expense_categories", {
   name: varchar("name", { length: 100 }),
 });
 
+export const expenseVendors = pgTable("expense_vendors", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 150 }),
+  email: varchar("email", { length: 100 }),
+  phone: varchar("phone", { length: 20 }),
+  address: text("address"),
+});
+
+export const expenseBudgets = pgTable("expense_budgets", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id").references(() => expenseCategories.id),
+  branchId: integer("branch_id").references(() => branches.id),
+  amount: numeric("amount", { precision: 12, scale: 2 }),
+  period: varchar("period", { length: 50 }),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+});
+
+export const expenseApprovals = pgTable("expense_approvals", {
+  id: serial("id").primaryKey(),
+  expenseId: integer("expense_id").references(() => expenses.id),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  status: varchar("status", { length: 50 }),
+  approvedAt: timestamp("approved_at"),
+  comments: text("comments"),
+});
+
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
   categoryId: integer("category_id").references(() => expenseCategories.id),
+  vendorId: integer("vendor_id").references(() => expenseVendors.id),
   amount: numeric("amount", { precision: 12, scale: 2 }),
   note: text("note"),
   expenseDate: timestamp("expense_date"),

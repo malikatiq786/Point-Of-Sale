@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import { LogIn, User, Lock, AlertCircle, Copy } from "lucide-react";
 
 export default function Login() {
@@ -87,10 +88,9 @@ export default function Login() {
           description: "Login successful! Redirecting to dashboard...",
         });
         
-        // Wait a bit for the session to be established, then redirect
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 100);
+        // Invalidate auth query cache and redirect
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        window.location.href = "/";
       } else {
         setError(data.message || "Login failed");
       }
