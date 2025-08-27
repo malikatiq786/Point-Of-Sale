@@ -101,6 +101,7 @@ export default function POSTerminal() {
   const [scanTimeout, setScanTimeout] = useState<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const quantityInputRefs = useRef<{[key: number]: HTMLInputElement | null}>({});
+  const discountInputRefs = useRef<{[key: number]: HTMLInputElement | null}>({});
   const priceInputRefs = useRef<{[key: number]: HTMLInputElement | null}>({});
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
@@ -2112,7 +2113,6 @@ export default function POSTerminal() {
                     <tr className="bg-gray-100 border-b border-gray-400">
                       <th className="text-left py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-12">Line</th>
                       <th className="text-left py-2 px-2 font-bold text-gray-800 border-r border-gray-300">Item Name</th>
-                      <th className="text-left py-2 px-2 font-bold text-gray-800 border-r border-gray-300">Employee Name</th>
                       <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Quantity</th>
                       <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Discount</th>
                       <th className="text-center py-2 px-2 font-bold text-gray-800 border-r border-gray-300 w-20">Price</th>
@@ -2128,104 +2128,117 @@ export default function POSTerminal() {
                         <tr key={index} className="border-b border-gray-200 hover:bg-blue-50">
                           <td className="py-1 px-2 text-center border-r border-gray-200">{index + 1}</td>
                           <td className="py-1 px-2 border-r border-gray-200">{item.name}</td>
-                          <td className="py-1 px-2 border-r border-gray-200">No Employee</td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">
-                            <div className="flex items-center justify-center">
-                              {editingItem === item.id ? (
-                                <Input
-                                  type="text"
-                                  ref={(el) => quantityInputRefs.current[item.id] = el}
-                                  value={editQuantity}
-                                  onChange={(e) => setEditQuantity(e.target.value)}
-                                  onBlur={() => {
-                                    const newQty = parseInt(editQuantity) || 1;
-                                    updateQuantity(item.id, newQty - item.quantity);
-                                    setEditingItem(null);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === '+') {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      const newQty = parseInt(editQuantity) || 1;
-                                      updateQuantity(item.id, newQty - item.quantity);
-                                      // Move to price editing - keep editing the same item
-                                      setEditPrice(item.price.toString());
-                                      // Force re-render then focus price input
-                                      setTimeout(() => {
-                                        const priceInput = priceInputRefs.current[item.id];
-                                        if (priceInput) {
-                                          priceInput.focus();
-                                          priceInput.select();
-                                        }
-                                      }, 150);
-                                    } else if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      // Save quantity and add product to cart
-                                      const newQty = parseInt(editQuantity) || 1;
-                                      updateQuantity(item.id, newQty - item.quantity);
-                                      setEditingItem(null);
-                                      setEditQuantity('');
+                            <Input
+                              type="text"
+                              ref={(el) => quantityInputRefs.current[item.id] = el}
+                              value={editingItem === item.id ? editQuantity : item.quantity.toString()}
+                              onChange={(e) => {
+                                if (editingItem !== item.id) {
+                                  setEditingItem(item.id);
+                                  setEditQuantity(e.target.value);
+                                } else {
+                                  setEditQuantity(e.target.value);
+                                }
+                              }}
+                              onFocus={() => {
+                                setEditingItem(item.id);
+                                setEditQuantity(item.quantity.toString());
+                              }}
+                              onBlur={() => {
+                                const newQty = parseInt(editQuantity) || 1;
+                                updateQuantity(item.id, newQty - item.quantity);
+                                setEditingItem(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Tab') {
+                                  e.preventDefault();
+                                  const newQty = parseInt(editQuantity) || 1;
+                                  updateQuantity(item.id, newQty - item.quantity);
+                                  setEditingItem(null);
+                                  // Move to discount field
+                                  setTimeout(() => {
+                                    const discountInput = discountInputRefs.current[item.id];
+                                    if (discountInput) {
+                                      discountInput.focus();
+                                      discountInput.select();
                                     }
-                                  }}
-                                  className="w-16 h-5 text-center text-xs rounded"
-                                  autoFocus
-                                  data-testid={`search-quantity-input-${item.id}`}
-                                />
-                              ) : (
-                                <span 
-                                  className="text-xs cursor-pointer hover:bg-gray-200 rounded px-2 py-1 min-w-[32px] inline-block text-center"
-                                  onClick={() => {
-                                    setEditingItem(item.id);
-                                    setEditQuantity(item.quantity.toString());
-                                  }}
-                                >
-                                  {item.quantity}
-                                </span>
-                              )}
-                            </div>
+                                  }, 50);
+                                } else if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const newQty = parseInt(editQuantity) || 1;
+                                  updateQuantity(item.id, newQty - item.quantity);
+                                  setEditingItem(null);
+                                  setEditQuantity('');
+                                }
+                              }}
+                              className="w-16 h-5 text-center text-xs rounded"
+                              data-testid={`quantity-input-${item.id}`}
+                            />
                           </td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">
-                            {editingDiscount === item.id ? (
-                              <Input
-                                value={editDiscountValue}
-                                onChange={(e) => setEditDiscountValue(e.target.value)}
-                                onBlur={() => {
+                            <Input
+                              ref={(el) => discountInputRefs.current[item.id] = el}
+                              value={editingDiscount === item.id ? editDiscountValue : 
+                                ((item.discount && item.discount > 0) ? 
+                                  `${item.discount}${item.discountType === 'percentage' ? '%' : ''}` : '')}
+                              onChange={(e) => {
+                                if (editingDiscount !== item.id) {
+                                  setEditingDiscount(item.id);
+                                  setEditDiscountValue(e.target.value);
+                                } else {
+                                  setEditDiscountValue(e.target.value);
+                                }
+                              }}
+                              onFocus={() => {
+                                setEditingDiscount(item.id);
+                                setEditDiscountValue((item.discount && item.discount > 0) ? `${item.discount}${item.discountType === 'percentage' ? '%' : ''}` : '');
+                              }}
+                              onBlur={() => {
+                                const value = parseFloat(editDiscountValue) || 0;
+                                if (value > 0) {
+                                  const isPercentage = editDiscountValue.includes('%');
+                                  applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
+                                }
+                                setEditingDiscount(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Tab') {
+                                  e.preventDefault();
                                   const value = parseFloat(editDiscountValue) || 0;
                                   if (value > 0) {
                                     const isPercentage = editDiscountValue.includes('%');
                                     applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
                                   }
                                   setEditingDiscount(null);
-                                }}
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter') {
-                                    const value = parseFloat(editDiscountValue) || 0;
-                                    if (value > 0) {
-                                      const isPercentage = editDiscountValue.includes('%');
-                                      applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
-                                    }
-                                    setEditingDiscount(null);
+                                  // Move to next item's quantity field or search
+                                  const nextIndex = cart.findIndex(cartItem => cartItem.id === item.id) + 1;
+                                  if (nextIndex < cart.length) {
+                                    const nextItem = cart[nextIndex];
+                                    setTimeout(() => {
+                                      const nextQuantityInput = quantityInputRefs.current[nextItem.id];
+                                      if (nextQuantityInput) {
+                                        nextQuantityInput.focus();
+                                        nextQuantityInput.select();
+                                      }
+                                    }, 50);
+                                  } else {
+                                    setTimeout(() => searchInputRef.current?.focus(), 50);
                                   }
-                                }}
-                                className="w-12 h-5 text-xs text-center rounded"
-                                placeholder="0% or 0.00"
-                                autoFocus
-                              />
-                            ) : (
-                              <span 
-                                className="text-xs cursor-pointer hover:bg-gray-200 rounded px-1 py-1 min-w-[40px] inline-block"
-                                onClick={() => {
-                                  setEditingDiscount(item.id);
-                                  setEditDiscountValue((item.discount && item.discount > 0) ? `${item.discount}${item.discountType === 'percentage' ? '%' : ''}` : '');
-                                }}
-                              >
-                                {(item.discount && item.discount > 0)
-                                  ? (item.discountType === 'percentage' ? `${item.discount}%` : formatCurrencyValue(item.discount))
-                                  : 'Click'
+                                } else if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const value = parseFloat(editDiscountValue) || 0;
+                                  if (value > 0) {
+                                    const isPercentage = editDiscountValue.includes('%');
+                                    applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
+                                  }
+                                  setEditingDiscount(null);
                                 }
-                              </span>
-                            )}
+                              }}
+                              className="w-20 h-5 text-xs text-center rounded"
+                              placeholder="0% or 0.00"
+                              data-testid={`discount-input-${item.id}`}
+                            />
                           </td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">
                             {editingItem === item.id && editPrice ? (
@@ -2843,6 +2856,48 @@ export default function POSTerminal() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+
+                {/* Stock Checking Box */}
+                {cart.length > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-blue-800 mb-2 flex items-center">
+                      <Package className="w-4 h-4 mr-1" />
+                      Stock Levels
+                    </h4>
+                    <div className="space-y-2">
+                      {cart.map((item) => {
+                        // Find the original product data to get stock info
+                        const productData = products.find(p => 
+                          (item.isVariant && p.id === `${item.productId}-${item.variantId}`) ||
+                          (!item.isVariant && p.id === item.productId)
+                        );
+                        const remainingStock = productData ? productData.stock : 0;
+                        const stockStatus = remainingStock <= 0 ? 'out' : 
+                                         remainingStock <= 5 ? 'low' : 'good';
+                        
+                        return (
+                          <div key={item.id} className="flex justify-between items-center text-xs">
+                            <span className="text-gray-700 truncate flex-1 mr-2">
+                              {item.name}
+                            </span>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-gray-600">
+                                Qty: {item.quantity}
+                              </span>
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                stockStatus === 'out' ? 'bg-red-100 text-red-700' :
+                                stockStatus === 'low' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-green-100 text-green-700'
+                              }`}>
+                                Stock: {remainingStock}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </CardContent>
