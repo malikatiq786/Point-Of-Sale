@@ -3,6 +3,8 @@ import { ProductRepository } from '../repositories/ProductRepository';
 import { CustomerRepository } from '../repositories/CustomerRepository';
 import { formatCurrency } from '../utils';
 import { DashboardStats, DatabaseResult } from '../types';
+import { db } from "../../db";
+import { sql } from "drizzle-orm";
 
 export class DashboardService {
   private saleRepository: SaleRepository;
@@ -18,36 +20,30 @@ export class DashboardService {
   // Get dashboard statistics
   async getDashboardStats(): Promise<DatabaseResult<DashboardStats>> {
     try {
-      // Get today's sales total
-      const todaysSalesTotal = await this.saleRepository.getTodaysSalesTotal();
-      
-      // Get total products count
-      const totalProducts = await this.productRepository.count();
-      
-      // Get total customers count
-      const totalCustomers = await this.customerRepository.count();
-      
-      // Get low stock items count
-      const lowStockProducts = await this.productRepository.findLowStock(5);
-      const lowStockCount = lowStockProducts.length;
+      // Get counts for dashboard stats using direct database queries
+      const [productsResult] = await this.db.execute(sql`SELECT COUNT(*) as count FROM products`);
+      const [customersResult] = await this.db.execute(sql`SELECT COUNT(*) as count FROM customers`);
+      const [suppliersResult] = await this.db.execute(sql`SELECT COUNT(*) as count FROM suppliers`);
 
-      const stats: DashboardStats = {
-        todaySales: formatCurrency(todaysSalesTotal),
-        totalProducts,
-        totalCustomers,
-        lowStockItems: lowStockCount,
-      };
+      // Get recent sales count (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const [salesResult] = await this.db.execute(sql`
+        SELECT COUNT(*) as count 
+        FROM sales 
+        WHERE sale_date >= ${thirtyDaysAgo.toISOString()}
+      `);
 
       return {
-        success: true,
-        data: stats,
+        totalProducts: parseInt(productsResult.count as string) || 0,
+        totalCustomers: parseInt(customersResult.count as string) || 0,
+        totalSuppliers: parseInt(suppliersResult.count as string) || 0,
+        recentSales: parseInt(salesResult.count as string) || 0,
       };
     } catch (error) {
       console.error('DashboardService: Error getting dashboard stats:', error);
-      return {
-        success: false,
-        error: 'Failed to fetch dashboard statistics',
-      };
+      throw new Error('Failed to fetch dashboard statistics');
     }
   }
 

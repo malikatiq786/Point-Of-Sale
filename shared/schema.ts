@@ -1,30 +1,6 @@
-import { sql, relations } from 'drizzle-orm';
-import {
-  index,
-  jsonb,
-  pgTable,
-  timestamp,
-  varchar,
-  serial,
-  text,
-  integer,
-  numeric,
-  date,
-  boolean,
-} from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
 
-// Session storage table for Replit Auth
-export const sessions = pgTable(
-  "sessions",
-  {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
-  },
-  (table) => [index("IDX_session_expire").on(table.expire)],
-);
+import { pgTable, serial, varchar, text, timestamp, integer, numeric, boolean, date, jsonb, index } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 // =========================================
 // 🔐 Authentication & Access Control
@@ -32,28 +8,26 @@ export const sessions = pgTable(
 
 export const roles = pgTable("roles", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).unique().notNull(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
 });
 
 export const permissions = pgTable("permissions", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).unique().notNull(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
 });
 
 export const rolePermissions = pgTable("role_permissions", {
-  roleId: integer("role_id").references(() => roles.id, { onDelete: "cascade" }).notNull(),
-  permissionId: integer("permission_id").references(() => permissions.id, { onDelete: "cascade" }).notNull(),
+  roleId: integer("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+  permissionId: integer("permission_id").notNull().references(() => permissions.id, { onDelete: "cascade" }),
 }, (table) => ({
-  pk: {
-    primaryKey: [table.roleId, table.permissionId],
-  },
+  pk: { primaryKey: [table.roleId, table.permissionId] },
 }));
 
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id").primaryKey().default('gen_random_uuid()'),
   name: varchar("name", { length: 100 }),
-  email: varchar("email", { length: 150 }).unique().notNull(),
-  password: text("password"), // Made nullable for Replit Auth
+  email: varchar("email", { length: 150 }).notNull().unique(),
+  password: text("password"),
   roleId: integer("role_id").references(() => roles.id),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
@@ -94,16 +68,16 @@ export const registers = pgTable("registers", {
   id: serial("id").primaryKey(),
   branchId: integer("branch_id").references(() => branches.id),
   name: varchar("name", { length: 150 }),
-  code: varchar("code", { length: 50 }),
-  openingBalance: numeric("opening_balance", { precision: 12, scale: 2 }).default("0"),
-  currentBalance: numeric("current_balance", { precision: 12, scale: 2 }).default("0"),
-  isActive: boolean("is_active").default(true),
   openedAt: timestamp("opened_at"),
   closedAt: timestamp("closed_at"),
+  code: varchar("code", { length: 50 }),
+  openingBalance: numeric("opening_balance", { precision: 12, scale: 2 }).default('0'),
+  currentBalance: numeric("current_balance", { precision: 12, scale: 2 }).default('0'),
+  isActive: boolean("is_active").default(true),
 });
 
 // =========================================
-// 📦 Product & Inventory Management
+// 📦 Product Management
 // =========================================
 
 export const categories = pgTable("categories", {
@@ -114,7 +88,7 @@ export const categories = pgTable("categories", {
 
 export const brands = pgTable("brands", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).unique(),
+  name: varchar("name", { length: 100 }),
 });
 
 export const units = pgTable("units", {
@@ -123,6 +97,36 @@ export const units = pgTable("units", {
   shortName: varchar("short_name", { length: 10 }),
   type: varchar("type", { length: 20 }),
   description: text("description"),
+});
+
+export const products = pgTable("products", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 150 }),
+  categoryId: integer("category_id").references(() => categories.id),
+  brandId: integer("brand_id").references(() => brands.id),
+  unitId: integer("unit_id").references(() => units.id),
+  description: text("description"),
+  price: numeric("price", { precision: 10, scale: 2 }).default('0'),
+  stock: integer("stock").default(0),
+  barcode: varchar("barcode", { length: 255 }),
+  lowStockAlert: integer("low_stock_alert").default(0),
+  image: text("image"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  purchasePrice: numeric("purchase_price", { precision: 10, scale: 2 }).default('0'),
+  salePrice: numeric("sale_price", { precision: 10, scale: 2 }).default('0'),
+  wholesalePrice: numeric("wholesale_price", { precision: 10, scale: 2 }).default('0'),
+  retailPrice: numeric("retail_price", { precision: 10, scale: 2 }).default('0'),
+});
+
+export const productVariants = pgTable("product_variants", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id),
+  variantName: varchar("variant_name", { length: 100 }),
+  purchasePrice: numeric("purchase_price", { precision: 10, scale: 2 }).default('0'),
+  salePrice: numeric("sale_price", { precision: 10, scale: 2 }).default('0'),
+  wholesalePrice: numeric("wholesale_price", { precision: 10, scale: 2 }).default('0'),
+  retailPrice: numeric("retail_price", { precision: 10, scale: 2 }).default('0'),
 });
 
 export const productAttributes = pgTable("product_attributes", {
@@ -137,34 +141,18 @@ export const productAttributeValues = pgTable("product_attribute_values", {
   value: text("value"),
 });
 
-export const products = pgTable("products", {
+export const productBundleItems = pgTable("product_bundle_items", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 150 }),
-  categoryId: integer("category_id").references(() => categories.id),
-  brandId: integer("brand_id").references(() => brands.id),
-  unitId: integer("unit_id").references(() => units.id),
-  description: text("description"),
-  barcode: varchar("barcode", { length: 255 }),
-  price: numeric("price", { precision: 10, scale: 2 }).default("0"), // Main price (sale price)
-  purchasePrice: numeric("purchase_price", { precision: 10, scale: 2 }).default("0"),
-  salePrice: numeric("sale_price", { precision: 10, scale: 2 }).default("0"),
-  wholesalePrice: numeric("wholesale_price", { precision: 10, scale: 2 }).default("0"),
-  retailPrice: numeric("retail_price", { precision: 10, scale: 2 }).default("0"),
-  stock: integer("stock").default(0),
-  lowStockAlert: integer("low_stock_alert").default(0),
-  image: text("image"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  bundleId: integer("bundle_id").references(() => products.id),
+  itemId: integer("item_id").references(() => products.id),
+  quantity: numeric("quantity", { precision: 10, scale: 2 }),
 });
 
-export const productVariants = pgTable("product_variants", {
+export const productImei = pgTable("product_imei", {
   id: serial("id").primaryKey(),
-  productId: integer("product_id").references(() => products.id),
-  variantName: varchar("variant_name", { length: 100 }),
-  purchasePrice: numeric("purchase_price", { precision: 10, scale: 2 }).default("0"),
-  salePrice: numeric("sale_price", { precision: 10, scale: 2 }).default("0"),
-  wholesalePrice: numeric("wholesale_price", { precision: 10, scale: 2 }).default("0"),
-  retailPrice: numeric("retail_price", { precision: 10, scale: 2 }).default("0"),
+  productVariantId: integer("product_variant_id").references(() => productVariants.id),
+  imei: varchar("imei", { length: 50 }).unique(),
+  status: varchar("status", { length: 50 }).default('available'),
 });
 
 export const productPrices = pgTable("product_prices", {
@@ -174,6 +162,10 @@ export const productPrices = pgTable("product_prices", {
   costPrice: numeric("cost_price", { precision: 12, scale: 2 }),
   effectiveFrom: timestamp("effective_from"),
 });
+
+// =========================================
+// 🏪 Inventory & Warehouse Management
+// =========================================
 
 export const warehouses = pgTable("warehouses", {
   id: serial("id").primaryKey(),
@@ -185,14 +177,7 @@ export const stock = pgTable("stock", {
   id: serial("id").primaryKey(),
   productVariantId: integer("product_variant_id").references(() => productVariants.id),
   warehouseId: integer("warehouse_id").references(() => warehouses.id),
-  quantity: numeric("quantity", { precision: 12, scale: 2 }).default("0"),
-});
-
-export const productBundleItems = pgTable("product_bundle_items", {
-  id: serial("id").primaryKey(),
-  bundleId: integer("bundle_id").references(() => products.id),
-  itemId: integer("item_id").references(() => products.id),
-  quantity: numeric("quantity", { precision: 10, scale: 2 }),
+  quantity: numeric("quantity", { precision: 12, scale: 2 }).default('0'),
 });
 
 export const stockAdjustments = pgTable("stock_adjustments", {
@@ -218,15 +203,47 @@ export const stockTransferItems = pgTable("stock_transfer_items", {
   quantity: numeric("quantity", { precision: 12, scale: 2 }),
 });
 
-export const productImei = pgTable("product_imei", {
+export const inventoryMovements = pgTable("inventory_movements", {
   id: serial("id").primaryKey(),
-  productVariantId: integer("product_variant_id").references(() => productVariants.id),
-  imei: varchar("imei", { length: 50 }).unique(),
-  status: varchar("status", { length: 50 }).default("available"),
+  createdAt: timestamp("created_at").defaultNow(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  branchId: integer("branch_id").references(() => branches.id),
+  movementType: varchar("movement_type").notNull(),
+  referenceId: integer("reference_id").notNull(),
+  referenceType: varchar("reference_type").notNull(),
+  quantityChange: varchar("quantity_change").notNull().default('0'),
+  unitCost: varchar("unit_cost").notNull().default('0'),
+  totalCost: varchar("total_cost").notNull().default('0'),
+  movementDate: timestamp("movement_date").defaultNow(),
+});
+
+export const productWac = pgTable("product_wac", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  branchId: integer("branch_id").references(() => branches.id),
+  warehouseId: integer("warehouse_id").references(() => warehouses.id),
+  currentQuantity: numeric("current_quantity", { precision: 15, scale: 4 }).default('0'),
+  totalValue: numeric("total_value", { precision: 15, scale: 4 }).default('0'),
+  weightedAverageCost: numeric("weighted_average_cost", { precision: 15, scale: 4 }).default('0'),
+  lastCalculatedAt: timestamp("last_calculated_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const wacHistory = pgTable("wac_history", {
+  id: serial("id").primaryKey(),
+  createdAt: timestamp("created_at").defaultNow(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  branchId: integer("branch_id").references(() => branches.id),
+  oldWac: varchar("old_wac").notNull().default('0'),
+  newWac: varchar("new_wac").notNull().default('0'),
+  movementType: varchar("movement_type").notNull(),
+  movementId: integer("movement_id").notNull(),
+  quantityChanged: varchar("quantity_changed").notNull().default('0'),
+  pricePerUnit: varchar("price_per_unit").notNull().default('0'),
 });
 
 // =========================================
-// 👥 CRM & Customers
+// 💰 Sales & POS
 // =========================================
 
 export const customers = pgTable("customers", {
@@ -237,51 +254,40 @@ export const customers = pgTable("customers", {
   address: text("address"),
 });
 
-export const suppliers = pgTable("suppliers", {
+export const onlineCustomers = pgTable("online_customers", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 150 }),
+  name: varchar("name", { length: 100 }).notNull(),
+  email: varchar("email", { length: 100 }).notNull().unique(),
   phone: varchar("phone", { length: 20 }),
-  email: varchar("email", { length: 100 }),
+  password: varchar("password", { length: 255 }).notNull(),
   address: text("address"),
-});
-
-// =========================================
-// 🚗 Delivery Riders & Management
-// =========================================
-
-export const deliveryRiders = pgTable("delivery_riders", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 150 }).notNull(),
-  phone: varchar("phone", { length: 20 }).notNull(),
-  email: varchar("email", { length: 100 }),
-  licenseNumber: varchar("license_number", { length: 50 }),
-  vehicleType: varchar("vehicle_type", { length: 50 }), // bike, car, scooter
-  vehicleNumber: varchar("vehicle_number", { length: 20 }),
-  isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const riderAssignments = pgTable("rider_assignments", {
+export const onlineCustomersLegacy = pgTable("onlineCustomers", {
   id: serial("id").primaryKey(),
-  saleId: integer("sale_id").references(() => sales.id, { onDelete: "cascade" }).notNull(),
-  riderId: integer("rider_id").references(() => deliveryRiders.id).notNull(),
-  assignedAt: timestamp("assigned_at").defaultNow(),
-  assignedBy: varchar("assigned_by").references(() => users.id),
-  status: varchar("status", { length: 50 }).default("assigned"), // assigned, picked_up, delivered, cancelled
-  pickedUpAt: timestamp("picked_up_at"),
-  deliveredAt: timestamp("delivered_at"),
-  notes: text("notes"),
+  name: varchar("name", { length: 100 }).notNull(),
+  email: varchar("email", { length: 100 }).notNull().unique(),
+  phone: varchar("phone", { length: 20 }),
+  password: varchar("password", { length: 255 }).notNull(),
+  address: text("address"),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
 });
 
-// =========================================
-// 🧾 POS & Sales
-// =========================================
+export const cartItems = pgTable("cart_items", {
+  id: serial("id").primaryKey(),
+  onlineCustomerId: integer("online_customer_id").notNull().references(() => onlineCustomers.id, { onDelete: "cascade" }),
+  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  quantity: integer("quantity").notNull(),
+  price: numeric("price", { precision: 12, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 export const sales = pgTable("sales", {
   id: serial("id").primaryKey(),
   customerId: integer("customer_id").references(() => customers.id),
-  onlineCustomerId: integer("online_customer_id").references(() => onlineCustomers.id),
   userId: varchar("user_id").references(() => users.id),
   branchId: integer("branch_id").references(() => branches.id),
   registerId: integer("register_id").references(() => registers.id),
@@ -289,17 +295,18 @@ export const sales = pgTable("sales", {
   paidAmount: numeric("paid_amount", { precision: 12, scale: 2 }),
   saleDate: timestamp("sale_date").defaultNow(),
   status: varchar("status", { length: 50 }),
-  orderType: varchar("order_type", { length: 20 }).default("sale"), // sale, dine-in, takeaway, delivery
-  orderSource: varchar("order_source", { length: 20 }).default("pos"), // pos, online
+  orderType: varchar("order_type", { length: 20 }).default('sale'),
   tableNumber: varchar("table_number", { length: 20 }),
-  kitchenStatus: varchar("kitchen_status", { length: 20 }).default("new"), // new, preparing, ready, served
+  kitchenStatus: varchar("kitchen_status", { length: 20 }).default('new'),
   specialInstructions: text("special_instructions"),
-  estimatedTime: integer("estimated_time"), // in minutes
+  estimatedTime: integer("estimated_time"),
+  onlineCustomerId: integer("online_customer_id").references(() => onlineCustomers.id),
+  orderSource: varchar("order_source", { length: 20 }).default('pos'),
   deliveryAddress: text("delivery_address"),
   customerPhone: varchar("customer_phone", { length: 20 }),
   customerName: varchar("customer_name", { length: 150 }),
-  assignedRiderId: integer("assigned_rider_id").references(() => deliveryRiders.id),
-  deliveryStatus: varchar("delivery_status", { length: 50 }).default("pending"), // pending, assigned, picked_up, delivered
+  assignedRiderId: integer("assigned_rider_id"),
+  deliveryStatus: varchar("delivery_status", { length: 50 }).default('pending'),
 });
 
 export const saleItems = pgTable("sale_items", {
@@ -310,18 +317,47 @@ export const saleItems = pgTable("sale_items", {
   price: numeric("price", { precision: 12, scale: 2 }),
 });
 
+export const deliveryRiders = pgTable("delivery_riders", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 150 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  email: varchar("email", { length: 100 }),
+  licenseNumber: varchar("license_number", { length: 50 }),
+  vehicleType: varchar("vehicle_type", { length: 50 }),
+  vehicleNumber: varchar("vehicle_number", { length: 20 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const riderAssignments = pgTable("rider_assignments", {
+  id: serial("id").primaryKey(),
+  saleId: integer("sale_id").notNull().references(() => sales.id, { onDelete: "cascade" }),
+  riderId: integer("rider_id").notNull().references(() => deliveryRiders.id),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  assignedBy: varchar("assigned_by").references(() => users.id),
+  status: varchar("status", { length: 50 }).default('assigned'),
+  pickedUpAt: timestamp("picked_up_at"),
+  deliveredAt: timestamp("delivered_at"),
+  notes: text("notes"),
+});
+
+// =========================================
+// 📥 Returns
+// =========================================
+
 export const returns = pgTable("returns", {
   id: serial("id").primaryKey(),
   saleId: integer("sale_id").references(() => sales.id),
   userId: varchar("user_id").references(() => users.id),
-  customerId: integer("customer_id").references(() => customers.id),
   reason: text("reason"),
-  status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected, processed
+  returnDate: timestamp("return_date"),
+  customerId: integer("customer_id"),
+  status: varchar("status", { length: 20 }).default('pending'),
   totalAmount: numeric("total_amount", { precision: 12, scale: 2 }),
   customerName: varchar("customer_name", { length: 150 }),
-  returnDate: timestamp("return_date").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").default('CURRENT_TIMESTAMP'),
+  updatedAt: timestamp("updated_at").default('CURRENT_TIMESTAMP'),
 });
 
 export const returnItems = pgTable("return_items", {
@@ -330,12 +366,20 @@ export const returnItems = pgTable("return_items", {
   productVariantId: integer("product_variant_id").references(() => productVariants.id),
   quantity: numeric("quantity", { precision: 10, scale: 2 }),
   price: numeric("price", { precision: 12, scale: 2 }),
-  returnType: varchar("return_type", { length: 20 }).default("refund"), // refund, exchange, store_credit
+  returnType: varchar("return_type", { length: 20 }).default('refund'),
 });
 
 // =========================================
 // 📥 Purchases & Suppliers
 // =========================================
+
+export const suppliers = pgTable("suppliers", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 150 }),
+  phone: varchar("phone", { length: 20 }),
+  email: varchar("email", { length: 100 }),
+  address: text("address"),
+});
 
 export const purchases = pgTable("purchases", {
   id: serial("id").primaryKey(),
@@ -373,7 +417,7 @@ export const customerLedgers = pgTable("customer_ledgers", {
 });
 
 // =========================================
-// 💰 Payments & Accounting
+// 💰 Accounting & Financial
 // =========================================
 
 export const accounts = pgTable("accounts", {
@@ -401,304 +445,25 @@ export const transactions = pgTable("transactions", {
 });
 
 // =========================================
-// 💸 Enterprise Expenses Management
+// 💸 Expenses
 // =========================================
 
 export const expenseCategories = pgTable("expense_categories", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
-  description: text("description"),
-  parentId: integer("parent_id"), // For subcategories
-  isActive: boolean("is_active").default(true),
-  color: varchar("color", { length: 7 }), // Hex color for UI
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const expenseVendors = pgTable("expense_vendors", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 150 }).notNull(),
-  email: varchar("email", { length: 150 }),
-  phone: varchar("phone", { length: 20 }),
-  address: text("address"),
-  taxId: varchar("tax_id", { length: 50 }),
-  paymentTerms: varchar("payment_terms", { length: 100 }),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const expenseBudgets = pgTable("expense_budgets", {
-  id: serial("id").primaryKey(),
-  categoryId: integer("category_id").references(() => expenseCategories.id),
-  branchId: integer("branch_id").references(() => branches.id),
-  budgetAmount: numeric("budget_amount", { precision: 12, scale: 2 }).notNull(),
-  period: varchar("period", { length: 20 }).notNull(), // monthly, quarterly, yearly
-  year: integer("year").notNull(),
-  month: integer("month"), // for monthly budgets
-  quarter: integer("quarter"), // for quarterly budgets
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const expenseApprovalWorkflows = pgTable("expense_approval_workflows", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
-  description: text("description"),
-  minAmount: numeric("min_amount", { precision: 12, scale: 2 }).default("0"),
-  maxAmount: numeric("max_amount", { precision: 12, scale: 2 }),
-  requiredApprovers: integer("required_approvers").default(1),
-  approverRoleIds: integer("approver_role_ids").array(), // Array of role IDs
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  name: varchar("name", { length: 100 }),
 });
 
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
-  expenseNumber: varchar("expense_number", { length: 50 }).unique(),
   categoryId: integer("category_id").references(() => expenseCategories.id),
-  subcategoryId: integer("subcategory_id").references(() => expenseCategories.id),
-  vendorId: integer("vendor_id").references(() => expenseVendors.id),
-  branchId: integer("branch_id").references(() => branches.id),
-  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-  taxAmount: numeric("tax_amount", { precision: 12, scale: 2 }).default("0"),
-  totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
-  currency: varchar("currency", { length: 3 }).default("USD"),
-  exchangeRate: numeric("exchange_rate", { precision: 10, scale: 6 }).default("1"),
-  description: text("description"),
-  notes: text("notes"),
-  receiptNumber: varchar("receipt_number", { length: 100 }),
-  paymentMethod: varchar("payment_method", { length: 50 }).notNull(), // cash, bank, credit_card, digital_wallet
-  paymentReference: varchar("payment_reference", { length: 100 }),
-  expenseDate: timestamp("expense_date").notNull(),
-  dueDate: timestamp("due_date"),
-  paidDate: timestamp("paid_date"),
-  status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected, paid
-  approvalStatus: varchar("approval_status", { length: 20 }).default("pending"), // pending, approved, rejected
-  isRecurring: boolean("is_recurring").default(false),
-  recurringPattern: varchar("recurring_pattern", { length: 50 }), // daily, weekly, monthly, yearly
-  recurringEndDate: timestamp("recurring_end_date"),
-  nextRecurringDate: timestamp("next_recurring_date"),
-  parentExpenseId: integer("parent_expense_id"), // For recurring expenses
-  isPettyCash: boolean("is_petty_cash").default(false),
-  projectId: integer("project_id"), // For project-based expenses
-  costCenter: varchar("cost_center", { length: 100 }),
-  taxType: varchar("tax_type", { length: 50 }), // VAT, GST, withholding
-  taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).default("0"),
-  isReimbursable: boolean("is_reimbursable").default(false),
-  reimbursedAmount: numeric("reimbursed_amount", { precision: 12, scale: 2 }).default("0"),
-  attachmentUrls: text("attachment_urls").array(), // Array of file URLs
-  createdBy: varchar("created_by").references(() => users.id).notNull(),
-  approvedBy: varchar("approved_by").references(() => users.id),
-  approvedAt: timestamp("approved_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const expenseApprovals = pgTable("expense_approvals", {
-  id: serial("id").primaryKey(),
-  expenseId: integer("expense_id").references(() => expenses.id, { onDelete: "cascade" }).notNull(),
-  workflowId: integer("workflow_id").references(() => expenseApprovalWorkflows.id),
-  approverId: varchar("approver_id").references(() => users.id).notNull(),
-  status: varchar("status", { length: 20 }).notNull(), // pending, approved, rejected
-  comments: text("comments"),
-  approvedAt: timestamp("approved_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const expenseAuditLogs = pgTable("expense_audit_logs", {
-  id: serial("id").primaryKey(),
-  expenseId: integer("expense_id").references(() => expenses.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").references(() => users.id).notNull(),
-  action: varchar("action", { length: 50 }).notNull(), // created, updated, deleted, approved, rejected
-  fieldChanged: varchar("field_changed", { length: 100 }),
-  oldValue: text("old_value"),
-  newValue: text("new_value"),
-  ipAddress: varchar("ip_address", { length: 45 }),
-  userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const pettyCashAccounts = pgTable("petty_cash_accounts", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
-  branchId: integer("branch_id").references(() => branches.id),
-  initialAmount: numeric("initial_amount", { precision: 12, scale: 2 }).notNull(),
-  currentBalance: numeric("current_balance", { precision: 12, scale: 2 }).notNull(),
-  custodianId: varchar("custodian_id").references(() => users.id),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const expenseNotifications = pgTable("expense_notifications", {
-  id: serial("id").primaryKey(),
-  expenseId: integer("expense_id").references(() => expenses.id),
-  userId: varchar("user_id").references(() => users.id).notNull(),
-  type: varchar("type", { length: 50 }).notNull(), // approval_required, due_reminder, budget_exceeded, approved, rejected
-  title: varchar("title", { length: 200 }).notNull(),
-  message: text("message").notNull(),
-  isRead: boolean("is_read").default(false),
-  sentAt: timestamp("sent_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const backupLogs = pgTable("backup_logs", {
-  id: serial("id").primaryKey(),
-  filename: text("filename"),
-  backupDate: timestamp("backup_date").defaultNow(),
-});
-
-// =========================================
-// 📊 Weighted Average Cost (WAC) Inventory System
-// =========================================
-
-// Current WAC values per product
-export const productWac = pgTable("product_wac", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
-  branchId: integer("branch_id").references(() => branches.id),
-  warehouseId: integer("warehouse_id").references(() => warehouses.id),
-  currentQuantity: numeric("current_quantity", { precision: 15, scale: 4 }).default("0"),
-  totalValue: numeric("total_value", { precision: 15, scale: 4 }).default("0"),
-  weightedAverageCost: numeric("weighted_average_cost", { precision: 15, scale: 4 }).default("0"),
-  lastCalculatedAt: timestamp("last_calculated_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// All inventory movements for WAC calculation
-export const inventoryMovements = pgTable("inventory_movements", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
-  branchId: integer("branch_id").references(() => branches.id),
-  warehouseId: integer("warehouse_id").references(() => warehouses.id),
-  movementType: varchar("movement_type", { length: 30 }).notNull(), // purchase, sale, adjustment, transfer_in, transfer_out, return, wastage
-  quantity: numeric("quantity", { precision: 15, scale: 4 }).notNull(), // Positive for inbound, negative for outbound
-  unitCost: numeric("unit_cost", { precision: 15, scale: 4 }).notNull(), // Cost per unit for this movement
-  totalCost: numeric("total_cost", { precision: 15, scale: 4 }).notNull(), // quantity * unitCost
-  runningQuantity: numeric("running_quantity", { precision: 15, scale: 4 }).default("0"), // Quantity after this movement
-  runningValue: numeric("running_value", { precision: 15, scale: 4 }).default("0"), // Total value after this movement
-  wacAfterMovement: numeric("wac_after_movement", { precision: 15, scale: 4 }).default("0"), // WAC after this movement
-  referenceType: varchar("reference_type", { length: 30 }), // sale, purchase, adjustment, transfer
-  referenceId: integer("reference_id"), // Reference to source transaction
-  notes: text("notes"),
+  amount: numeric("amount", { precision: 12, scale: 2 }),
+  note: text("note"),
+  expenseDate: timestamp("expense_date"),
   createdBy: varchar("created_by").references(() => users.id),
-  movementDate: timestamp("movement_date").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Enhanced Purchase Orders for WAC calculation
-export const purchaseOrders = pgTable("purchase_orders", {
-  id: serial("id").primaryKey(),
-  purchaseOrderNumber: varchar("purchase_order_number", { length: 50 }).unique().notNull(),
-  supplierId: integer("supplier_id").references(() => suppliers.id),
-  branchId: integer("branch_id").references(() => branches.id),
-  warehouseId: integer("warehouse_id").references(() => warehouses.id),
-  totalAmount: numeric("total_amount", { precision: 15, scale: 2 }).default("0"),
-  taxAmount: numeric("tax_amount", { precision: 15, scale: 2 }).default("0"),
-  discountAmount: numeric("discount_amount", { precision: 15, scale: 2 }).default("0"),
-  shippingCost: numeric("shipping_cost", { precision: 15, scale: 2 }).default("0"),
-  grandTotal: numeric("grand_total", { precision: 15, scale: 2 }).default("0"),
-  currency: varchar("currency", { length: 3 }).default("USD"),
-  exchangeRate: numeric("exchange_rate", { precision: 10, scale: 6 }).default("1"),
-  status: varchar("status", { length: 30 }).default("draft"), // draft, sent, received, partially_received, completed, cancelled
-  orderDate: timestamp("order_date").defaultNow(),
-  expectedDeliveryDate: timestamp("expected_delivery_date"),
-  receivedDate: timestamp("received_date"),
-  notes: text("notes"),
-  createdBy: varchar("created_by").references(() => users.id),
-  receivedBy: varchar("received_by").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Purchase Order Items with detailed costing
-export const purchaseOrderItems = pgTable("purchase_order_items", {
-  id: serial("id").primaryKey(),
-  purchaseOrderId: integer("purchase_order_id").references(() => purchaseOrders.id, { onDelete: "cascade" }).notNull(),
-  productId: integer("product_id").references(() => products.id).notNull(),
-  productVariantId: integer("product_variant_id").references(() => productVariants.id),
-  orderedQuantity: numeric("ordered_quantity", { precision: 15, scale: 4 }).notNull(),
-  receivedQuantity: numeric("received_quantity", { precision: 15, scale: 4 }).default("0"),
-  unitCost: numeric("unit_cost", { precision: 15, scale: 4 }).notNull(),
-  totalCost: numeric("total_cost", { precision: 15, scale: 4 }).notNull(),
-  discountPercent: numeric("discount_percent", { precision: 5, scale: 2 }).default("0"),
-  discountAmount: numeric("discount_amount", { precision: 15, scale: 4 }).default("0"),
-  taxPercent: numeric("tax_percent", { precision: 5, scale: 2 }).default("0"),
-  taxAmount: numeric("tax_amount", { precision: 15, scale: 4 }).default("0"),
-  lineTotal: numeric("line_total", { precision: 15, scale: 4 }).notNull(),
-  notes: text("notes"),
-});
-
-// Stock Adjustments with WAC impact tracking
-export const stockAdjustmentItems = pgTable("stock_adjustment_items", {
-  id: serial("id").primaryKey(),
-  adjustmentId: integer("adjustment_id").references(() => stockAdjustments.id, { onDelete: "cascade" }).notNull(),
-  productId: integer("product_id").references(() => products.id).notNull(),
-  adjustmentType: varchar("adjustment_type", { length: 20 }).notNull(), // increase, decrease, recount
-  quantityBefore: numeric("quantity_before", { precision: 15, scale: 4 }).notNull(),
-  quantityAfter: numeric("quantity_after", { precision: 15, scale: 4 }).notNull(),
-  adjustmentQuantity: numeric("adjustment_quantity", { precision: 15, scale: 4 }).notNull(),
-  unitCost: numeric("unit_cost", { precision: 15, scale: 4 }), // Used for increases
-  totalCostImpact: numeric("total_cost_impact", { precision: 15, scale: 4 }).default("0"),
-  wacBefore: numeric("wac_before", { precision: 15, scale: 4 }),
-  wacAfter: numeric("wac_after", { precision: 15, scale: 4 }),
-  reason: text("reason"),
-  notes: text("notes"),
-});
-
-// WAC History for audit trail
-export const wacHistory = pgTable("wac_history", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
-  branchId: integer("branch_id").references(() => branches.id),
-  warehouseId: integer("warehouse_id").references(() => warehouses.id),
-  previousWac: numeric("previous_wac", { precision: 15, scale: 4 }),
-  newWac: numeric("new_wac", { precision: 15, scale: 4 }).notNull(),
-  previousQuantity: numeric("previous_quantity", { precision: 15, scale: 4 }),
-  newQuantity: numeric("new_quantity", { precision: 15, scale: 4 }).notNull(),
-  previousTotalValue: numeric("previous_total_value", { precision: 15, scale: 4 }),
-  newTotalValue: numeric("new_total_value", { precision: 15, scale: 4 }).notNull(),
-  triggerType: varchar("trigger_type", { length: 30 }).notNull(), // purchase, sale, adjustment, transfer
-  triggerReferenceId: integer("trigger_reference_id"),
-  calculationDetails: jsonb("calculation_details"), // Store calculation breakdown
-  createdBy: varchar("created_by").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// COGS Tracking per sale item
-export const cogsTracking = pgTable("cogs_tracking", {
-  id: serial("id").primaryKey(),
-  saleItemId: integer("sale_item_id").references(() => saleItems.id, { onDelete: "cascade" }).notNull(),
-  productId: integer("product_id").references(() => products.id).notNull(),
-  quantitySold: numeric("quantity_sold", { precision: 15, scale: 4 }).notNull(),
-  wacAtSale: numeric("wac_at_sale", { precision: 15, scale: 4 }).notNull(),
-  totalCogs: numeric("total_cogs", { precision: 15, scale: 4 }).notNull(),
-  salePrice: numeric("sale_price", { precision: 15, scale: 4 }).notNull(),
-  grossProfit: numeric("gross_profit", { precision: 15, scale: 4 }).notNull(),
-  profitMargin: numeric("profit_margin", { precision: 5, scale: 2 }).notNull(),
-  saleDate: timestamp("sale_date").notNull(),
-  branchId: integer("branch_id").references(() => branches.id),
-  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // =========================================
-// 🔔 Notifications
-// =========================================
-
-export const notifications = pgTable("notifications", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").references(() => users.id),
-  message: text("message"),
-  type: varchar("type", { length: 50 }),
-  status: varchar("status", { length: 50 }).default("unread"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// =========================================
-// 👨‍💼 Human Resource (Optional)
+// 👥 HR & Employees
 // =========================================
 
 export const employees = pgTable("employees", {
@@ -726,359 +491,97 @@ export const salaries = pgTable("salaries", {
 });
 
 // =========================================
-// 📊 Settings & Configuration
+// ⚙️ Settings & Configuration
 // =========================================
 
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
-  key: varchar("key", { length: 100 }).unique().notNull(),
+  key: varchar("key", { length: 100 }).unique(),
   value: text("value"),
 });
 
 export const currencies = pgTable("currencies", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 10 }).unique().notNull(), // USD, PKR, EUR, etc.
-  name: varchar("name", { length: 100 }).notNull(), // US Dollar, Pakistani Rupee, etc.
-  symbol: varchar("symbol", { length: 10 }).notNull(), // $, Rs, €, etc.
-  exchangeRate: numeric("exchange_rate", { precision: 15, scale: 6 }).default("1.000000").notNull(), // Rate relative to base currency
-  isActive: boolean("is_active").default(true).notNull(),
-  isDefault: boolean("is_default").default(false).notNull(),
+  code: varchar("code", { length: 10 }).notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(),
+  symbol: varchar("symbol", { length: 10 }).notNull(),
+  exchangeRate: numeric("exchange_rate", { precision: 12, scale: 6 }).default('1.000000'),
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// =========================================
-// 🌐 Online Restaurant & Customer Orders
-// =========================================
-
-export const onlineCustomers = pgTable("online_customers", {
+export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 150 }).notNull(),
-  email: varchar("email", { length: 150 }).unique().notNull(),
-  phone: varchar("phone", { length: 20 }),
-  password: text("password").notNull(),
-  address: text("address"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const cartItems = pgTable("cart_items", {
-  id: serial("id").primaryKey(),
-  onlineCustomerId: integer("online_customer_id").references(() => onlineCustomers.id, { onDelete: "cascade" }).notNull(),
-  productId: integer("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
-  quantity: integer("quantity").notNull(),
-  price: numeric("price", { precision: 12, scale: 2 }).notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  message: text("message"),
+  type: varchar("type", { length: 50 }),
+  status: varchar("status", { length: 50 }).default('unread'),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const menuCategories = pgTable("menu_categories", {
+export const backupLogs = pgTable("backup_logs", {
+  id: serial("id").primaryKey(),
+  filename: text("filename"),
+  backupDate: timestamp("backup_date").defaultNow(),
+});
+
+// =========================================
+// 📊 Analytics & Tracking
+// =========================================
+
+export const cogsTracking = pgTable("cogs_tracking", {
+  id: serial("id").primaryKey(),
+  createdAt: timestamp("created_at").defaultNow(),
+  salePrice: varchar("sale_price").notNull(),
+  branchId: integer("branch_id").references(() => branches.id),
+  saleDate: timestamp("sale_date").notNull(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  saleItemId: integer("sale_item_id").notNull().references(() => saleItems.id, { onDelete: "cascade" }),
+  quantitySold: varchar("quantity_sold").notNull(),
+  wacAtSale: varchar("wac_at_sale").notNull(),
+  totalCogs: varchar("total_cogs").notNull(),
+  grossProfit: varchar("gross_profit").notNull(),
+  profitMargin: varchar("profit_margin").notNull(),
+});
+
+// =========================================
+// 🍽️ Restaurant Features
+// =========================================
+
+export const menuCategories = pgTable("menuCategories", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
-  isActive: boolean("is_active").default(true),
-  sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
+  isActive: boolean("isActive").default(true),
+  sortOrder: integer("sortOrder").default(0),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
 });
 
 // =========================================
-// Relations
+// 🗄️ Session Management
 // =========================================
 
-export const usersRelations = relations(users, ({ one, many }) => ({
-  role: one(roles, {
-    fields: [users.roleId],
-    references: [roles.id],
-  }),
-  sales: many(sales),
-  activityLogs: many(activityLogs),
+export const sessions = pgTable("sessions", {
+  sid: varchar("sid").primaryKey(),
+  sess: jsonb("sess").notNull(),
+  expire: timestamp("expire").notNull(),
+}, (table) => ({
+  expireIdx: index("IDX_session_expire").on(table.expire),
 }));
 
-export const rolesRelations = relations(roles, ({ many }) => ({
-  users: many(users),
-  rolePermissions: many(rolePermissions),
+// Relations can be added here if needed for Drizzle queries
+export const usersRelations = relations(users, ({ one, many }) => ({
+  role: one(roles, { fields: [users.roleId], references: [roles.id] }),
+  sales: many(sales),
+  purchases: many(purchases),
 }));
 
 export const productsRelations = relations(products, ({ one, many }) => ({
-  category: one(categories, {
-    fields: [products.categoryId],
-    references: [categories.id],
-  }),
-  brand: one(brands, {
-    fields: [products.brandId],
-    references: [brands.id],
-  }),
-  unit: one(units, {
-    fields: [products.unitId],
-    references: [units.id],
-  }),
+  category: one(categories, { fields: [products.categoryId], references: [categories.id] }),
+  brand: one(brands, { fields: [products.brandId], references: [brands.id] }),
+  unit: one(units, { fields: [products.unitId], references: [units.id] }),
   variants: many(productVariants),
 }));
-
-export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({
-  product: one(products, {
-    fields: [productVariants.productId],
-    references: [products.id],
-  }),
-  prices: many(productPrices),
-  stock: many(stock),
-  saleItems: many(saleItems),
-}));
-
-export const salesRelations = relations(sales, ({ one, many }) => ({
-  customer: one(customers, {
-    fields: [sales.customerId],
-    references: [customers.id],
-  }),
-  onlineCustomer: one(onlineCustomers, {
-    fields: [sales.onlineCustomerId],
-    references: [onlineCustomers.id],
-  }),
-  user: one(users, {
-    fields: [sales.userId],
-    references: [users.id],
-  }),
-  branch: one(branches, {
-    fields: [sales.branchId],
-    references: [branches.id],
-  }),
-  assignedRider: one(deliveryRiders, {
-    fields: [sales.assignedRiderId],
-    references: [deliveryRiders.id],
-  }),
-  items: many(saleItems),
-  riderAssignments: many(riderAssignments),
-}));
-
-export const deliveryRidersRelations = relations(deliveryRiders, ({ many }) => ({
-  sales: many(sales),
-  riderAssignments: many(riderAssignments),
-}));
-
-export const riderAssignmentsRelations = relations(riderAssignments, ({ one }) => ({
-  sale: one(sales, {
-    fields: [riderAssignments.saleId],
-    references: [sales.id],
-  }),
-  rider: one(deliveryRiders, {
-    fields: [riderAssignments.riderId],
-    references: [deliveryRiders.id],
-  }),
-  assignedByUser: one(users, {
-    fields: [riderAssignments.assignedBy],
-    references: [users.id],
-  }),
-}));
-
-export const onlineCustomersRelations = relations(onlineCustomers, ({ many }) => ({
-  cartItems: many(cartItems),
-  sales: many(sales),
-}));
-
-export const cartItemsRelations = relations(cartItems, ({ one }) => ({
-  onlineCustomer: one(onlineCustomers, {
-    fields: [cartItems.onlineCustomerId],
-    references: [onlineCustomers.id],
-  }),
-  product: one(products, {
-    fields: [cartItems.productId],
-    references: [products.id],
-  }),
-}));
-
-export const saleItemsRelations = relations(saleItems, ({ one }) => ({
-  sale: one(sales, {
-    fields: [saleItems.saleId],
-    references: [sales.id],
-  }),
-  productVariant: one(productVariants, {
-    fields: [saleItems.productVariantId],
-    references: [productVariants.id],
-  }),
-}));
-
-// =========================================
-// Types
-// =========================================
-
-export type User = typeof users.$inferSelect;
-export type Role = typeof roles.$inferSelect;
-export type Product = typeof products.$inferSelect;
-export type ProductVariant = typeof productVariants.$inferSelect;
-export type ProductPrice = typeof productPrices.$inferSelect;
-export type Sale = typeof sales.$inferSelect;
-export type SaleItem = typeof saleItems.$inferSelect;
-export type Customer = typeof customers.$inferSelect;
-export type Category = typeof categories.$inferSelect;
-export type Brand = typeof brands.$inferSelect;
-export type Stock = typeof stock.$inferSelect;
-export type Supplier = typeof suppliers.$inferSelect;
-export type Purchase = typeof purchases.$inferSelect;
-export type PurchaseItem = typeof purchaseItems.$inferSelect;
-export type Account = typeof accounts.$inferSelect;
-export type Payment = typeof payments.$inferSelect;
-export type Transaction = typeof transactions.$inferSelect;
-export type Expense = typeof expenses.$inferSelect;
-export type ExpenseCategory = typeof expenseCategories.$inferSelect;
-export type Employee = typeof employees.$inferSelect;
-export type Notification = typeof notifications.$inferSelect;
-export type Setting = typeof settings.$inferSelect;
-export type Currency = typeof currencies.$inferSelect;
-export type OnlineCustomer = typeof onlineCustomers.$inferSelect;
-export type CartItem = typeof cartItems.$inferSelect;
-export type MenuCategory = typeof menuCategories.$inferSelect;
-export type DeliveryRider = typeof deliveryRiders.$inferSelect;
-export type RiderAssignment = typeof riderAssignments.$inferSelect;
-
-// WAC System Types
-export type ProductWac = typeof productWac.$inferSelect;
-export type InventoryMovement = typeof inventoryMovements.$inferSelect;
-export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
-export type PurchaseOrderItem = typeof purchaseOrderItems.$inferSelect;
-export type StockAdjustmentItem = typeof stockAdjustmentItems.$inferSelect;
-export type WacHistory = typeof wacHistory.$inferSelect;
-export type CogsTracking = typeof cogsTracking.$inferSelect;
-
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const upsertUserSchema = createInsertSchema(users).omit({
-  password: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertProductSchema = createInsertSchema(products);
-export const insertSaleSchema = createInsertSchema(sales).extend({
-  status: z.enum(['completed', 'pending', 'cancelled']).optional(),
-  orderType: z.enum(['sale', 'dine-in', 'takeaway', 'delivery']).optional(),
-  orderSource: z.enum(['pos', 'online']).optional(),
-  kitchenStatus: z.enum(['new', 'preparing', 'ready', 'served']).optional(),
-});
-export const insertOnlineCustomerSchema = createInsertSchema(onlineCustomers).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export const insertCartItemSchema = createInsertSchema(cartItems).omit({
-  id: true,
-  createdAt: true,
-});
-export const insertCustomerSchema = createInsertSchema(customers);
-export const insertSupplierSchema = createInsertSchema(suppliers);
-export const insertPurchaseSchema = createInsertSchema(purchases);
-export const insertEmployeeSchema = createInsertSchema(employees);
-export const insertExpenseSchema = createInsertSchema(expenses).omit({
-  id: true,
-  expenseNumber: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export const insertExpenseCategorySchema = createInsertSchema(expenseCategories).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export const insertExpenseVendorSchema = createInsertSchema(expenseVendors).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export const insertExpenseBudgetSchema = createInsertSchema(expenseBudgets).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export const insertExpenseWorkflowSchema = createInsertSchema(expenseApprovalWorkflows).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export const insertExpenseApprovalSchema = createInsertSchema(expenseApprovals).omit({
-  id: true,
-  createdAt: true,
-});
-export const insertPettyCashAccountSchema = createInsertSchema(pettyCashAccounts).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export const insertCurrencySchema = createInsertSchema(currencies);
-export const insertDeliveryRiderSchema = createInsertSchema(deliveryRiders).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export const insertRiderAssignmentSchema = createInsertSchema(riderAssignments).omit({
-  id: true,
-  assignedAt: true,
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type UpsertUser = z.infer<typeof upsertUserSchema>;
-export type InsertProduct = z.infer<typeof insertProductSchema>;
-export type InsertSale = z.infer<typeof insertSaleSchema>;
-export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
-export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
-export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
-export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
-export type InsertExpense = z.infer<typeof insertExpenseSchema>;
-export type SelectExpense = typeof expenses.$inferSelect;
-export type InsertExpenseCategory = z.infer<typeof insertExpenseCategorySchema>;
-export type SelectExpenseCategory = typeof expenseCategories.$inferSelect;
-export type InsertExpenseVendor = z.infer<typeof insertExpenseVendorSchema>;
-export type SelectExpenseVendor = typeof expenseVendors.$inferSelect;
-export type InsertExpenseBudget = z.infer<typeof insertExpenseBudgetSchema>;
-export type SelectExpenseBudget = typeof expenseBudgets.$inferSelect;
-export type InsertExpenseWorkflow = z.infer<typeof insertExpenseWorkflowSchema>;
-export type SelectExpenseWorkflow = typeof expenseApprovalWorkflows.$inferSelect;
-export type InsertExpenseApproval = z.infer<typeof insertExpenseApprovalSchema>;
-export type SelectExpenseApproval = typeof expenseApprovals.$inferSelect;
-export type InsertPettyCashAccount = z.infer<typeof insertPettyCashAccountSchema>;
-export type SelectPettyCashAccount = typeof pettyCashAccounts.$inferSelect;
-export type InsertCurrency = z.infer<typeof insertCurrencySchema>;
-export type InsertOnlineCustomer = z.infer<typeof insertOnlineCustomerSchema>;
-export type InsertDeliveryRider = z.infer<typeof insertDeliveryRiderSchema>;
-export type InsertRiderAssignment = z.infer<typeof insertRiderAssignmentSchema>;
-export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
-
-// WAC System Insert Schemas
-export const insertProductWacSchema = createInsertSchema(productWac).omit({
-  id: true,
-  lastCalculatedAt: true,
-  updatedAt: true,
-});
-
-export const insertInventoryMovementSchema = createInsertSchema(inventoryMovements).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertPurchaseOrderItemSchema = createInsertSchema(purchaseOrderItems).omit({
-  id: true,
-});
-
-export const insertStockAdjustmentItemSchema = createInsertSchema(stockAdjustmentItems).omit({
-  id: true,
-});
-
-export const insertCogsTrackingSchema = createInsertSchema(cogsTracking).omit({
-  id: true,
-  createdAt: true,
-});
-
-// WAC System Insert Types
-export type InsertProductWac = z.infer<typeof insertProductWacSchema>;
-export type InsertInventoryMovement = z.infer<typeof insertInventoryMovementSchema>;
-export type InsertPurchaseOrder = z.infer<typeof insertPurchaseOrderSchema>;
-export type InsertPurchaseOrderItem = z.infer<typeof insertPurchaseOrderItemSchema>;
-export type InsertStockAdjustmentItem = z.infer<typeof insertStockAdjustmentItemSchema>;
-export type InsertCogsTracking = z.infer<typeof insertCogsTrackingSchema>;

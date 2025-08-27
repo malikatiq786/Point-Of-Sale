@@ -68,7 +68,7 @@ export class ProductRepository {
         .from(schema.products)
         .where(eq(schema.products.id, id))
         .limit(1);
-      
+
       console.log('ProductRepository: Found product:', results[0]);
       return results[0] || null;
     } catch (error) {
@@ -142,7 +142,7 @@ export class ProductRepository {
         })
         .where(eq(schema.products.id, productId))
         .returning();
-      
+
       return results[0] || null;
     } catch (error) {
       console.error('Error updating product stock:', error);
@@ -168,6 +168,16 @@ export class ProductRepository {
     } catch (error) {
       console.error('Error decreasing product stock:', error);
       throw error;
+    }
+  }
+
+  async count(): Promise<number> {
+    try {
+      const result = await db.select({ count: sql`count(*)`.mapWith(Number) }).from(schema.products);
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error('Error counting products:', error);
+      return 0;
     }
   }
 }
