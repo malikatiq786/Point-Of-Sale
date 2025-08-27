@@ -17,7 +17,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { 
   Search, ShoppingCart, Minus, Plus, Trash2, CreditCard, DollarSign, 
   Smartphone, Percent, Calculator, Receipt, Printer, QrCode, 
-  User, Edit3, X, Check, Tag, Gift, AlertCircle, CheckCircle, Settings, Package, RotateCcw
+  User, Edit3, Edit, X, Check, Tag, Gift, AlertCircle, CheckCircle, Settings, Package, RotateCcw
 } from "lucide-react";
 
 interface CartItem {
@@ -1888,16 +1888,39 @@ export default function POSTerminal() {
                       <Plus className="w-4 h-4 mr-2" />
                       Add Customer
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="text-sm px-4 py-2 rounded-lg bg-white border-gray-300 hover:bg-gray-50 font-medium shadow-sm"
-                      onClick={() => setShowCustomerHistoryDialog(true)}
-                      disabled={!selectedCustomerId}
-                    >
-                      <User className="w-4 h-4 mr-2" />
-                      Customer History
-                    </Button>
+                    <div className="flex space-x-1">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-xs px-2 py-1 h-6 rounded bg-white border-gray-300 hover:bg-gray-50 font-medium shadow-sm"
+                        onClick={() => setShowCustomerHistoryDialog(true)}
+                        disabled={!selectedCustomerId}
+                      >
+                        <User className="w-3 h-3 mr-1" />
+                        History
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-xs px-2 py-1 h-6 rounded bg-blue-50 border-blue-300 hover:bg-blue-100 font-medium shadow-sm"
+                        onClick={() => {
+                          if (selectedCustomerId) {
+                            // Show customer sales in items table area
+                            const customerSales = sales?.filter(sale => sale.customerId === selectedCustomerId) || [];
+                            console.log('Customer Sales:', customerSales);
+                            toast({
+                              title: "Customer Sales",
+                              description: `Found ${customerSales.length} sales for this customer`,
+                            });
+                            setShowCustomerHistoryDialog(true); // Use existing dialog for now
+                          }
+                        }}
+                        disabled={!selectedCustomerId}
+                      >
+                        <Receipt className="w-3 h-3 mr-1" />
+                        Sales
+                      </Button>
+                    </div>
                     <Button 
                       size="sm" 
                       variant="outline" 
@@ -2815,13 +2838,20 @@ export default function POSTerminal() {
                                       setEditPrice('');
                                       // Focus back to search input for next product
                                       setTimeout(() => searchInputRef.current?.focus(), 100);
-                                    } else if (e.key === 'Enter') {
+                                    } else if (e.key === 'Enter' || e.key === 'Tab') {
                                       e.preventDefault();
                                       // Save price and add product to cart
                                       const newPrice = parseFloat(editPrice) || item.price;
                                       updateItemPrice(item.id, newPrice);
                                       setEditingItem(null);
                                       setEditPrice('');
+                                      // Focus back to search input for next product
+                                      setTimeout(() => {
+                                        if (searchInputRef.current) {
+                                          searchInputRef.current.focus();
+                                          searchInputRef.current.select();
+                                        }
+                                      }, 100);
                                     }
                                   }}
                                   className="w-20 h-6 text-xs text-right rounded"
