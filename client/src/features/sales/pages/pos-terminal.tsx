@@ -125,7 +125,11 @@ export default function POSTerminal() {
   
   // Discount and tax state
   const [discount, setDiscount] = useState<DiscountState>({ type: 'percentage', value: 0, applyTo: 'total' });
-  const [taxRate, setTaxRate] = useState<number>(10); // 10% default tax\n\n  // Fetch tax rate from settings\n  const { data: taxRateData } = useQuery({ queryKey: ['/api/settings/tax_rate'] });\n  const { data: taxEnabledData } = useQuery({ queryKey: ['/api/settings/tax_enabled'] });
+  const [taxRate, setTaxRate] = useState<number>(10); // 10% default tax
+
+  // Fetch tax rate from settings
+  const { data: taxRateData } = useQuery({ queryKey: ['/api/settings/tax_rate'] });
+  const { data: taxEnabledData } = useQuery({ queryKey: ['/api/settings/tax_enabled'] });
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
@@ -1193,6 +1197,10 @@ export default function POSTerminal() {
     const saleData = {
       totalAmount: grandTotal,
       paidAmount: paidAmount,
+      subtotal: getSubtotal(),
+      discountAmount: getItemDiscountTotal() + getGlobalDiscountAmount(),
+      taxAmount: getTaxAmount(),
+      taxRate: taxRate,
       status: unpaidAmount > 0 ? "pending" : "completed",
       paymentMethod,
       customerId: selectedCustomerId || null,
