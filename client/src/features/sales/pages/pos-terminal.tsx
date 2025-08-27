@@ -2243,7 +2243,7 @@ export default function POSTerminal() {
                     ) : null}
                     
                     {/* Empty rows for better UX - always show 8 rows */}
-                    {Array.from({ length: Math.max(8 - Math.max(cart.length, searchResults.length), 1) }).map((_, index) => (
+                    {Array.from({ length: Math.max(3 - Math.max(cart.length, searchResults.length), 1) }).map((_, index) => (
                       <tr key={`empty-${index}`} className="border-b border-gray-200">
                         <td className="py-1 px-2 text-center border-r border-gray-200 text-gray-300">{cart.length + searchResults.length + index + 1}</td>
                         <td className="py-1 px-2 border-r border-gray-200 text-gray-300">-</td>
@@ -3770,6 +3770,10 @@ export default function POSTerminal() {
             <CustomerHistoryContent 
               customerId={selectedCustomerId} 
               showAllSales={false} 
+              onViewSale={(sale) => {
+                setSelectedSaleForView(sale);
+                setShowSaleDetailDialog(true);
+              }}
               onEditLoadSale={(sale) => {
                 if (sale.items && sale.items.length > 0) {
                   const cartItems = sale.items.map((item: any) => ({
@@ -3831,6 +3835,10 @@ export default function POSTerminal() {
             <CustomerHistoryContent 
               customerId={null} 
               showAllSales={true} 
+              onViewSale={(sale) => {
+                setSelectedSaleForView(sale);
+                setShowSaleDetailDialog(true);
+              }}
               onEditLoadSale={null}
             />
           </DialogContent>
@@ -4127,7 +4135,7 @@ export default function POSTerminal() {
 }
 
 // Customer History Component
-function CustomerHistoryContent({ customerId, showAllSales, onEditLoadSale }: { customerId: number | null; showAllSales?: boolean; onEditLoadSale?: (sale: any) => void }) {
+function CustomerHistoryContent({ customerId, showAllSales, onEditLoadSale, onViewSale }: { customerId: number | null; showAllSales?: boolean; onEditLoadSale?: (sale: any) => void; onViewSale?: (sale: any) => void }) {
   const { formatCurrencyValue } = useCurrency();
   const { toast } = useToast();
   
@@ -4215,8 +4223,9 @@ function CustomerHistoryContent({ customerId, showAllSales, onEditLoadSale }: { 
                   variant="outline"
                   className="text-xs px-2 py-1 h-6 bg-blue-50 border-blue-300 hover:bg-blue-100"
                   onClick={() => {
-                    setSelectedSaleForView(sale);
-                    setShowSaleDetailDialog(true);
+                    if (onViewSale) {
+                      onViewSale(sale);
+                    }
                   }}
                 >
                   <Eye className="w-3 h-3 mr-1" />
