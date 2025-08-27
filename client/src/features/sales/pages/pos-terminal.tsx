@@ -2211,20 +2211,14 @@ export default function POSTerminal() {
                                     applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
                                   }
                                   setEditingDiscount(null);
-                                  // Move to next item's quantity field or search
-                                  const nextIndex = cart.findIndex(cartItem => cartItem.id === item.id) + 1;
-                                  if (nextIndex < cart.length) {
-                                    const nextItem = cart[nextIndex];
-                                    setTimeout(() => {
-                                      const nextQuantityInput = quantityInputRefs.current[nextItem.id];
-                                      if (nextQuantityInput) {
-                                        nextQuantityInput.focus();
-                                        nextQuantityInput.select();
-                                      }
-                                    }, 50);
-                                  } else {
-                                    setTimeout(() => searchInputRef.current?.focus(), 50);
-                                  }
+                                  // Move to price field of the same item
+                                  setTimeout(() => {
+                                    const priceInput = priceInputRefs.current[item.id];
+                                    if (priceInput) {
+                                      priceInput.focus();
+                                      priceInput.select();
+                                    }
+                                  }, 50);
                                 } else if (e.key === 'Enter') {
                                   e.preventDefault();
                                   const value = parseFloat(editDiscountValue) || 0;
@@ -2373,82 +2367,29 @@ export default function POSTerminal() {
 
               {/* Bottom Toolbar */}
               <div className="bg-gray-100 border-t border-gray-400 p-2">
-                <div className="flex justify-between">
-                  {/* Left Side Buttons */}
-                  <div className="flex space-x-1">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="text-xs px-2 py-1 h-6 flex items-center hover:bg-blue-50"
-                      onClick={() => setShowDiscountDialog(true)}
-                    >
-                      <div className="w-3 h-3 bg-blue-600 mr-1"></div>
-                      F2-Discount
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="text-xs px-2 py-1 h-6 flex items-center hover:bg-red-50"
-                      onClick={() => cart.length > 0 && removeFromCart(cart[cart.length - 1].id)}
-                    >
-                      <X className="w-3 h-3 mr-1 text-red-600" />
-                      F3-Delete Line
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-green-50">
-                      <RotateCcw className="w-3 h-3 mr-1 text-green-600" />
-                      F4-Refund
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="text-xs px-2 py-1 h-6 flex items-center hover:bg-orange-50"
-                      onClick={resetAll}
-                    >
-                      <Tag className="w-3 h-3 mr-1 text-orange-600" />
-                      F5-Reset All
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-green-50">
-                      <DollarSign className="w-3 h-3 mr-1 text-green-600" />
-                      F6-Payout
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-blue-50">
-                      <Calculator className="w-3 h-3 mr-1 text-blue-600" />
-                      F7-Enter Qty
-                    </Button>
-                  </div>
+                <div className="flex flex-col space-y-3">
 
                   {/* Stock and Purchase Price Info Boxes */}
                   {cart.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="grid grid-cols-2 gap-2">
                       {/* Stock Levels Box */}
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <h4 className="text-xs font-semibold text-blue-800 mb-2 flex items-center">
+                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white px-2 py-2 rounded-lg shadow-lg text-center">
+                        <div className="text-xs font-medium opacity-90 mb-1 flex items-center justify-center">
                           <Package className="w-3 h-3 mr-1" />
                           Stock Levels
-                        </h4>
-                        <div className="space-y-1">
-                          {cart.slice(-3).map((item) => {
+                        </div>
+                        <div className="text-sm font-bold">
+                          {cart.slice(-1).map((item) => {
                             // Find the original product data to get stock info
                             const productData = products.find(p => 
                               (item.isVariant && p.id === `${item.productId}-${item.variantId}`) ||
                               (!item.isVariant && p.id === item.productId)
                             );
                             const remainingStock = productData ? productData.stock : 0;
-                            const stockStatus = remainingStock <= 0 ? 'out' : 
-                                             remainingStock <= 5 ? 'low' : 'good';
                             
                             return (
-                              <div key={item.id} className="flex justify-between items-center text-xs">
-                                <span className="text-gray-700 truncate flex-1 mr-1">
-                                  {item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name}
-                                </span>
-                                <span className={`px-1 py-0.5 rounded text-xs font-medium ${
-                                  stockStatus === 'out' ? 'bg-red-100 text-red-700' :
-                                  stockStatus === 'low' ? 'bg-yellow-100 text-yellow-700' :
-                                  'bg-green-100 text-green-700'
-                                }`}>
-                                  {remainingStock}
-                                </span>
+                              <div key={item.id} className="text-white font-bold">
+                                {remainingStock}
                               </div>
                             );
                           })}
@@ -2456,11 +2397,11 @@ export default function POSTerminal() {
                       </div>
 
                       {/* Purchase Price Box - Last Added Product */}
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                        <h4 className="text-xs font-semibold text-amber-800 mb-2 flex items-center">
+                      <div className="bg-gradient-to-br from-amber-500 to-amber-600 text-white px-2 py-2 rounded-lg shadow-lg text-center">
+                        <div className="text-xs font-medium opacity-90 mb-1 flex items-center justify-center">
                           <DollarSign className="w-3 h-3 mr-1" />
                           Purchase Price
-                        </h4>
+                        </div>
                         {cart.length > 0 && (() => {
                           const lastItem = cart[cart.length - 1];
                           const productData = products.find(p => 
@@ -2471,13 +2412,10 @@ export default function POSTerminal() {
                           
                           return (
                             <div className="space-y-1">
-                              <div className="text-xs text-amber-700 truncate">
-                                {lastItem.name.length > 20 ? lastItem.name.substring(0, 20) + '...' : lastItem.name}
-                              </div>
-                              <div className="text-sm font-bold text-amber-800">
+                              <div className="text-xs font-bold text-white">
                                 Cost: {formatCurrencyValue(purchasePrice)}
                               </div>
-                              <div className="text-xs text-amber-600">
+                              <div className="text-xs text-white opacity-90">
                                 Profit: {formatCurrencyValue((lastItem.price - purchasePrice) * lastItem.quantity)}
                               </div>
                             </div>
@@ -2590,7 +2528,49 @@ export default function POSTerminal() {
                 </div>
 
                 {/* Second Row of Buttons */}
-                <div className="flex space-x-1 mt-2">
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {/* Help Buttons F2-F7 */}
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-xs px-1 py-0.5 h-5 flex items-center hover:bg-blue-50"
+                    onClick={() => setShowDiscountDialog(true)}
+                  >
+                    <div className="w-2 h-2 bg-blue-600 mr-1"></div>
+                    F2
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-xs px-1 py-0.5 h-5 flex items-center hover:bg-red-50"
+                    onClick={() => cart.length > 0 && removeFromCart(cart[cart.length - 1].id)}
+                  >
+                    <X className="w-2 h-2 mr-1 text-red-600" />
+                    F3
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs px-1 py-0.5 h-5 flex items-center hover:bg-green-50">
+                    <RotateCcw className="w-2 h-2 mr-1 text-green-600" />
+                    F4
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-xs px-1 py-0.5 h-5 flex items-center hover:bg-orange-50"
+                    onClick={resetAll}
+                  >
+                    <Tag className="w-2 h-2 mr-1 text-orange-600" />
+                    F5
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs px-1 py-0.5 h-5 flex items-center hover:bg-green-50">
+                    <DollarSign className="w-2 h-2 mr-1 text-green-600" />
+                    F6
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs px-1 py-0.5 h-5 flex items-center hover:bg-blue-50">
+                    <Calculator className="w-2 h-2 mr-1 text-blue-600" />
+                    F7
+                  </Button>
+                  
+                  {/* Main Action Buttons */}
                   <Button size="sm" variant="outline" className="text-xs px-2 py-1 h-6 flex items-center hover:bg-blue-50">
                     <Gift className="w-3 h-3 mr-1 text-blue-600" />
                     F9-Gift Card
