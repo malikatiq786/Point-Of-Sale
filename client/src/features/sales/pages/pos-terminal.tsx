@@ -688,6 +688,12 @@ export default function POSTerminal() {
   const { data: customerLedgerData } = useQuery<any[]>({
     queryKey: ['/api/customer-ledgers'],
   });
+  
+  // Fetch all sales data
+  const { data: sales = [] } = useQuery<any[]>({
+    queryKey: ['/api/sales'],
+    retry: false,
+  });
 
   // Initialize customer search query when customer is selected
   React.useEffect(() => {
@@ -1904,21 +1910,17 @@ export default function POSTerminal() {
                         variant="outline" 
                         className="text-xs px-2 py-1 h-6 rounded bg-blue-50 border-blue-300 hover:bg-blue-100 font-medium shadow-sm"
                         onClick={() => {
-                          if (selectedCustomerId) {
-                            // Show customer sales in items table area
-                            const customerSales = sales?.filter(sale => sale.customerId === selectedCustomerId) || [];
-                            console.log('Customer Sales:', customerSales);
-                            toast({
-                              title: "Customer Sales",
-                              description: `Found ${customerSales.length} sales for this customer`,
-                            });
-                            setShowCustomerHistoryDialog(true); // Use existing dialog for now
-                          }
+                          // Show all sales - default visible, not disabled
+                          console.log('All Sales:', sales);
+                          toast({
+                            title: "All Sales",
+                            description: `Showing ${sales?.length || 0} total sales`,
+                          });
+                          setShowCustomerHistoryDialog(true); // Use existing dialog for now
                         }}
-                        disabled={!selectedCustomerId}
                       >
                         <Receipt className="w-3 h-3 mr-1" />
-                        Sales
+                        Sales ({sales?.length || 0})
                       </Button>
                     </div>
                     <Button 
@@ -2285,7 +2287,7 @@ export default function POSTerminal() {
                                 setEditPrice('');
                               }}
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === 'Tab') {
+                                if (e.key === 'Tab') {
                                   e.preventDefault();
                                   const newPrice = parseFloat(editPrice) || item.price;
                                   updateItemPrice(item.id, newPrice);
@@ -2297,7 +2299,20 @@ export default function POSTerminal() {
                                       searchInputRef.current.focus();
                                       searchInputRef.current.select();
                                     }
-                                  }, 100);
+                                  }, 50);
+                                } else if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const newPrice = parseFloat(editPrice) || item.price;
+                                  updateItemPrice(item.id, newPrice);
+                                  setEditingItem(null);
+                                  setEditPrice('');
+                                  // Focus back to search input for next product
+                                  setTimeout(() => {
+                                    if (searchInputRef.current) {
+                                      searchInputRef.current.focus();
+                                      searchInputRef.current.select();
+                                    }
+                                  }, 50);
                                 }
                               }}
                               className="w-16 h-5 text-xs text-center rounded"
@@ -2838,7 +2853,21 @@ export default function POSTerminal() {
                                       setEditPrice('');
                                       // Focus back to search input for next product
                                       setTimeout(() => searchInputRef.current?.focus(), 100);
-                                    } else if (e.key === 'Enter' || e.key === 'Tab') {
+                                    } else if (e.key === 'Tab') {
+                                      e.preventDefault();
+                                      // Save price and go back to search field
+                                      const newPrice = parseFloat(editPrice) || item.price;
+                                      updateItemPrice(item.id, newPrice);
+                                      setEditingItem(null);
+                                      setEditPrice('');
+                                      // Focus back to search input for next product
+                                      setTimeout(() => {
+                                        if (searchInputRef.current) {
+                                          searchInputRef.current.focus();
+                                          searchInputRef.current.select();
+                                        }
+                                      }, 50);
+                                    } else if (e.key === 'Enter') {
                                       e.preventDefault();
                                       // Save price and add product to cart
                                       const newPrice = parseFloat(editPrice) || item.price;
@@ -2851,7 +2880,7 @@ export default function POSTerminal() {
                                           searchInputRef.current.focus();
                                           searchInputRef.current.select();
                                         }
-                                      }, 100);
+                                      }, 50);
                                     }
                                   }}
                                   className="w-20 h-6 text-xs text-right rounded"
