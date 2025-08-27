@@ -1,7 +1,7 @@
 import { BaseRepository, eq, and, gte, lte, sql } from './BaseRepository';
 import { desc, inArray } from 'drizzle-orm';
 import { sales, saleItems, customers, products, productVariants, categories, brands, units, users, returns, returnItems } from '../../../shared/schema';
-import { db } from './BaseRepository';
+import { db } from '../../db';
 
 export class SaleRepository extends BaseRepository<typeof sales, any, typeof sales.$inferSelect> {
   constructor() {

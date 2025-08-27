@@ -1,6 +1,6 @@
 import { BaseRepository, eq, like } from './BaseRepository';
 import { categories } from '../../../shared/schema';
-import { db } from './BaseRepository';
+import { db } from '../../db';
 
 export class CategoryRepository extends BaseRepository<typeof categories.$inferSelect> {
   constructor() {

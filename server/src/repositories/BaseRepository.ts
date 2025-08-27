@@ -1,11 +1,5 @@
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
-import * as schema from '../../../shared/schema';
+import { db } from '../../db';
 import { eq, and, or, like, gte, lte, sql } from 'drizzle-orm';
-
-// Database connection
-const sqlClient = neon(process.env.DATABASE_URL!);
-export const db = drizzle(sqlClient, { schema });
 
 // Base repository class with common CRUD operations
 export abstract class BaseRepository<TTable, TInsert, TSelect> {

@@ -1,7 +1,7 @@
 import { BaseRepository, eq, like, or } from './BaseRepository';
 import { sql } from 'drizzle-orm';
 import { users, roles, permissions, rolePermissions } from '../../../shared/schema';
-import { db } from './BaseRepository';
+import { db } from '../../db';
 
 export class UserRepository extends BaseRepository<typeof users.$inferSelect> {
   constructor() {

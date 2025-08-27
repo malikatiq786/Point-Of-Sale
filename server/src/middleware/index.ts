@@ -1,2 +1,2 @@
 // Export middleware functions
-export { isAuthenticated } from '../../replitAuth';
+export { isAuthenticated } from '../../customAuth';
