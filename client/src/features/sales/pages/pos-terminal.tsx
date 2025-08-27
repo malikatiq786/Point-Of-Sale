@@ -993,6 +993,29 @@ export default function POSTerminal() {
     }).filter(Boolean) as CartItem[]);
   };
 
+  // Set absolute quantity (not delta)
+  const setAbsoluteQuantity = (id: number | string, absoluteQuantity: number) => {
+    setCart(cart.map(item => {
+      if (item.id === id) {
+        const newQuantity = Math.max(1, absoluteQuantity);
+        const baseTotal = newQuantity * item.price;
+        const discountAmount = item.discountType === 'percentage' 
+          ? baseTotal * (item.discount || 0) / 100
+          : (item.discount || 0);
+        const afterDiscount = baseTotal - discountAmount;
+        const taxAmount = afterDiscount * (taxRate / 100);
+        
+        return { 
+          ...item, 
+          quantity: newQuantity, 
+          total: afterDiscount + taxAmount,
+          tax: taxAmount
+        };
+      }
+      return item;
+    }).filter(Boolean) as CartItem[]);
+  };
+
   const updateItemPrice = (id: number, newPrice: number) => {
     setCart(cart.map(item => {
       if (item.id === id) {
@@ -1164,7 +1187,7 @@ export default function POSTerminal() {
       paidAmount: paidAmount,
       status: unpaidAmount > 0 ? "pending" : "completed",
       paymentMethod,
-      customerId: selectedCustomerId,
+      customerId: selectedCustomerId || null,
       customer: selectedCustomer || { name: 'Walk-in Customer' },
       // Kitchen order fields
       orderType: orderType,
@@ -2064,7 +2087,7 @@ export default function POSTerminal() {
                               }}
                               onBlur={() => {
                                 const newQty = parseInt(editQuantity) || 1;
-                                updateQuantity(item.id, newQty - item.quantity);
+                                setAbsoluteQuantity(item.id, newQty);
                                 setEditingQuantityItem(null);
                                 setEditQuantity('');
                               }}
@@ -2709,7 +2732,7 @@ export default function POSTerminal() {
                                     onChange={(e) => setEditQuantity(e.target.value)}
                                     onBlur={() => {
                                       const newQty = parseInt(editQuantity) || 1;
-                                      updateQuantity(item.id, newQty - item.quantity);
+                                      setAbsoluteQuantity(item.id, newQty);
                                       setEditingPriceItem(null);
                                     }}
                                     onKeyDown={(e) => {
@@ -2717,7 +2740,7 @@ export default function POSTerminal() {
                                         e.preventDefault();
                                         e.stopPropagation();
                                         const newQty = parseInt(editQuantity) || 1;
-                                        updateQuantity(item.id, newQty - item.quantity);
+                                        setAbsoluteQuantity(item.id, newQty);
                                         // Move to price editing
                                         setEditPrice(item.price.toString());
                                         setTimeout(() => {
@@ -2732,7 +2755,7 @@ export default function POSTerminal() {
                                         e.stopPropagation();
                                         // Save quantity and add product to cart
                                         const newQty = parseInt(editQuantity) || 1;
-                                        updateQuantity(item.id, newQty - item.quantity);
+                                        setAbsoluteQuantity(item.id, newQty);
                                         setEditingPriceItem(null);
                                         setEditQuantity('');
                                       }
