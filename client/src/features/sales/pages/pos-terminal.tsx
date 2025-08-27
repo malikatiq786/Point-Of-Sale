@@ -163,7 +163,7 @@ export default function POSTerminal() {
   const [selectedSaleForView, setSelectedSaleForView] = useState<any>(null);
 
   // Update tax rate when fetched from settings
-  React.useEffect(() => {
+  useEffect(() => {
     if (taxRateData?.data?.value) {
       setTaxRate(parseFloat(taxRateData.data.value));
     }
