@@ -17,7 +17,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { 
   Search, ShoppingCart, Minus, Plus, Trash2, CreditCard, DollarSign, 
   Smartphone, Percent, Calculator, Receipt, Printer, QrCode, 
-  User, Edit3, Edit, X, Check, Tag, Gift, AlertCircle, CheckCircle, Settings, Package, RotateCcw
+  User, Edit3, Edit, X, Check, Tag, Gift, AlertCircle, CheckCircle, Settings, Package, RotateCcw, Eye
 } from "lucide-react";
 
 interface CartItem {
@@ -3829,32 +3829,7 @@ export default function POSTerminal() {
             <CustomerHistoryContent 
               customerId={null} 
               showAllSales={true} 
-              onEditLoadSale={(sale) => {
-                if (sale.items && sale.items.length > 0) {
-                  const cartItems = sale.items.map((item: any) => ({
-                    id: item.id || `${item.productId}-${item.variantId || 'default'}`,
-                    productId: item.productId,
-                    variantId: item.variantId,
-                    name: item.productName,
-                    baseName: item.productName.split(' - ')[0],
-                    variantName: item.productName.split(' - ')[1] || 'Default',
-                    price: parseFloat(item.price || item.unitPrice || 0),
-                    quantity: item.quantity,
-                    total: parseFloat(item.total),
-                    discount: item.discount || 0,
-                    isVariant: !!item.variantId
-                  }));
-                  setCart(cartItems);
-                  if (sale.customerId) {
-                    setSelectedCustomerId(sale.customerId);
-                  }
-                  setShowAllSalesDialog(false);
-                  toast({
-                    title: "Sale Loaded",
-                    description: `Sale #${sale.id} loaded for editing with ${sale.items.length} items`,
-                  });
-                }
-              }}
+              onEditLoadSale={null}
             />
           </DialogContent>
         </Dialog>
@@ -4119,20 +4094,16 @@ function CustomerHistoryContent({ customerId, showAllSales, onEditLoadSale }: { 
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-xs px-2 py-1 h-6 bg-green-50 border-green-300 hover:bg-green-100"
+                  className="text-xs px-2 py-1 h-6 bg-blue-50 border-blue-300 hover:bg-blue-100"
                   onClick={() => {
-                    if (onEditLoadSale) {
-                      onEditLoadSale(sale);
-                    } else {
-                      toast({
-                        title: "Edit Load Sale",
-                        description: `Loading Sale #${sale.id} for editing...`,
-                      });
-                    }
+                    toast({
+                      title: "View Sale Invoice",
+                      description: `Sale #${sale.id} - ${formatCurrencyValue(sale.totalAmount)} - ${sale.items?.length || 0} items`,
+                    });
                   }}
                 >
-                  <Edit className="w-3 h-3 mr-1" />
-                  Edit Load Sale
+                  <Eye className="w-3 h-3 mr-1" />
+                  View Sale
                 </Button>
               </div>
               {sale.items && sale.items.length > 0 && (
