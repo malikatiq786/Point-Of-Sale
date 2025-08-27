@@ -127,9 +127,10 @@ export default function POSTerminal() {
   const [discount, setDiscount] = useState<DiscountState>({ type: 'percentage', value: 0, applyTo: 'total' });
   const [taxRate, setTaxRate] = useState<number>(10); // 10% default tax
 
-  // Fetch tax rate from settings
-  const { data: taxRateData } = useQuery({ queryKey: ['/api/settings/tax_rate'] });
-  const { data: taxEnabledData } = useQuery({ queryKey: ['/api/settings/tax_enabled'] });
+  // Fetch enabled taxes from dynamic tax system
+  const { data: enabledTaxes = [] } = useQuery<any[]>({
+    queryKey: ['/api/taxes/enabled'],
+  });
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
@@ -166,12 +167,23 @@ export default function POSTerminal() {
   const [showSaleDetailDialog, setShowSaleDetailDialog] = useState(false);
   const [selectedSaleForView, setSelectedSaleForView] = useState<any>(null);
 
-  // Update tax rate when fetched from settings
-  useEffect(() => {
-    if (taxRateData?.data?.value) {
-      setTaxRate(parseFloat(taxRateData.data.value));
-    }
-  }, [taxRateData]);
+  // Calculate total tax rate from enabled taxes
+  const getTotalTaxRate = () => {
+    return enabledTaxes.reduce((total: number, tax: any) => {
+      return total + parseFloat(tax.rate || 0);
+    }, 0);
+  };
+
+  // Get tax breakdown for display
+  const getTaxBreakdown = () => {
+    const totalAfterDiscount = getTotalAfterDiscount();
+    return enabledTaxes.map((tax: any) => ({
+      id: tax.id,
+      name: tax.name,
+      rate: parseFloat(tax.rate || 0),
+      amount: totalAfterDiscount * (parseFloat(tax.rate || 0) / 100)
+    }));
+  };
 
   // Customer search functionality with autocomplete
   const handleCustomerSearchChange = (value: string) => {
@@ -1116,7 +1128,7 @@ export default function POSTerminal() {
   };
 
   const getTaxAmount = () => {
-    return getTotalAfterDiscount() * (taxRate / 100);
+    return getTotalAfterDiscount() * (getTotalTaxRate() / 100);
   };
 
   const getGrandTotal = () => {
@@ -1200,7 +1212,8 @@ export default function POSTerminal() {
       subtotal: getSubtotal(),
       discountAmount: getItemDiscountTotal() + getGlobalDiscountAmount(),
       taxAmount: getTaxAmount(),
-      taxRate: taxRate,
+      taxRate: getTotalTaxRate(),
+      taxes: getTaxBreakdown(),
       status: unpaidAmount > 0 ? "pending" : "completed",
       paymentMethod,
       customerId: selectedCustomerId || null,
@@ -1338,10 +1351,16 @@ export default function POSTerminal() {
               <span class="right">-${formatCurrencyValue(discountAmount)}</span>
             </div>
           ` : ''}
+          ${getTaxBreakdown().map(tax => `
           <div class="flex">
-            <span>Tax (${taxRate}%):</span>
-            <span class="right">${formatCurrencyValue(taxAmount)}</span>
-          </div>
+            <span>${tax.name} (${tax.rate}%):</span>
+            <span class="right">${formatCurrencyValue(tax.amount)}</span>
+          </div>`).join('')}
+          ${getTaxBreakdown().length === 0 ? `
+          <div class="flex">
+            <span>Tax (0%):</span>
+            <span class="right">${formatCurrencyValue(0)}</span>
+          </div>` : ''}
           <div class="divider"></div>
           <div class="bold">
             <span>TOTAL:</span>
@@ -3162,7 +3181,12 @@ export default function POSTerminal() {
               {/* Tax Box */}
               <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
                 <CardContent className="p-4 text-center">
-                  <div className="text-xs font-medium opacity-90 mb-1">Tax ({taxRate}%)</div>
+                  <div className="text-xs font-medium opacity-90 mb-1">
+                    {getTaxBreakdown().length > 0 ? 
+                      `Tax (${getTotalTaxRate()}%)` : 
+                      'Tax (0%)'
+                    }
+                  </div>
                   <div className="text-lg font-bold">{formatCurrencyValue(getTaxAmount())}</div>
                 </CardContent>
               </Card>
@@ -3369,10 +3393,19 @@ export default function POSTerminal() {
                       <span>-{formatCurrencyValue(getItemDiscountTotal() + getGlobalDiscountAmount())}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm">
-                    <span>Tax ({taxRate}%):</span>
-                    <span>{formatCurrencyValue(getTaxAmount())}</span>
-                  </div>
+                  {/* Tax Breakdown */}
+                  {getTaxBreakdown().length > 0 && getTaxBreakdown().map((tax) => (
+                    <div key={tax.id} className="flex justify-between text-sm">
+                      <span>{tax.name} ({tax.rate}%):</span>
+                      <span>{formatCurrencyValue(tax.amount)}</span>
+                    </div>
+                  ))}
+                  {getTaxBreakdown().length === 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>Tax (0%):</span>
+                      <span>{formatCurrencyValue(0)}</span>
+                    </div>
+                  )}
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">
                     <span>TOTAL:</span>
