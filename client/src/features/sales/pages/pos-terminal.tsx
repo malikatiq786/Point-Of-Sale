@@ -385,7 +385,8 @@ export default function POSTerminal() {
     setShowDiscountDialog(false);
     setShowCustomerDialog(false);
     setShowInvoice(false);
-    setEditingItem(null);
+    setEditingQuantityItem(null);
+    setEditingPriceItem(null);
     setEditingDiscount(null);
     setEditQuantity('');
     setEditPrice('');
@@ -906,7 +907,7 @@ export default function POSTerminal() {
       updateQuantity(cartId, 1);
       // Focus quantity input for existing item
       setTimeout(() => {
-        setEditingItem(cartId);
+        setEditingQuantityItem(cartId);
         setEditQuantity((existingItem.quantity + 1).toString());
         // Force a re-render then focus
         setTimeout(() => {
@@ -941,7 +942,7 @@ export default function POSTerminal() {
       
       // Auto-focus quantity input for the newly added item
       setTimeout(() => {
-        setEditingItem(cartId);
+        setEditingQuantityItem(cartId);
         setEditQuantity('1');
         // Force a re-render then focus
         setTimeout(() => {
@@ -2731,7 +2732,7 @@ export default function POSTerminal() {
                                   <span 
                                     className="w-16 text-center font-medium text-sm cursor-pointer hover:bg-gray-200 rounded px-2 py-1 min-w-[32px]"
                                     onClick={() => {
-                                      setEditingItem(item.id);
+                                      setEditingQuantityItem(item.id);
                                       setEditQuantity(item.quantity.toString());
                                     }}
                                   >
@@ -2806,7 +2807,7 @@ export default function POSTerminal() {
                                 <span 
                                   className="text-sm font-medium cursor-pointer hover:bg-gray-200 rounded px-1"
                                   onClick={() => {
-                                    setEditingItem(item.id);
+                                    setEditingPriceItem(item.id);
                                     setEditPrice(item.price.toString());
                                   }}
                                 >
