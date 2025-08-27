@@ -1612,7 +1612,7 @@ export default function POSTerminal() {
           {/* Header with Register Info, Staff, and Action Buttons */}
           <div className="flex items-center justify-between mb-6">
             {/* Left: Register and Staff Info */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <div className="bg-green-100 backdrop-blur-sm rounded-xl px-4 py-2 border border-green-200">
                 <span className="text-sm font-semibold text-green-800">
                   Main Register - {formatCurrencyValue(selectedRegister?.openingBalance || 0)}
@@ -2293,15 +2293,6 @@ export default function POSTerminal() {
                                     <QrCode className="w-6 h-6 text-gray-600" />
                                     <span className="text-lg font-medium text-gray-700">Scan to add items</span>
                                   </div>
-                                </div>
-                              </div>
-                              <div className="text-gray-500 text-sm">
-                                <div className="flex items-center justify-center space-x-2">
-                                  <QrCode className="w-4 h-4" />
-                                  <span>Scan barcode or enter item code to add items</span>
-                                </div>
-                                <div className="text-xs text-gray-400 mt-1">
-                                  Scanner automatically focused for instant scanning
                                 </div>
                               </div>
                             </div>

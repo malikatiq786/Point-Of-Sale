@@ -49,24 +49,7 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
   // Find sales with customer and user information
   async findAllWithDetails(limit: number = 10, offset: number = 0) {
     try {
-      const salesData = await db.select({
-        id: sales.id,
-        totalAmount: sales.totalAmount,
-        paidAmount: sales.paidAmount,
-        status: sales.status,
-        saleDate: sales.saleDate,
-        customerName: sales.customerName,
-        customerPhone: sales.customerPhone,
-        paymentMethod: sales.paymentMethod,
-        customerId: sales.customerId,
-        // Customer info
-        customerId_joined: customers.id,
-        customerName_joined: customers.name,
-        customerPhone_joined: customers.phone,
-        // User info
-        userId: users.id,
-        userName: users.name,
-      })
+      const salesData = await db.select()
       .from(sales)
       .leftJoin(customers, eq(sales.customerId, customers.id))
       .leftJoin(users, eq(sales.userId, users.id))
@@ -76,21 +59,13 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
 
       // Get items for each sale and format the response
       const salesWithItems = await Promise.all(
-        salesData.map(async (sale) => {
+        salesData.map(async (saleRow) => {
           try {
+            const sale = saleRow.sales;
+            const customer = saleRow.customers;
+            const user = saleRow.users;
+            
             const items = await this.getSaleItems(sale.id);
-            
-            // Format customer and user objects properly
-            const customer = sale.customerId_joined ? {
-              id: sale.customerId_joined,
-              name: sale.customerName_joined,
-              phone: sale.customerPhone_joined,
-            } : null;
-            
-            const user = sale.userId ? {
-              id: sale.userId,
-              name: sale.userName,
-            } : null;
             
             return {
               id: sale.id,
@@ -102,8 +77,15 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
               customerPhone: sale.customerPhone,
               paymentMethod: sale.paymentMethod,
               customerId: sale.customerId,
-              customer,
-              user,
+              customer: customer ? {
+                id: customer.id,
+                name: customer.name,
+                phone: customer.phone,
+              } : null,
+              user: user ? {
+                id: user.id,
+                name: user.name,
+              } : null,
               items: items.map((item: any) => ({
                 id: item.id,
                 productId: item.product?.id,
@@ -119,17 +101,17 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
               }))
             };
           } catch (error) {
-            console.error(`Error getting items for sale ${sale.id}:`, error);
+            console.error(`Error getting items for sale ${saleRow.sales.id}:`, error);
             return {
-              id: sale.id,
-              totalAmount: sale.totalAmount,
-              paidAmount: sale.paidAmount,
-              status: sale.status,
-              saleDate: sale.saleDate,
-              customerName: sale.customerName,
-              customerPhone: sale.customerPhone,
-              paymentMethod: sale.paymentMethod,
-              customerId: sale.customerId,
+              id: saleRow.sales.id,
+              totalAmount: saleRow.sales.totalAmount,
+              paidAmount: saleRow.sales.paidAmount,
+              status: saleRow.sales.status,
+              saleDate: saleRow.sales.saleDate,
+              customerName: saleRow.sales.customerName,
+              customerPhone: saleRow.sales.customerPhone,
+              paymentMethod: saleRow.sales.paymentMethod,
+              customerId: saleRow.sales.customerId,
               customer: null,
               user: null,
               items: []
