@@ -2241,43 +2241,42 @@ export default function POSTerminal() {
                             />
                           </td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">
-                            {editingItem === item.id && editPrice ? (
-                              <Input
-                                type="text"
-                                ref={(el) => priceInputRefs.current[item.id] = el}
-                                value={editPrice}
-                                onChange={(e) => setEditPrice(e.target.value)}
-                                onBlur={() => {
+                            <Input
+                              type="text"
+                              ref={(el) => priceInputRefs.current[item.id] = el}
+                              value={editingItem === item.id && editPrice ? editPrice : item.price.toFixed(2)}
+                              onChange={(e) => {
+                                if (editingItem !== item.id) {
+                                  setEditingItem(item.id);
+                                  setEditPrice(e.target.value);
+                                } else {
+                                  setEditPrice(e.target.value);
+                                }
+                              }}
+                              onFocus={() => {
+                                setEditingItem(item.id);
+                                setEditPrice(item.price.toString());
+                              }}
+                              onBlur={() => {
+                                const newPrice = parseFloat(editPrice) || item.price;
+                                updateItemPrice(item.id, newPrice);
+                                setEditingItem(null);
+                                setEditPrice('');
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
                                   const newPrice = parseFloat(editPrice) || item.price;
                                   updateItemPrice(item.id, newPrice);
                                   setEditingItem(null);
                                   setEditPrice('');
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === '+') {
-                                    e.preventDefault();
-                                    const newPrice = parseFloat(editPrice) || item.price;
-                                    updateItemPrice(item.id, newPrice);
-                                    setEditingItem(null);
-                                    setEditPrice('');
-                                    // Focus back to search input for next product
-                                    setTimeout(() => searchInputRef.current?.focus(), 100);
-                                  } else if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    // Save price and add product to cart
-                                    const newPrice = parseFloat(editPrice) || item.price;
-                                    updateItemPrice(item.id, newPrice);
-                                    setEditingItem(null);
-                                    setEditPrice('');
-                                  }
-                                }}
-                                className="w-16 h-5 text-xs text-center rounded"
-                                autoFocus
-                                data-testid={`search-price-input-${item.id}`}
-                              />
-                            ) : (
-                              <span className="text-xs">{item.price.toFixed(2)}</span>
-                            )}
+                                  // Focus back to search input for next product
+                                  setTimeout(() => searchInputRef.current?.focus(), 100);
+                                }
+                              }}
+                              className="w-16 h-5 text-xs text-center rounded"
+                              data-testid={`price-input-${item.id}`}
+                            />
                           </td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">{item.total.toFixed(2)}</td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">{(item.total * 0.1).toFixed(2)}</td>
@@ -2417,6 +2416,76 @@ export default function POSTerminal() {
                       F7-Enter Qty
                     </Button>
                   </div>
+
+                  {/* Stock and Purchase Price Info Boxes */}
+                  {cart.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      {/* Stock Levels Box */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <h4 className="text-xs font-semibold text-blue-800 mb-2 flex items-center">
+                          <Package className="w-3 h-3 mr-1" />
+                          Stock Levels
+                        </h4>
+                        <div className="space-y-1">
+                          {cart.slice(-3).map((item) => {
+                            // Find the original product data to get stock info
+                            const productData = products.find(p => 
+                              (item.isVariant && p.id === `${item.productId}-${item.variantId}`) ||
+                              (!item.isVariant && p.id === item.productId)
+                            );
+                            const remainingStock = productData ? productData.stock : 0;
+                            const stockStatus = remainingStock <= 0 ? 'out' : 
+                                             remainingStock <= 5 ? 'low' : 'good';
+                            
+                            return (
+                              <div key={item.id} className="flex justify-between items-center text-xs">
+                                <span className="text-gray-700 truncate flex-1 mr-1">
+                                  {item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name}
+                                </span>
+                                <span className={`px-1 py-0.5 rounded text-xs font-medium ${
+                                  stockStatus === 'out' ? 'bg-red-100 text-red-700' :
+                                  stockStatus === 'low' ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-green-100 text-green-700'
+                                }`}>
+                                  {remainingStock}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Purchase Price Box - Last Added Product */}
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <h4 className="text-xs font-semibold text-amber-800 mb-2 flex items-center">
+                          <DollarSign className="w-3 h-3 mr-1" />
+                          Purchase Price
+                        </h4>
+                        {cart.length > 0 && (() => {
+                          const lastItem = cart[cart.length - 1];
+                          const productData = products.find(p => 
+                            (lastItem.isVariant && p.id === `${lastItem.productId}-${lastItem.variantId}`) ||
+                            (!lastItem.isVariant && p.id === lastItem.productId)
+                          );
+                          const purchasePrice = productData?.baseProduct?.purchasePrice || productData?.purchasePrice || 0;
+                          
+                          return (
+                            <div className="space-y-1">
+                              <div className="text-xs text-amber-700 truncate">
+                                {lastItem.name.length > 20 ? lastItem.name.substring(0, 20) + '...' : lastItem.name}
+                              </div>
+                              <div className="text-sm font-bold text-amber-800">
+                                Cost: {formatCurrencyValue(purchasePrice)}
+                              </div>
+                              <div className="text-xs text-amber-600">
+                                Profit: {formatCurrencyValue((lastItem.price - purchasePrice) * lastItem.quantity)}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Horizontal Totals Boxes */}
                   <div className="grid grid-cols-4 gap-2">
@@ -2859,47 +2928,6 @@ export default function POSTerminal() {
                   </div>
                 )}
 
-                {/* Stock Checking Box */}
-                {cart.length > 0 && (
-                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="text-sm font-semibold text-blue-800 mb-2 flex items-center">
-                      <Package className="w-4 h-4 mr-1" />
-                      Stock Levels
-                    </h4>
-                    <div className="space-y-2">
-                      {cart.map((item) => {
-                        // Find the original product data to get stock info
-                        const productData = products.find(p => 
-                          (item.isVariant && p.id === `${item.productId}-${item.variantId}`) ||
-                          (!item.isVariant && p.id === item.productId)
-                        );
-                        const remainingStock = productData ? productData.stock : 0;
-                        const stockStatus = remainingStock <= 0 ? 'out' : 
-                                         remainingStock <= 5 ? 'low' : 'good';
-                        
-                        return (
-                          <div key={item.id} className="flex justify-between items-center text-xs">
-                            <span className="text-gray-700 truncate flex-1 mr-2">
-                              {item.name}
-                            </span>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-gray-600">
-                                Qty: {item.quantity}
-                              </span>
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                stockStatus === 'out' ? 'bg-red-100 text-red-700' :
-                                stockStatus === 'low' ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-green-100 text-green-700'
-                              }`}>
-                                Stock: {remainingStock}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
