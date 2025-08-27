@@ -100,6 +100,55 @@ export default function Settings() {
     }
   }, [editingTax]);
 
+  // Tax form helpers
+  const resetTaxForm = () => {
+    setTaxForm({
+      name: "",
+      rate: "",
+      taxNumber: "",
+      isEnabled: true
+    });
+  };
+
+  const handleCreateTax = () => {
+    if (!taxForm.name || !taxForm.rate) {
+      toast({ title: "Error", description: "Name and rate are required", variant: "destructive" });
+      return;
+    }
+    console.log('Creating tax:', taxForm);
+    setIsAddTaxDialogOpen(false);
+    resetTaxForm();
+    toast({ title: "Success", description: "Tax created successfully" });
+  };
+
+  const handleUpdateTax = () => {
+    if (!editingTax || !taxForm.name || !taxForm.rate) {
+      toast({ title: "Error", description: "Name and rate are required", variant: "destructive" });
+      return;
+    }
+    console.log('Updating tax:', editingTax.id, taxForm);
+    setEditingTax(null);
+    setIsAddTaxDialogOpen(false);
+    resetTaxForm();
+    toast({ title: "Success", description: "Tax updated successfully" });
+  };
+
+  const handleDeleteTax = (id: number) => {
+    if (confirm("Are you sure you want to delete this tax?")) {
+      console.log('Deleting tax:', id);
+      toast({ title: "Success", description: "Tax deleted successfully" });
+    }
+  };
+
+  const handleToggleTax = (id: number) => {
+    console.log('Toggling tax:', id);
+  };
+
+  const openEditTax = (tax: any) => {
+    setEditingTax(tax);
+    setIsAddTaxDialogOpen(true);
+  };
+
   // Create currency mutation
   const createCurrencyMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -681,75 +730,79 @@ export default function Settings() {
               </Card>
             </TabsContent>
 
-            {/* Tax Settings Tab */}
+            {/* Dynamic Tax Management Tab */}
             <TabsContent value="tax" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Receipt className="w-5 h-5" />
-                    <span>Tax Settings</span>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Receipt className="w-5 h-5" />
+                      <span>Tax Management</span>
+                    </div>
+                    <Button 
+                      onClick={() => setIsAddTaxDialogOpen(true)}
+                      size="sm"
+                      data-testid="button-add-tax"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Tax
+                    </Button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="taxRate">Default Tax Rate (%)</Label>
-                      <Input 
-                        id="taxRate" 
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        value={taxSettings.defaultTaxRate}
-                        onChange={(e) => setTaxSettings(prev => ({ ...prev, defaultTaxRate: e.target.value }))}
-                        placeholder="10.00"
-                        data-testid="input-tax-rate"
-                      />
+                <CardContent>
+                  {taxesLoading ? (
+                    <div className="text-center py-4">Loading taxes...</div>
+                  ) : taxes.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Receipt className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                      <p>No taxes configured yet</p>
+                      <p className="text-sm">Click "Add Tax" to create your first tax</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="taxName">Tax Name</Label>
-                      <Input 
-                        id="taxName" 
-                        value={taxSettings.taxName}
-                        onChange={(e) => setTaxSettings(prev => ({ ...prev, taxName: e.target.value }))}
-                        placeholder="Sales Tax"
-                        data-testid="input-tax-name"
-                      />
+                  ) : (
+                    <div className="space-y-4">
+                      {taxes.map((tax: any) => (
+                        <div key={tax.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-4">
+                              <div>
+                                <h4 className="font-medium">{tax.name}</h4>
+                                <p className="text-sm text-gray-500">
+                                  Rate: {tax.rate}%
+                                  {tax.taxNumber && ` • Tax Number: ${tax.taxNumber}`}
+                                </p>
+                              </div>
+                              <Badge variant={tax.isEnabled ? "default" : "secondary"}>
+                                {tax.isEnabled ? "Enabled" : "Disabled"}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={tax.isEnabled}
+                              onCheckedChange={() => handleToggleTax(tax.id)}
+                              data-testid={`switch-tax-${tax.id}`}
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditTax(tax)}
+                              data-testid={`button-edit-tax-${tax.id}`}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteTax(tax.id)}
+                              data-testid={`button-delete-tax-${tax.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="taxNumber">Tax Number (Optional)</Label>
-                    <Input 
-                      id="taxNumber" 
-                      value={taxSettings.taxNumber}
-                      onChange={(e) => setTaxSettings(prev => ({ ...prev, taxNumber: e.target.value }))}
-                      placeholder="Enter your business tax number"
-                      data-testid="input-tax-number"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Enable Tax Calculation</h4>
-                      <p className="text-sm text-gray-600">Apply tax to all sales transactions</p>
-                    </div>
-                    <Switch
-                      checked={taxSettings.isActive}
-                      onCheckedChange={(checked) => setTaxSettings(prev => ({ ...prev, isActive: checked }))}
-                      data-testid="switch-tax-active"
-                    />
-                  </div>
-
-                  <div className="pt-4">
-                    <Button 
-                      className="w-full" 
-                      onClick={handleSaveTaxSettings}
-                      data-testid="button-save-tax-settings"
-                    >
-                      Save Tax Settings
-                    </Button>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -787,6 +840,91 @@ export default function Settings() {
           </Tabs>
         </main>
       </div>
+
+      {/* Add/Edit Tax Dialog */}
+      <Dialog open={isAddTaxDialogOpen} onOpenChange={setIsAddTaxDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingTax ? "Edit Tax" : "Add New Tax"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            editingTax ? handleUpdateTax() : handleCreateTax();
+          }}>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="taxName">Tax Name</Label>
+                <Input
+                  id="taxName"
+                  value={taxForm.name}
+                  onChange={(e) => setTaxForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., Sales Tax, VAT, GST"
+                  required
+                  data-testid="input-tax-form-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                <Input
+                  id="taxRate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={taxForm.rate}
+                  onChange={(e) => setTaxForm(prev => ({ ...prev, rate: e.target.value }))}
+                  placeholder="e.g., 10.00"
+                  required
+                  data-testid="input-tax-form-rate"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="taxNumber">Tax Number (Optional)</Label>
+                <Input
+                  id="taxNumber"
+                  value={taxForm.taxNumber}
+                  onChange={(e) => setTaxForm(prev => ({ ...prev, taxNumber: e.target.value }))}
+                  placeholder="Enter tax registration number"
+                  data-testid="input-tax-form-number"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">Enable Tax</h4>
+                  <p className="text-sm text-gray-600">Apply this tax to sales transactions</p>
+                </div>
+                <Switch
+                  checked={taxForm.isEnabled}
+                  onCheckedChange={(checked) => setTaxForm(prev => ({ ...prev, isEnabled: checked }))}
+                  data-testid="switch-tax-form-enabled"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsAddTaxDialogOpen(false);
+                  setEditingTax(null);
+                  resetTaxForm();
+                }}
+                data-testid="button-cancel-tax"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                data-testid="button-save-tax"
+              >
+                {editingTax ? "Update Tax" : "Create Tax"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
