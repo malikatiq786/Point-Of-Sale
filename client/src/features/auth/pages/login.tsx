@@ -75,6 +75,7 @@ export default function Login() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(formData),
       });
 
@@ -86,8 +87,10 @@ export default function Login() {
           description: "Login successful! Redirecting to dashboard...",
         });
         
-        // Redirect to dashboard after successful login
-        window.location.href = "/";
+        // Wait a bit for the session to be established, then redirect
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 100);
       } else {
         setError(data.message || "Login failed");
       }

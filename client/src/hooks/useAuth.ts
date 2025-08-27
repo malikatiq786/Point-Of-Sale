@@ -16,6 +16,16 @@ export function useAuth() {
     retry: false,
     // Don't throw on 401/403 errors, just return undefined user
     throwOnError: false,
+    queryFn: async () => {
+      const response = await fetch("/api/auth/user", {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        return null;
+      }
+      const data = await response.json();
+      return data.user || data;
+    },
   });
 
   // Check if we have our custom login user or if we need to force login
