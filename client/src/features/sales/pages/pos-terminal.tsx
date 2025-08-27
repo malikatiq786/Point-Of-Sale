@@ -2137,64 +2137,71 @@ export default function POSTerminal() {
                             />
                           </td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">
-                            <Input
-                              type="text"
-                              ref={(el) => priceInputRefs.current[item.id] = el}
-                              value={editingItem === item.id && editPrice ? editPrice : item.price.toFixed(2)}
-                              onChange={(e) => {
-                                if (editingItem !== item.id) {
+                            {editingItem === item.id ? (
+                              <Input
+                                type="text"
+                                ref={(el) => priceInputRefs.current[item.id] = el}
+                                value={editPrice}
+                                onChange={(e) => setEditPrice(e.target.value)}
+                                onBlur={() => {
+                                  const newPrice = parseFloat(editPrice) || item.price;
+                                  updateItemPrice(item.id, newPrice);
+                                  setEditingItem(null);
+                                  setEditPrice('');
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Tab') {
+                                    e.preventDefault();
+                                    const newPrice = parseFloat(editPrice) || item.price;
+                                    updateItemPrice(item.id, newPrice);
+                                    setEditingItem(null);
+                                    setEditPrice('');
+                                    // Focus back to search input for next product
+                                    setTimeout(() => {
+                                      if (searchInputRef.current) {
+                                        searchInputRef.current.focus();
+                                        searchInputRef.current.select();
+                                      }
+                                    }, 50);
+                                  } else if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const newPrice = parseFloat(editPrice) || item.price;
+                                    updateItemPrice(item.id, newPrice);
+                                    setEditingItem(null);
+                                    setEditPrice('');
+                                    // Focus back to search input for next product
+                                    setTimeout(() => {
+                                      if (searchInputRef.current) {
+                                        searchInputRef.current.focus();
+                                        searchInputRef.current.select();
+                                      }
+                                    }, 50);
+                                  }
+                                }}
+                                className="w-16 h-5 text-xs text-center rounded"
+                                data-testid={`price-input-${item.id}`}
+                                autoFocus
+                              />
+                            ) : (
+                              <span
+                                onClick={() => {
                                   setEditingItem(item.id);
-                                  setEditPrice(e.target.value);
-                                } else {
-                                  setEditPrice(e.target.value);
-                                }
-                              }}
-                              onFocus={(e) => {
-                                setEditingItem(item.id);
-                                setEditPrice(item.price.toString());
-                                // Set cursor to beginning
-                                setTimeout(() => {
-                                  e.target.setSelectionRange(0, 0);
-                                }, 0);
-                              }}
-                              onBlur={() => {
-                                const newPrice = parseFloat(editPrice) || item.price;
-                                updateItemPrice(item.id, newPrice);
-                                setEditingItem(null);
-                                setEditPrice('');
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Tab') {
-                                  e.preventDefault();
-                                  const newPrice = parseFloat(editPrice) || item.price;
-                                  updateItemPrice(item.id, newPrice);
-                                  setEditingItem(null);
-                                  setEditPrice('');
-                                  // Focus back to search input for next product
+                                  setEditPrice(item.price.toString());
+                                  // Focus the input after state update
                                   setTimeout(() => {
-                                    if (searchInputRef.current) {
-                                      searchInputRef.current.focus();
-                                      searchInputRef.current.select();
+                                    const priceInput = priceInputRefs.current[item.id];
+                                    if (priceInput) {
+                                      priceInput.focus();
+                                      priceInput.select();
                                     }
-                                  }, 50);
-                                } else if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  const newPrice = parseFloat(editPrice) || item.price;
-                                  updateItemPrice(item.id, newPrice);
-                                  setEditingItem(null);
-                                  setEditPrice('');
-                                  // Focus back to search input for next product
-                                  setTimeout(() => {
-                                    if (searchInputRef.current) {
-                                      searchInputRef.current.focus();
-                                      searchInputRef.current.select();
-                                    }
-                                  }, 50);
-                                }
-                              }}
-                              className="w-16 h-5 text-xs text-center rounded"
-                              data-testid={`price-input-${item.id}`}
-                            />
+                                  }, 0);
+                                }}
+                                className="cursor-pointer hover:bg-blue-50 px-2 py-1 rounded text-xs"
+                                data-testid={`price-display-${item.id}`}
+                              >
+                                {item.price.toFixed(2)}
+                              </span>
+                            )}
                           </td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">{item.total.toFixed(2)}</td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">{(item.total * 0.1).toFixed(2)}</td>
