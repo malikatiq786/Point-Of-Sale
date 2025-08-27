@@ -133,7 +133,8 @@ export default function POSTerminal() {
   const [lastInvoice, setLastInvoice] = useState<InvoiceData | null>(null);
   
   // Item editing state
-  const [editingItem, setEditingItem] = useState<number | null>(null);
+  const [editingPriceItem, setEditingPriceItem] = useState<number | null>(null);
+  const [editingQuantityItem, setEditingQuantityItem] = useState<number | null>(null);
   const [editPrice, setEditPrice] = useState<string>("");
   const [editQuantity, setEditQuantity] = useState<string>("");
   const [editingDiscount, setEditingDiscount] = useState<number | null>(null);
@@ -2034,30 +2035,32 @@ export default function POSTerminal() {
                             <Input
                               type="text"
                               ref={(el) => quantityInputRefs.current[item.id] = el}
-                              value={editingItem === item.id ? editQuantity : item.quantity.toString()}
+                              value={editingQuantityItem === item.id ? editQuantity : item.quantity.toString()}
                               onChange={(e) => {
-                                if (editingItem !== item.id) {
-                                  setEditingItem(item.id);
+                                if (editingQuantityItem !== item.id) {
+                                  setEditingQuantityItem(item.id);
                                   setEditQuantity(e.target.value);
                                 } else {
                                   setEditQuantity(e.target.value);
                                 }
                               }}
                               onFocus={() => {
-                                setEditingItem(item.id);
+                                setEditingQuantityItem(item.id);
                                 setEditQuantity(item.quantity.toString());
                               }}
                               onBlur={() => {
                                 const newQty = parseInt(editQuantity) || 1;
                                 updateQuantity(item.id, newQty - item.quantity);
-                                setEditingItem(null);
+                                setEditingQuantityItem(null);
+                                setEditQuantity('');
                               }}
                               onKeyDown={(e) => {
                                 if (e.key === 'Tab') {
                                   e.preventDefault();
                                   const newQty = parseInt(editQuantity) || 1;
                                   updateQuantity(item.id, newQty - item.quantity);
-                                  setEditingItem(null);
+                                  setEditingQuantityItem(null);
+                                  setEditQuantity('');
                                   // Move to discount field
                                   setTimeout(() => {
                                     const discountInput = discountInputRefs.current[item.id];
@@ -2070,7 +2073,7 @@ export default function POSTerminal() {
                                   e.preventDefault();
                                   const newQty = parseInt(editQuantity) || 1;
                                   updateQuantity(item.id, newQty - item.quantity);
-                                  setEditingItem(null);
+                                  setEditingQuantityItem(null);
                                   setEditQuantity('');
                                 }
                               }}
@@ -2113,13 +2116,18 @@ export default function POSTerminal() {
                                     applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
                                   }
                                   setEditingDiscount(null);
-                                  // Move to price field of the same item
+                                  // Move to price field of the same item by triggering edit mode
                                   setTimeout(() => {
-                                    const priceInput = priceInputRefs.current[item.id];
-                                    if (priceInput) {
-                                      priceInput.focus();
-                                      priceInput.select();
-                                    }
+                                    setEditingPriceItem(item.id);
+                                    setEditPrice(item.price.toString());
+                                    // Focus the input after state update
+                                    setTimeout(() => {
+                                      const priceInput = priceInputRefs.current[item.id];
+                                      if (priceInput) {
+                                        priceInput.focus();
+                                        priceInput.select();
+                                      }
+                                    }, 0);
                                   }, 50);
                                 } else if (e.key === 'Enter') {
                                   e.preventDefault();
@@ -2137,7 +2145,7 @@ export default function POSTerminal() {
                             />
                           </td>
                           <td className="py-1 px-2 text-center border-r border-gray-200">
-                            {editingItem === item.id ? (
+                            {editingPriceItem === item.id ? (
                               <Input
                                 type="text"
                                 ref={(el) => priceInputRefs.current[item.id] = el}
@@ -2146,7 +2154,7 @@ export default function POSTerminal() {
                                 onBlur={() => {
                                   const newPrice = parseFloat(editPrice) || item.price;
                                   updateItemPrice(item.id, newPrice);
-                                  setEditingItem(null);
+                                  setEditingPriceItem(null);
                                   setEditPrice('');
                                 }}
                                 onKeyDown={(e) => {
@@ -2154,7 +2162,7 @@ export default function POSTerminal() {
                                     e.preventDefault();
                                     const newPrice = parseFloat(editPrice) || item.price;
                                     updateItemPrice(item.id, newPrice);
-                                    setEditingItem(null);
+                                    setEditingPriceItem(null);
                                     setEditPrice('');
                                     // Focus back to search input for next product
                                     setTimeout(() => {
@@ -2167,7 +2175,7 @@ export default function POSTerminal() {
                                     e.preventDefault();
                                     const newPrice = parseFloat(editPrice) || item.price;
                                     updateItemPrice(item.id, newPrice);
-                                    setEditingItem(null);
+                                    setEditingPriceItem(null);
                                     setEditPrice('');
                                     // Focus back to search input for next product
                                     setTimeout(() => {
@@ -2185,7 +2193,7 @@ export default function POSTerminal() {
                             ) : (
                               <span
                                 onClick={() => {
-                                  setEditingItem(item.id);
+                                  setEditingPriceItem(item.id);
                                   setEditPrice(item.price.toString());
                                   // Focus the input after state update
                                   setTimeout(() => {
@@ -2688,7 +2696,7 @@ export default function POSTerminal() {
                                     onBlur={() => {
                                       const newQty = parseInt(editQuantity) || 1;
                                       updateQuantity(item.id, newQty - item.quantity);
-                                      setEditingItem(null);
+                                      setEditingPriceItem(null);
                                     }}
                                     onKeyDown={(e) => {
                                       if (e.key === '+') {
@@ -2711,7 +2719,7 @@ export default function POSTerminal() {
                                         // Save quantity and add product to cart
                                         const newQty = parseInt(editQuantity) || 1;
                                         updateQuantity(item.id, newQty - item.quantity);
-                                        setEditingItem(null);
+                                        setEditingPriceItem(null);
                                         setEditQuantity('');
                                       }
                                     }}
@@ -2748,7 +2756,7 @@ export default function POSTerminal() {
                                   onBlur={() => {
                                     const newPrice = parseFloat(editPrice) || item.price;
                                     updateItemPrice(item.id, newPrice);
-                                    setEditingItem(null);
+                                    setEditingPriceItem(null);
                                     setEditPrice('');
                                   }}
                                   onKeyDown={(e) => {
@@ -2756,7 +2764,7 @@ export default function POSTerminal() {
                                       e.preventDefault();
                                       const newPrice = parseFloat(editPrice) || item.price;
                                       updateItemPrice(item.id, newPrice);
-                                      setEditingItem(null);
+                                      setEditingPriceItem(null);
                                       setEditPrice('');
                                       // Focus back to search input for next product
                                       setTimeout(() => searchInputRef.current?.focus(), 100);
@@ -2765,7 +2773,7 @@ export default function POSTerminal() {
                                       // Save price and go back to search field
                                       const newPrice = parseFloat(editPrice) || item.price;
                                       updateItemPrice(item.id, newPrice);
-                                      setEditingItem(null);
+                                      setEditingPriceItem(null);
                                       setEditPrice('');
                                       // Focus back to search input for next product
                                       setTimeout(() => {
@@ -2779,7 +2787,7 @@ export default function POSTerminal() {
                                       // Save price and add product to cart
                                       const newPrice = parseFloat(editPrice) || item.price;
                                       updateItemPrice(item.id, newPrice);
-                                      setEditingItem(null);
+                                      setEditingPriceItem(null);
                                       setEditPrice('');
                                       // Focus back to search input for next product
                                       setTimeout(() => {
