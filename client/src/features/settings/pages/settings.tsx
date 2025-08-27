@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star } from "lucide-react";
+import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star, Receipt } from "lucide-react";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -30,6 +30,14 @@ export default function Settings() {
     timezone: "UTC",
     dateFormat: "MM/DD/YYYY",
     systemCurrency: ""
+  });
+
+  // Tax settings state
+  const [taxSettings, setTaxSettings] = useState({
+    defaultTaxRate: "10",
+    taxName: "Sales Tax",
+    taxNumber: "",
+    isActive: true
   });
 
   // Currency form state
@@ -52,6 +60,12 @@ export default function Settings() {
     queryKey: ['/api/settings/system_currency'],
   });
 
+  // Fetch tax settings
+  const { data: taxRateData } = useQuery({ queryKey: ['/api/settings/tax_rate'] });
+  const { data: taxNameData } = useQuery({ queryKey: ['/api/settings/tax_name'] });
+  const { data: taxNumberData } = useQuery({ queryKey: ['/api/settings/tax_number'] });
+  const { data: taxEnabledData } = useQuery({ queryKey: ['/api/settings/tax_enabled'] });
+
   // Update generalSettings when systemSettings loads
   React.useEffect(() => {
     if (systemSettings?.data?.value) {
@@ -61,6 +75,22 @@ export default function Settings() {
       }));
     }
   }, [systemSettings]);
+
+  // Update tax settings when data loads
+  React.useEffect(() => {
+    if (taxRateData?.data?.value) {
+      setTaxSettings(prev => ({ ...prev, defaultTaxRate: taxRateData.data.value }));
+    }
+    if (taxNameData?.data?.value) {
+      setTaxSettings(prev => ({ ...prev, taxName: taxNameData.data.value }));
+    }
+    if (taxNumberData?.data?.value) {
+      setTaxSettings(prev => ({ ...prev, taxNumber: taxNumberData.data.value }));
+    }
+    if (taxEnabledData?.data?.value) {
+      setTaxSettings(prev => ({ ...prev, isActive: taxEnabledData.data.value === 'true' }));
+    }
+  }, [taxRateData, taxNameData, taxNumberData, taxEnabledData]);
 
   // Create currency mutation
   const createCurrencyMutation = useMutation({
@@ -219,6 +249,76 @@ export default function Settings() {
     }
   };
 
+  // Tax settings update mutations
+  const updateTaxRateMutation = useMutation({
+    mutationFn: async (value: string) => {
+      const response = await fetch('/api/settings/tax_rate', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      });
+      if (!response.ok) throw new Error('Failed to update tax rate');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/tax_rate'] });
+      toast({ title: 'Success', description: 'Tax rate updated successfully' });
+    },
+  });
+
+  const updateTaxNameMutation = useMutation({
+    mutationFn: async (value: string) => {
+      const response = await fetch('/api/settings/tax_name', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      });
+      if (!response.ok) throw new Error('Failed to update tax name');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/tax_name'] });
+    },
+  });
+
+  const updateTaxNumberMutation = useMutation({
+    mutationFn: async (value: string) => {
+      const response = await fetch('/api/settings/tax_number', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      });
+      if (!response.ok) throw new Error('Failed to update tax number');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/tax_number'] });
+    },
+  });
+
+  const updateTaxEnabledMutation = useMutation({
+    mutationFn: async (value: string) => {
+      const response = await fetch('/api/settings/tax_enabled', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      });
+      if (!response.ok) throw new Error('Failed to update tax enabled status');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/tax_enabled'] });
+    },
+  });
+
+  // Handle tax settings save
+  const handleSaveTaxSettings = () => {
+    updateTaxRateMutation.mutate(taxSettings.defaultTaxRate);
+    updateTaxNameMutation.mutate(taxSettings.taxName);
+    updateTaxNumberMutation.mutate(taxSettings.taxNumber);
+    updateTaxEnabledMutation.mutate(taxSettings.isActive.toString());
+  };
+
   // Handle general settings save
   const handleSaveGeneralSettings = () => {
     if (generalSettings.systemCurrency) {
@@ -244,7 +344,7 @@ export default function Settings() {
         {/* Main Content */}
         <main className="flex-1 overflow-auto p-6">
           <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="general" className="flex items-center gap-2">
                 <SettingsIcon className="h-4 w-4" />
                 General
@@ -260,6 +360,10 @@ export default function Settings() {
               <TabsTrigger value="notifications" className="flex items-center gap-2">
                 <Bell className="h-4 w-4" />
                 Notifications
+              </TabsTrigger>
+              <TabsTrigger value="tax" className="flex items-center gap-2">
+                <Receipt className="h-4 w-4" />
+                Tax
               </TabsTrigger>
               <TabsTrigger value="security" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
@@ -565,6 +669,79 @@ export default function Settings() {
                   </div>
 
                   <Button>Save Notification Settings</Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Tax Settings Tab */}
+            <TabsContent value="tax" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Receipt className="w-5 h-5" />
+                    <span>Tax Settings</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="taxRate">Default Tax Rate (%)</Label>
+                      <Input 
+                        id="taxRate" 
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={taxSettings.defaultTaxRate}
+                        onChange={(e) => setTaxSettings(prev => ({ ...prev, defaultTaxRate: e.target.value }))}
+                        placeholder="10.00"
+                        data-testid="input-tax-rate"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="taxName">Tax Name</Label>
+                      <Input 
+                        id="taxName" 
+                        value={taxSettings.taxName}
+                        onChange={(e) => setTaxSettings(prev => ({ ...prev, taxName: e.target.value }))}
+                        placeholder="Sales Tax"
+                        data-testid="input-tax-name"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="taxNumber">Tax Number (Optional)</Label>
+                    <Input 
+                      id="taxNumber" 
+                      value={taxSettings.taxNumber}
+                      onChange={(e) => setTaxSettings(prev => ({ ...prev, taxNumber: e.target.value }))}
+                      placeholder="Enter your business tax number"
+                      data-testid="input-tax-number"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">Enable Tax Calculation</h4>
+                      <p className="text-sm text-gray-600">Apply tax to all sales transactions</p>
+                    </div>
+                    <Switch
+                      checked={taxSettings.isActive}
+                      onCheckedChange={(checked) => setTaxSettings(prev => ({ ...prev, isActive: checked }))}
+                      data-testid="switch-tax-active"
+                    />
+                  </div>
+
+                  <div className="pt-4">
+                    <Button 
+                      className="w-full" 
+                      onClick={handleSaveTaxSettings}
+                      data-testid="button-save-tax-settings"
+                    >
+                      Save Tax Settings
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

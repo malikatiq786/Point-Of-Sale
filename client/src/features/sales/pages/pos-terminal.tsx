@@ -125,7 +125,7 @@ export default function POSTerminal() {
   
   // Discount and tax state
   const [discount, setDiscount] = useState<DiscountState>({ type: 'percentage', value: 0, applyTo: 'total' });
-  const [taxRate, setTaxRate] = useState<number>(10); // 10% default tax
+  const [taxRate, setTaxRate] = useState<number>(10); // 10% default tax\n\n  // Fetch tax rate from settings\n  const { data: taxRateData } = useQuery({ queryKey: ['/api/settings/tax_rate'] });\n  const { data: taxEnabledData } = useQuery({ queryKey: ['/api/settings/tax_enabled'] });
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
@@ -161,6 +161,13 @@ export default function POSTerminal() {
   const [showAllSalesDialog, setShowAllSalesDialog] = useState(false);
   const [showSaleDetailDialog, setShowSaleDetailDialog] = useState(false);
   const [selectedSaleForView, setSelectedSaleForView] = useState<any>(null);
+
+  // Update tax rate when fetched from settings
+  React.useEffect(() => {
+    if (taxRateData?.data?.value) {
+      setTaxRate(parseFloat(taxRateData.data.value));
+    }
+  }, [taxRateData]);
 
   // Customer search functionality with autocomplete
   const handleCustomerSearchChange = (value: string) => {
