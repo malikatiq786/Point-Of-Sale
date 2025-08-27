@@ -21,8 +21,12 @@ import {
 } from "lucide-react";
 
 interface CartItem {
-  id: number;
+  id: number | string; // Support composite IDs for variants
+  productId: number;
+  variantId?: number | null;
   name: string;
+  baseName: string;
+  variantName: string;
   price: number;
   quantity: number;
   total: number;
@@ -30,6 +34,7 @@ interface CartItem {
   discountType?: 'percentage' | 'fixed';
   tax?: number;
   category?: string;
+  isVariant: boolean;
 }
 
 interface Customer {
@@ -594,12 +599,12 @@ export default function POSTerminal() {
   const [cashDrawerBalance, setCashDrawerBalance] = useState(0);
   const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(true); // Show register setup when closed
 
-  // Fetch all products (no server-side search)
+  // Fetch all products with variants for POS
   const { data: products = [], isLoading } = useQuery<any[]>({
     queryKey: ["pos-products"],
     queryFn: async () => {
-      // Fetch with a large page size to get all products
-      const response = await fetch("/api/products/1/1000", {
+      // Fetch products with their variants from new POS endpoint
+      const response = await fetch("/api/products/pos/all", {
         credentials: 'include'
       });
       
@@ -607,8 +612,59 @@ export default function POSTerminal() {
         throw new Error(`Failed to fetch products: ${response.status}`);
       }
       
-      const data = await response.json();
-      return data.products || data; // Handle both paginated and non-paginated responses
+      const productsWithVariants = await response.json();
+      
+      // Create searchable items: one for each variant (or base product if no variants)
+      const searchableItems = [];
+      
+      productsWithVariants.forEach(product => {
+        if (product.variants && product.variants.length > 0) {
+          // Create searchable items for each variant
+          product.variants.forEach(variant => {
+            searchableItems.push({
+              id: `${product.id}-${variant.id}`, // Composite ID
+              productId: product.id,
+              variantId: variant.id,
+              name: `${product.name} - ${variant.variantName}`,
+              baseName: product.name,
+              variantName: variant.variantName,
+              barcode: product.barcode,
+              description: product.description,
+              price: variant.salePrice || product.price,
+              salePrice: variant.salePrice,
+              stock: variant.stock,
+              category: product.category,
+              brand: product.brand,
+              unit: product.unit,
+              isVariant: true,
+              baseProduct: product
+            });
+          });
+        } else {
+          // No variants, use base product
+          searchableItems.push({
+            id: product.id,
+            productId: product.id,
+            variantId: null,
+            name: product.name,
+            baseName: product.name,
+            variantName: 'Default',
+            barcode: product.barcode,
+            description: product.description,
+            price: product.price,
+            salePrice: product.price,
+            stock: product.stock,
+            category: product.category,
+            brand: product.brand,
+            unit: product.unit,
+            isVariant: false,
+            baseProduct: product
+          });
+        }
+      });
+      
+      console.log(`Processed ${searchableItems.length} searchable items from ${productsWithVariants.length} products`);
+      return searchableItems;
     },
     retry: false,
   });
@@ -717,7 +773,11 @@ export default function POSTerminal() {
   // Process sale mutation
   const processSaleMutation = useMutation({
     mutationFn: async (saleData: any) => {
-      await apiRequest("POST", "/api/sales", saleData);
+      const response = await apiRequest("/api/sales", {
+        method: "POST",
+        body: JSON.stringify(saleData)
+      });
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -809,7 +869,7 @@ export default function POSTerminal() {
     },
   });
 
-  // Enhanced cart operations
+  // Enhanced cart operations with variant support
   const addToCart = (product: any) => {
     if (registerStatus !== 'open') {
       toast({
@@ -821,17 +881,19 @@ export default function POSTerminal() {
       return;
     }
     
-    const existingItem = cart.find(item => item.id === product.id);
+    // Use composite ID for variants (productId-variantId) or regular ID for base products
+    const cartId = product.isVariant ? product.id : product.id;
+    const existingItem = cart.find(item => item.id === cartId);
     
     if (existingItem) {
-      updateQuantity(product.id, 1);
+      updateQuantity(cartId, 1);
       // Focus quantity input for existing item
       setTimeout(() => {
-        setEditingItem(product.id);
+        setEditingItem(cartId);
         setEditQuantity((existingItem.quantity + 1).toString());
         // Force a re-render then focus
         setTimeout(() => {
-          const quantityInput = quantityInputRefs.current[product.id];
+          const quantityInput = quantityInputRefs.current[cartId];
           if (quantityInput) {
             quantityInput.focus();
             quantityInput.select();
@@ -839,29 +901,34 @@ export default function POSTerminal() {
         }, 50);
       }, 150);
     } else {
-      // Set default price based on product category
-      const defaultPrice = parseFloat(product.price) || 0;
+      // Use variant price if available, otherwise use base product price
+      const itemPrice = parseFloat(product.salePrice || product.price) || 0;
       
       const newItem: CartItem = {
-        id: product.id,
-        name: product.name,
-        price: defaultPrice,
+        id: cartId,
+        productId: product.productId,
+        variantId: product.variantId,
+        name: product.name, // Already includes variant name like "Product - Variant"
+        baseName: product.baseName,
+        variantName: product.variantName,
+        price: itemPrice,
         quantity: 1,
-        total: defaultPrice,
+        total: itemPrice,
         discount: 0,
         discountType: 'percentage',
         tax: 0,
-        category: product.category?.name || 'General'
+        category: product.category?.name || 'General',
+        isVariant: product.isVariant || false
       };
       setCart([...cart, newItem]);
       
       // Auto-focus quantity input for the newly added item
       setTimeout(() => {
-        setEditingItem(product.id);
+        setEditingItem(cartId);
         setEditQuantity('1');
         // Force a re-render then focus
         setTimeout(() => {
-          const quantityInput = quantityInputRefs.current[product.id];
+          const quantityInput = quantityInputRefs.current[cartId];
           if (quantityInput) {
             quantityInput.focus();
             quantityInput.select();
@@ -871,7 +938,7 @@ export default function POSTerminal() {
     }
   };
 
-  const updateQuantity = (id: number, change: number) => {
+  const updateQuantity = (id: number | string, change: number) => {
     setCart(cart.map(item => {
       if (item.id === id) {
         const newQuantity = Math.max(0, item.quantity + change);
@@ -953,7 +1020,7 @@ export default function POSTerminal() {
     setTaxRate(Math.max(0, Math.min(100, newTaxRate))); // Ensure tax rate is between 0-100%
   };;
 
-  const removeFromCart = (id: number) => {
+  const removeFromCart = (id: number | string) => {
     setCart(cart.filter(item => item.id !== id));
   };
 
@@ -1076,7 +1143,8 @@ export default function POSTerminal() {
       // Set kitchen status for kitchen orders (dine-in, takeaway, delivery)
       kitchenStatus: (orderType === 'dine-in' || orderType === 'takeaway' || orderType === 'delivery') ? 'new' : null,
       items: cart.map(item => ({
-        productId: item.id,
+        productId: item.productId,
+        variantId: item.variantId,
         quantity: item.quantity,
         unitPrice: item.price,
         price: item.price,

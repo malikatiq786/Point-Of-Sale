@@ -113,6 +113,100 @@ router.get('/products', isAuthenticated, async (req: any, res: any) => {
     res.status(500).json({ message: 'Failed to fetch products' });
   }
 });
+
+// Get products with variants for POS
+router.get('/products/pos/all', isAuthenticated, async (req: any, res: any) => {
+  try {
+    console.log('Fetching all products with variants for POS...');
+    
+    // Fetch all products with their relationships
+    const products = await db.select({
+      id: schema.products.id,
+      name: schema.products.name,
+      description: schema.products.description,
+      barcode: schema.products.barcode,
+      price: schema.products.price,
+      stock: schema.products.stock,
+      lowStockAlert: schema.products.lowStockAlert,
+      image: schema.products.image,
+      categoryId: schema.products.categoryId,
+      brandId: schema.products.brandId,
+      unitId: schema.products.unitId,
+      // Include relationship data
+      category: {
+        id: schema.categories.id,
+        name: schema.categories.name
+      },
+      brand: {
+        id: schema.brands.id,
+        name: schema.brands.name
+      },
+      unit: {
+        id: schema.units.id,
+        name: schema.units.name,
+        shortName: schema.units.shortName
+      }
+    })
+    .from(schema.products)
+    .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+    .leftJoin(schema.brands, eq(schema.products.brandId, schema.brands.id))
+    .leftJoin(schema.units, eq(schema.products.unitId, schema.units.id))
+    .orderBy(schema.products.name);
+
+    // Fetch all variants for all products
+    const allVariants = await db.select({
+      id: schema.productVariants.id,
+      productId: schema.productVariants.productId,
+      variantName: schema.productVariants.variantName,
+      purchasePrice: schema.productVariants.purchasePrice,
+      salePrice: schema.productVariants.salePrice,
+      wholesalePrice: schema.productVariants.wholesalePrice,
+      retailPrice: schema.productVariants.retailPrice,
+      totalStock: sql<number>`COALESCE(SUM(CAST(${schema.stock.quantity} AS INTEGER)), 0)`
+    })
+    .from(schema.productVariants)
+    .leftJoin(schema.stock, eq(schema.productVariants.id, schema.stock.productVariantId))
+    .groupBy(
+      schema.productVariants.id,
+      schema.productVariants.productId,
+      schema.productVariants.variantName,
+      schema.productVariants.purchasePrice,
+      schema.productVariants.salePrice,
+      schema.productVariants.wholesalePrice,
+      schema.productVariants.retailPrice
+    );
+
+    // Group variants by product ID
+    const variantsByProduct = allVariants.reduce((acc: any, variant: any) => {
+      if (!acc[variant.productId]) {
+        acc[variant.productId] = [];
+      }
+      acc[variant.productId].push({
+        id: variant.id,
+        variantName: variant.variantName || 'Default',
+        stock: variant.totalStock || 0,
+        purchasePrice: variant.purchasePrice || '0',
+        salePrice: variant.salePrice || '0',
+        wholesalePrice: variant.wholesalePrice || '0',
+        retailPrice: variant.retailPrice || '0'
+      });
+      return acc;
+    }, {});
+
+    // Combine products with their variants
+    const productsWithVariants = products.map(product => ({
+      ...product,
+      variants: variantsByProduct[product.id] || []
+    }));
+
+    console.log(`Found ${productsWithVariants.length} products with variants for POS`);
+    res.json(productsWithVariants);
+  } catch (error) {
+    console.error('Error fetching products for POS:', error);
+    res.status(500).json({ message: 'Failed to fetch products for POS' });
+  }
+});
+
 router.post('/products', isAuthenticated, async (req: any, res: any) => {
   try {
     console.log('Product creation with variants:', req.body);
