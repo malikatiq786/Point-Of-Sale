@@ -40,7 +40,7 @@ export default function Customers() {
   });
 
   // Fetch customers
-  const { data: customers = [], isLoading } = useQuery({
+  const { data: customers = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/customers"],
     retry: false,
   });
@@ -52,7 +52,10 @@ export default function Customers() {
   );
 
   const createCustomerMutation = useMutation({
-    mutationFn: (customerData: any) => apiRequest("POST", "/api/customers", customerData),
+    mutationFn: (customerData: any) => apiRequest("/api/customers", {
+      method: "POST",
+      body: JSON.stringify(customerData)
+    }),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -72,7 +75,10 @@ export default function Customers() {
   });
 
   const updateCustomerMutation = useMutation({
-    mutationFn: (customerData: any) => apiRequest("PUT", `/api/customers/${customerData.id}`, customerData),
+    mutationFn: (customerData: any) => apiRequest(`/api/customers/${customerData.id}`, {
+      method: "PUT",
+      body: JSON.stringify(customerData)
+    }),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -92,7 +98,9 @@ export default function Customers() {
   });
 
   const deleteCustomerMutation = useMutation({
-    mutationFn: (customerId: number) => apiRequest("DELETE", `/api/customers/${customerId}`),
+    mutationFn: (customerId: number) => apiRequest(`/api/customers/${customerId}`, {
+      method: "DELETE"
+    }),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -110,7 +118,10 @@ export default function Customers() {
   });
 
   const bulkDeleteMutation = useMutation({
-    mutationFn: (customerIds: number[]) => apiRequest("DELETE", "/api/customers/bulk-delete", { customerIds }),
+    mutationFn: (customerIds: number[]) => apiRequest("/api/customers/bulk-delete", {
+      method: "DELETE",
+      body: JSON.stringify({ customerIds })
+    }),
     onSuccess: (data: any) => {
       toast({
         title: "Success",
