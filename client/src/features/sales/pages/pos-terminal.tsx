@@ -1936,6 +1936,7 @@ export default function POSTerminal() {
                     </select>
                     <div className="relative">
                       <Input
+                        ref={searchInputRef}
                         placeholder="Enter item code or scan barcode..."
                         value={searchQuery}
                         onChange={(e) => handleSearchChange(e.target.value)}
