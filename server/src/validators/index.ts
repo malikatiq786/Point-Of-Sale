@@ -68,6 +68,19 @@ export const searchQuerySchema = z.object({
   maxPrice: z.number().min(0).optional(),
 });
 
+// Tax validation schemas
+export const taxCreateSchema = z.object({
+  name: z.string().min(1, 'Tax name is required').max(100),
+  rate: z.number().min(0, 'Rate cannot be negative').max(100, 'Rate cannot exceed 100%'),
+  taxNumber: z.string().optional(),
+  isEnabled: z.boolean().default(true),
+  sortOrder: z.number().min(0).default(0),
+});
+
+export const taxUpdateSchema = taxCreateSchema.partial().extend({
+  id: z.number().positive('Tax ID is required'),
+});
+
 // Sample data initialization schema
 export const sampleDataSchema = z.object({
   categories: z.number().min(1).max(20).default(5),

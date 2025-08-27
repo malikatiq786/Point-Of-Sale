@@ -546,6 +546,17 @@ export const settings = pgTable("settings", {
   value: text("value"),
 });
 
+export const taxes = pgTable("taxes", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  rate: numeric("rate", { precision: 5, scale: 2 }).notNull(),
+  taxNumber: varchar("tax_number", { length: 50 }),
+  isEnabled: boolean("is_enabled").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const currencies = pgTable("currencies", {
   id: serial("id").primaryKey(),
   code: varchar("code", { length: 10 }).notNull().unique(),

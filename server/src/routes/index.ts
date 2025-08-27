@@ -11,6 +11,7 @@ import { ExpenseController } from '../controllers/ExpenseController';
 import { FinancialReportController } from '../controllers/FinancialReportController';
 import { ProfitLossController } from '../controllers/ProfitLossController';
 import { SettingsController } from '../controllers/SettingsController';
+import { TaxController } from '../controllers/TaxController';
 import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
@@ -33,6 +34,7 @@ const expenseController = new ExpenseController();
 const financialReportController = new FinancialReportController();
 const profitLossController = new ProfitLossController();
 const settingsController = new SettingsController();
+const taxController = new TaxController();
 
 // Create router
 const router = Router();
@@ -1907,5 +1909,15 @@ router.post('/cogs/backfill', isAuthenticated, async (req: any, res: any) => {
 // Settings routes
 router.get('/settings/:key', isAuthenticated, settingsController.getSetting);
 router.put('/settings/:key', isAuthenticated, settingsController.updateSetting);
+
+// Tax routes
+router.get('/taxes', isAuthenticated, taxController.getAllTaxes);
+router.get('/taxes/enabled', isAuthenticated, taxController.getEnabledTaxes);
+router.get('/taxes/:id', isAuthenticated, taxController.getTaxById);
+router.post('/taxes', isAuthenticated, taxController.createTax);
+router.put('/taxes/:id', isAuthenticated, taxController.updateTax);
+router.delete('/taxes/:id', isAuthenticated, taxController.deleteTax);
+router.patch('/taxes/:id/toggle', isAuthenticated, taxController.toggleTaxEnabled);
+router.patch('/taxes/sort-order', isAuthenticated, taxController.updateTaxSortOrders);
 
 export { router as apiRoutes };

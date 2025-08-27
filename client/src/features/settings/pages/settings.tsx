@@ -32,12 +32,14 @@ export default function Settings() {
     systemCurrency: ""
   });
 
-  // Tax settings state
-  const [taxSettings, setTaxSettings] = useState({
-    defaultTaxRate: "10",
-    taxName: "Sales Tax",
+  // Dynamic tax settings state
+  const [isAddTaxDialogOpen, setIsAddTaxDialogOpen] = useState(false);
+  const [editingTax, setEditingTax] = useState<any>(null);
+  const [taxForm, setTaxForm] = useState({
+    name: "",
+    rate: "",
     taxNumber: "",
-    isActive: true
+    isEnabled: true
   });
 
   // Currency form state
@@ -60,11 +62,14 @@ export default function Settings() {
     queryKey: ['/api/settings/system_currency'],
   });
 
-  // Fetch tax settings
-  const { data: taxRateData } = useQuery({ queryKey: ['/api/settings/tax_rate'] });
-  const { data: taxNameData } = useQuery({ queryKey: ['/api/settings/tax_name'] });
-  const { data: taxNumberData } = useQuery({ queryKey: ['/api/settings/tax_number'] });
-  const { data: taxEnabledData } = useQuery({ queryKey: ['/api/settings/tax_enabled'] });
+  // Fetch dynamic taxes
+  const { data: taxes = [], isLoading: taxesLoading, refetch: refetchTaxes } = useQuery<any[]>({
+    queryKey: ['/api/taxes'],
+  });
+
+  const { data: enabledTaxes = [] } = useQuery<any[]>({
+    queryKey: ['/api/taxes/enabled'],
+  });
 
   // Update generalSettings when systemSettings loads
   React.useEffect(() => {
@@ -76,21 +81,24 @@ export default function Settings() {
     }
   }, [systemSettings]);
 
-  // Update tax settings when data loads
+  // Reset tax form when dialog closes
   React.useEffect(() => {
-    if (taxRateData?.data?.value) {
-      setTaxSettings(prev => ({ ...prev, defaultTaxRate: taxRateData.data.value }));
+    if (!isAddTaxDialogOpen && !editingTax) {
+      resetTaxForm();
     }
-    if (taxNameData?.data?.value) {
-      setTaxSettings(prev => ({ ...prev, taxName: taxNameData.data.value }));
+  }, [isAddTaxDialogOpen, editingTax]);
+
+  // Populate form when editing
+  React.useEffect(() => {
+    if (editingTax) {
+      setTaxForm({
+        name: editingTax.name || '',
+        rate: editingTax.rate || '',
+        taxNumber: editingTax.taxNumber || '',
+        isEnabled: editingTax.isEnabled ?? true
+      });
     }
-    if (taxNumberData?.data?.value) {
-      setTaxSettings(prev => ({ ...prev, taxNumber: taxNumberData.data.value }));
-    }
-    if (taxEnabledData?.data?.value) {
-      setTaxSettings(prev => ({ ...prev, isActive: taxEnabledData.data.value === 'true' }));
-    }
-  }, [taxRateData, taxNameData, taxNumberData, taxEnabledData]);
+  }, [editingTax]);
 
   // Create currency mutation
   const createCurrencyMutation = useMutation({
