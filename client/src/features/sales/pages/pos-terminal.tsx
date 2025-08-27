@@ -1607,100 +1607,7 @@ export default function POSTerminal() {
       <div className={`max-w-7xl mx-auto ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
         {/* Stunning Modern Header */}
         <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-3xl shadow-2xl border border-slate-200/50 p-8 mb-6 backdrop-blur-sm">
-          {/* Top Row - Time, Title & Quick Stats */}
-          <div className="flex items-center justify-between mb-8">
-            {/* Current Date & Time */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/30 shadow-lg">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-slate-800 mb-1">
-                  {currentTime.toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    hour12: true 
-                  })}
-                </div>
-                <div className="text-sm font-medium text-slate-600">
-                  {currentTime.toLocaleDateString('en-US', { 
-                    weekday: 'long',
-                    month: 'short', 
-                    day: 'numeric',
-                    year: 'numeric' 
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Company Logo - Central Branding */}
-            <div className="text-center">
-              <div className="flex items-center justify-center space-x-6 mb-3">
-                {/* Professional Company Logo */}
-                <div className="flex items-center space-x-4">
-                  <div className="relative">
-                    <svg width="80" height="80" viewBox="0 0 80 80" className="drop-shadow-2xl">
-                      {/* Logo Background */}
-                      <defs>
-                        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#1e40af" />
-                          <stop offset="50%" stopColor="#3b82f6" />
-                          <stop offset="100%" stopColor="#60a5fa" />
-                        </linearGradient>
-                        <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#1e3a8a" />
-                          <stop offset="50%" stopColor="#3730a3" />
-                          <stop offset="100%" stopColor="#581c87" />
-                        </linearGradient>
-                      </defs>
-                      
-                      {/* Main Logo Circle */}
-                      <circle cx="40" cy="40" r="38" fill="url(#logoGradient)" stroke="#f8fafc" strokeWidth="2"/>
-                      
-                      {/* Letter "U" */}
-                      <path d="M20 25 L20 45 Q20 55 30 55 L50 55 Q60 55 60 45 L60 25" 
-                            stroke="white" strokeWidth="4" fill="none" strokeLinecap="round"/>
-                      
-                      {/* Letter "P" */}
-                      <path d="M25 35 L25 65 M25 35 L40 35 Q50 35 50 45 Q50 55 40 55 L25 55" 
-                            stroke="white" strokeWidth="3" fill="none" strokeLinecap="round"/>
-                      
-                      {/* Decorative Elements */}
-                      <circle cx="65" cy="20" r="3" fill="white" opacity="0.8"/>
-                      <circle cx="15" cy="65" r="2" fill="white" opacity="0.6"/>
-                      <circle cx="70" cy="60" r="2" fill="white" opacity="0.7"/>
-                    </svg>
-                  </div>
-                  
-                  <div className="text-left">
-                    <h1 className="text-5xl font-black tracking-tight">
-                      <span style={{background: 'linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #581c87 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text'}}>
-                        Universal
-                      </span>
-                    </h1>
-                    <div className="flex items-center space-x-2">
-                      <h2 className="text-3xl font-bold text-blue-700 tracking-wide">POS</h2>
-                      <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                        SYSTEM
-                      </span>
-                    </div>
-                    <p className="text-slate-600 font-medium text-sm mt-1 tracking-wide">
-                      Professional Point of Sale Solution
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* System Status */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/30 shadow-lg">
-              <div className="text-center">
-                <div className="text-xl font-bold text-emerald-600 mb-1">
-                  {cart.length}
-                </div>
-                <div className="text-sm font-medium text-slate-600">
-                  Items in Cart
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Simplified Header - Only Action Buttons */}
 
           {/* Middle Row - Main Controls */}
           <div className="flex items-center justify-between mb-6">
@@ -3881,7 +3788,36 @@ export default function POSTerminal() {
               </DialogTitle>
             </DialogHeader>
             
-            <CustomerHistoryContent customerId={selectedCustomerId} showAllSales={false} />
+            <CustomerHistoryContent 
+              customerId={selectedCustomerId} 
+              showAllSales={false} 
+              onEditLoadSale={(sale) => {
+                if (sale.items && sale.items.length > 0) {
+                  const cartItems = sale.items.map((item: any) => ({
+                    id: item.id || `${item.productId}-${item.variantId || 'default'}`,
+                    productId: item.productId,
+                    variantId: item.variantId,
+                    name: item.productName,
+                    baseName: item.productName.split(' - ')[0],
+                    variantName: item.productName.split(' - ')[1] || 'Default',
+                    price: parseFloat(item.price || item.unitPrice || 0),
+                    quantity: item.quantity,
+                    total: parseFloat(item.total),
+                    discount: item.discount || 0,
+                    isVariant: !!item.variantId
+                  }));
+                  setCart(cartItems);
+                  if (sale.customerId) {
+                    setSelectedCustomerId(sale.customerId);
+                  }
+                  setShowCustomerHistoryDialog(false);
+                  toast({
+                    title: "Sale Loaded",
+                    description: `Sale #${sale.id} loaded for editing with ${sale.items.length} items`,
+                  });
+                }
+              }}
+            />
           </DialogContent>
         </Dialog>
 
@@ -3913,7 +3849,36 @@ export default function POSTerminal() {
               </DialogTitle>
             </DialogHeader>
             
-            <CustomerHistoryContent customerId={null} showAllSales={true} />
+            <CustomerHistoryContent 
+              customerId={null} 
+              showAllSales={true} 
+              onEditLoadSale={(sale) => {
+                if (sale.items && sale.items.length > 0) {
+                  const cartItems = sale.items.map((item: any) => ({
+                    id: item.id || `${item.productId}-${item.variantId || 'default'}`,
+                    productId: item.productId,
+                    variantId: item.variantId,
+                    name: item.productName,
+                    baseName: item.productName.split(' - ')[0],
+                    variantName: item.productName.split(' - ')[1] || 'Default',
+                    price: parseFloat(item.price || item.unitPrice || 0),
+                    quantity: item.quantity,
+                    total: parseFloat(item.total),
+                    discount: item.discount || 0,
+                    isVariant: !!item.variantId
+                  }));
+                  setCart(cartItems);
+                  if (sale.customerId) {
+                    setSelectedCustomerId(sale.customerId);
+                  }
+                  setShowAllSalesDialog(false);
+                  toast({
+                    title: "Sale Loaded",
+                    description: `Sale #${sale.id} loaded for editing with ${sale.items.length} items`,
+                  });
+                }
+              }}
+            />
           </DialogContent>
         </Dialog>
 
@@ -4091,8 +4056,9 @@ export default function POSTerminal() {
 }
 
 // Customer History Component
-function CustomerHistoryContent({ customerId, showAllSales }: { customerId: number | null; showAllSales?: boolean }) {
+function CustomerHistoryContent({ customerId, showAllSales, onEditLoadSale }: { customerId: number | null; showAllSales?: boolean; onEditLoadSale?: (sale: any) => void }) {
   const { formatCurrencyValue } = useCurrency();
+  const { toast } = useToast();
   
   // Fetch customer sales history or all sales
   const { data: customerSales = [], isLoading } = useQuery<any[]>({
@@ -4170,19 +4136,44 @@ function CustomerHistoryContent({ customerId, showAllSales }: { customerId: numb
               )}
             </div>
             
-            {sale.items && sale.items.length > 0 && (
-              <div className="mt-3 pt-3 border-t">
-                <div className="text-xs font-semibold mb-2">Items:</div>
+            <div className="mt-3 pt-3 border-t">
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-xs font-semibold">Items: {sale.items?.length || 0}</div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs px-2 py-1 h-6 bg-green-50 border-green-300 hover:bg-green-100"
+                  onClick={() => {
+                    if (onEditLoadSale) {
+                      onEditLoadSale(sale);
+                    } else {
+                      toast({
+                        title: "Edit Load Sale",
+                        description: `Loading Sale #${sale.id} for editing...`,
+                      });
+                    }
+                  }}
+                >
+                  <Edit className="w-3 h-3 mr-1" />
+                  Edit Load Sale
+                </Button>
+              </div>
+              {sale.items && sale.items.length > 0 && (
                 <div className="space-y-1">
-                  {sale.items.map((item: any, index: number) => (
+                  {sale.items.slice(0, 3).map((item: any, index: number) => (
                     <div key={index} className="flex justify-between text-xs">
                       <span>{item.productName} × {item.quantity}</span>
                       <span>{formatCurrencyValue(item.total)}</span>
                     </div>
                   ))}
+                  {sale.items.length > 3 && (
+                    <div className="text-xs text-gray-500">
+                      ... and {sale.items.length - 3} more items
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </Card>
         ))}
       </div>
