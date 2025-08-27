@@ -15,7 +15,7 @@ import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
 import { eq, sql, and, or, like, desc, count, inArray } from 'drizzle-orm';
-import { isAuthenticated } from '../../replitAuth';
+import { isAuthenticated } from '../../customAuth';
 import { WacCalculationService } from '../services/WacCalculationService';
 import { PurchaseOrderService } from '../services/PurchaseOrderService';
 import { CogsTrackingService } from '../services/CogsTrackingService';
