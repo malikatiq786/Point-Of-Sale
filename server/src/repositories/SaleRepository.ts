@@ -27,11 +27,9 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       if (items.length > 0) {
         const saleItemsData = items.map(item => ({
           saleId: sale.id,
-          productId: item.productId,
+          productVariantId: item.productVariantId || item.variantId,
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          discount: item.discount || 0,
-          totalPrice: (item.unitPrice * item.quantity) - (item.discount || 0),
+          price: item.unitPrice || item.price,
           createdAt: new Date(),
           updatedAt: new Date(),
         }));
