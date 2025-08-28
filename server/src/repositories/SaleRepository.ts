@@ -499,15 +499,6 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
         customerPhone: sales.customerPhone,
         paymentMethod: sales.paymentMethod,
         customerId: sales.customerId,
-        customer: {
-          id: customers.id,
-          name: customers.name,
-          phone: customers.phone,
-        },
-        user: {
-          id: users.id,
-          name: users.name,
-        }
       })
       .from(sales)
       .leftJoin(customers, eq(sales.customerId, customers.id))
