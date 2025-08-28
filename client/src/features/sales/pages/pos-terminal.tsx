@@ -854,7 +854,7 @@ export default function POSTerminal() {
       
       // If there was a customer, invalidate their sales history too
       if (customerId) {
-        queryClient.invalidateQueries({ queryKey: ["/api/customers", customerId, "sales"] });
+        queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}/sales`] });
       }
     },
     onError: (error) => {
