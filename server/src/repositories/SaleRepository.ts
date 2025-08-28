@@ -488,6 +488,7 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
   // Get customer sales history with items
   async findByCustomerId(customerId: number) {
     try {
+      console.log(`SaleRepository: Finding sales for customer ID: ${customerId}`);
       const salesData = await db.select({
         id: sales.id,
         totalAmount: sales.totalAmount,
@@ -514,6 +515,8 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       .where(eq(sales.customerId, customerId))
       .orderBy(desc(sales.saleDate));
 
+      console.log(`SaleRepository: Found ${salesData.length} sales for customer ${customerId}`);
+      
       // Get items for each sale
       const salesWithItems = await Promise.all(
         salesData.map(async (sale) => {
