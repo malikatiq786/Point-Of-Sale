@@ -43,9 +43,18 @@ export function useCurrency() {
 
   const formatCurrency = (amount: number | string, currency?: Currency) => {
     const curr = currency || defaultCurrency;
+    
+    // Handle null, undefined, or empty values
+    if (amount === null || amount === undefined || amount === '') {
+      return `${curr.symbol}0.00`;
+    }
+    
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     
-    if (isNaN(numAmount)) return `${curr.symbol}0.00`;
+    // Handle NaN or invalid numbers
+    if (isNaN(numAmount) || numAmount === null || numAmount === undefined) {
+      return `${curr.symbol}0.00`;
+    }
     
     return `${curr.symbol}${numAmount.toLocaleString('en-US', {
       minimumFractionDigits: 2,
