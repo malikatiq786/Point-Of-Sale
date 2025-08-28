@@ -2257,13 +2257,8 @@ export default function POSTerminal() {
                                     updateItemPrice(item.id, newPrice);
                                     setEditingPriceItem(null);
                                     setEditPrice('');
-                                    // Focus back to search input for next product
-                                    setTimeout(() => {
-                                      if (searchInputRef.current) {
-                                        searchInputRef.current.focus();
-                                        searchInputRef.current.select();
-                                      }
-                                    }, 50);
+                                    // Complete sale when Enter is pressed
+                                    setTimeout(() => setShowPaymentDialog(true), 100);
                                   }
                                 }}
                                 className="w-16 h-5 text-xs text-center rounded"
@@ -2821,7 +2816,7 @@ export default function POSTerminal() {
                               </div>
                             </td>
                             <td className="py-3 px-2 text-right">
-                              {editingItem === item.id && editPrice ? (
+                              {editingPriceItem === item.id ? (
                                 <Input
                                   ref={(el) => priceInputRefs.current[item.id] = el}
                                   value={editPrice}
