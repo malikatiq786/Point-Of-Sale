@@ -308,7 +308,9 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
 
         // Handle missing product information - use fallback values
         let itemPrice = parseFloat(item.price || '0');
-        let productName = item.product?.name || 'Product';
+        let productName = item.variant?.variantName ? 
+          `${item.product?.name || 'Product'} - ${item.variant.variantName}` : 
+          item.product?.name || 'Product';
         
         // If price is missing but we have a sale total, use that as fallback
         if (!itemPrice && saleTotal && items.length === 1) {
@@ -434,7 +436,9 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
 
         // Handle missing product information - use fallback values
         let itemPrice = parseFloat(item.price || '0');
-        let productName = item.product?.name || 'Product';
+        let productName = item.variant?.variantName ? 
+          `${item.product?.name || 'Product'} - ${item.variant.variantName}` : 
+          item.product?.name || 'Product';
         
         // Get items for this sale to calculate distributed prices
         const saleItemsCount = allItems.filter(i => i.saleId === item.saleId).length;
