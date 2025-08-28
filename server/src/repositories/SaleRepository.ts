@@ -88,9 +88,8 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
                 id: item.id,
                 productId: item.product?.id,
                 variantId: item.productVariantId,
-                productName: item.variant?.variantName ? 
-                  `${item.product?.name} - ${item.variant.variantName}` : 
-                  item.product?.name,
+                // Use the already-formatted productName from getSaleItems instead of reformatting
+                productName: item.productName || item.product?.name || 'Unknown Product',
                 quantity: item.quantity,
                 price: item.price,
                 unitPrice: item.price,
@@ -168,9 +167,8 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
                 id: item.id,
                 productId: item.product?.id,
                 variantId: item.productVariantId,
-                productName: item.variant?.variantName ? 
-                  `${item.product?.name} - ${item.variant.variantName}` : 
-                  item.product?.name,
+                // Use the already-formatted productName from getSaleItems instead of reformatting
+                productName: item.productName || item.product?.name || 'Unknown Product',
                 quantity: item.quantity,
                 price: item.price,
                 unitPrice: item.price,
@@ -521,9 +519,8 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
                 id: item.id,
                 productId: item.product?.id,
                 variantId: item.productVariantId,
-                productName: item.variant?.variantName ? 
-                  `${item.product?.name} - ${item.variant.variantName}` : 
-                  item.product?.name,
+                // Use the already-formatted productName from getSaleItems instead of reformatting
+                productName: item.productName || item.product?.name || 'Unknown Product',
                 quantity: item.quantity,
                 price: item.price,
                 unitPrice: item.price,
