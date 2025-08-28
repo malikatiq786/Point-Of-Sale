@@ -3869,8 +3869,33 @@ export default function POSTerminal() {
             <CustomerHistoryContent 
               customerId={selectedCustomerId} 
               showAllSales={false} 
-              onViewSale={(sale) => {
-                setSelectedSaleForView(sale);
+              onViewSale={async (sale) => {
+                // Fetch detailed sale items for the invoice
+                try {
+                  const itemsResponse = await fetch(`/api/sales/${sale.id}/items`);
+                  if (itemsResponse.ok) {
+                    const items = await itemsResponse.json();
+                    // Format items for invoice display
+                    const formattedItems = items.map((item: any) => ({
+                      ...item,
+                      productName: item.product?.name || item.productName || 'Unknown Product',
+                      quantity: parseFloat(item.quantity || '0'),
+                      price: parseFloat(item.price || '0'),
+                      total: parseFloat(item.quantity || '0') * parseFloat(item.price || '0')
+                    }));
+                    
+                    setSelectedSaleForView({
+                      ...sale,
+                      items: formattedItems
+                    });
+                  } else {
+                    // Fallback to sale without items
+                    setSelectedSaleForView({ ...sale, items: [] });
+                  }
+                } catch (error) {
+                  console.error('Error fetching sale items:', error);
+                  setSelectedSaleForView({ ...sale, items: [] });
+                }
                 setShowSaleDetailDialog(true);
               }}
               onEditLoadSale={(sale) => {
@@ -3934,8 +3959,33 @@ export default function POSTerminal() {
             <CustomerHistoryContent 
               customerId={null} 
               showAllSales={true} 
-              onViewSale={(sale) => {
-                setSelectedSaleForView(sale);
+              onViewSale={async (sale) => {
+                // Fetch detailed sale items for the invoice
+                try {
+                  const itemsResponse = await fetch(`/api/sales/${sale.id}/items`);
+                  if (itemsResponse.ok) {
+                    const items = await itemsResponse.json();
+                    // Format items for invoice display
+                    const formattedItems = items.map((item: any) => ({
+                      ...item,
+                      productName: item.product?.name || item.productName || 'Unknown Product',
+                      quantity: parseFloat(item.quantity || '0'),
+                      price: parseFloat(item.price || '0'),
+                      total: parseFloat(item.quantity || '0') * parseFloat(item.price || '0')
+                    }));
+                    
+                    setSelectedSaleForView({
+                      ...sale,
+                      items: formattedItems
+                    });
+                  } else {
+                    // Fallback to sale without items
+                    setSelectedSaleForView({ ...sale, items: [] });
+                  }
+                } catch (error) {
+                  console.error('Error fetching sale items:', error);
+                  setSelectedSaleForView({ ...sale, items: [] });
+                }
                 setShowSaleDetailDialog(true);
               }}
               onEditLoadSale={null}
