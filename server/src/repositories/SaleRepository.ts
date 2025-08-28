@@ -533,5 +533,18 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       throw error;
     }
   }
+
+  // Get total count of all sales
+  async getTotalCount(): Promise<number> {
+    try {
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(sales);
+      
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error('SaleRepository: Error getting total sales count:', error);
+      throw error;
+    }
+  }
 }
 

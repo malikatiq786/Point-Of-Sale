@@ -228,4 +228,24 @@ export class SaleController {
       });
     }
   };
+
+  // Get total sales count
+  getSalesCount = async (req: Request, res: Response) => {
+    try {
+      const result = await this.saleService.getSalesCount();
+
+      if (result.success) {
+        res.status(HTTP_STATUS.OK).json({ count: result.data });
+      } else {
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+          message: result.error || ERROR_MESSAGES.INTERNAL_ERROR
+        });
+      }
+    } catch (error) {
+      console.error('SaleController: Error in getSalesCount:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
 }

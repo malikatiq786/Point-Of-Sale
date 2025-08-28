@@ -738,6 +738,13 @@ export default function POSTerminal() {
     retry: false,
   });
 
+  // Fetch total sales count
+  const { data: salesCount = 0 } = useQuery<number>({
+    queryKey: ['/api/sales/count'],
+    retry: false,
+    select: (data: any) => data.count || 0,
+  });
+
   // Initialize customer search query when customer is selected
   React.useEffect(() => {
     if (selectedCustomerId && customers) {
@@ -850,6 +857,7 @@ export default function POSTerminal() {
       // Invalidate all relevant caches for auto-refresh
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["/api/sales"] }); // Sales list and counter
+      queryClient.invalidateQueries({ queryKey: ["/api/sales/count"] }); // Sales count
       queryClient.invalidateQueries({ queryKey: ["/api/customer-ledgers"] }); // Customer ledgers
       
       // If there was a customer, invalidate their sales history too
@@ -1869,13 +1877,13 @@ export default function POSTerminal() {
                           console.log('All Sales:', sales);
                           toast({
                             title: "All Sales",
-                            description: `Showing ${sales?.length || 0} total sales`,
+                            description: `Showing ${salesCount || 0} total sales`,
                           });
                           setShowAllSalesDialog(true); // Show all sales dialog
                         }}
                       >
                         <Receipt className="w-3 h-3 mr-1" />
-                        Sales ({sales?.length || 0})
+                        Sales ({salesCount || 0})
                       </Button>
                     </div>
                     <Button 
@@ -3962,7 +3970,7 @@ export default function POSTerminal() {
             <DialogHeader>
               <DialogTitle className="flex items-center">
                 <Receipt className="w-5 h-5 mr-2" />
-                All Sales ({sales?.length || 0})
+                All Sales ({salesCount || 0})
               </DialogTitle>
             </DialogHeader>
             

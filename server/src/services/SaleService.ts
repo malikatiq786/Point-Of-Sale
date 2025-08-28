@@ -305,4 +305,22 @@ export class SaleService {
       };
     }
   }
+
+  // Get total sales count
+  async getSalesCount(): Promise<DatabaseResult> {
+    try {
+      const count = await this.saleRepository.getTotalCount();
+      
+      return {
+        success: true,
+        data: count,
+      };
+    } catch (error) {
+      console.error('SaleService: Error getting sales count:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch sales count',
+      };
+    }
+  }
 }

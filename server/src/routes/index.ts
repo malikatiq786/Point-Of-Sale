@@ -402,6 +402,7 @@ router.get('/units', isAuthenticated, async (req: any, res: any) => {
 // Sale routes
 router.post('/sales', isAuthenticated, saleController.processSale as any);
 router.get('/sales', isAuthenticated, saleController.getSales as any);
+router.get('/sales/count', isAuthenticated, saleController.getSalesCount as any);
 router.get('/sales/:id', isAuthenticated, saleController.getSaleById as any);
 router.get('/sales/:id/items', isAuthenticated, saleController.getSaleItems as any);
 router.post('/sales/bulk-items', isAuthenticated, saleController.getBulkSaleItems as any);
