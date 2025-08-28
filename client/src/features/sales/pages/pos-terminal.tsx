@@ -833,19 +833,29 @@ export default function POSTerminal() {
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Sale Completed",
         description: "Transaction processed successfully",
       });
       setCart([]);
+      const customerId = selectedCustomerId;
       setSelectedCustomerId(null);
       setAmountReceived(0);
       // Reset kitchen order fields
       setOrderType('sale');
       setTableNumber('');
       setSpecialInstructions('');
+      
+      // Invalidate all relevant caches for auto-refresh
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales"] }); // Sales list and counter
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-ledgers"] }); // Customer ledgers
+      
+      // If there was a customer, invalidate their sales history too
+      if (customerId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/customers", customerId, "sales"] });
+      }
     },
     onError: (error) => {
       toast({

@@ -25,36 +25,16 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
 
       // If items are provided, create sale items
       if (items.length > 0) {
-        console.log('SaleRepository: Processing items for sale:', sale.id);
-        
-        const saleItemsData = items.map((item, index) => {
-          const productVariantId = item.productVariantId || item.variantId;
-          const price = item.unitPrice || item.price;
-          
-          console.log(`SaleRepository: Item ${index + 1} data:`, JSON.stringify({
-            productId: item.productId,
-            variantId: item.variantId,
-            productVariantId: item.productVariantId,
-            finalVariantId: productVariantId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            price: item.price,
-            finalPrice: price
-          }, null, 2));
-          
-          return {
-            saleId: sale.id,
-            productVariantId: productVariantId,
-            quantity: item.quantity,
-            price: price,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-        });
+        const saleItemsData = items.map(item => ({
+          saleId: sale.id,
+          productVariantId: item.productVariantId || item.variantId,
+          quantity: item.quantity,
+          price: item.unitPrice || item.price,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }));
 
-        console.log('SaleRepository: Final saleItemsData:', JSON.stringify(saleItemsData, null, 2));
         await db.insert(saleItems).values(saleItemsData);
-        console.log('SaleRepository: Sale items inserted successfully');
       }
 
       return sale;
