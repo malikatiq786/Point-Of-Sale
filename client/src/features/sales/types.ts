@@ -19,11 +19,20 @@ export interface SaleItem {
 }
 
 export interface CartItem {
-  id: number;
+  id: number | string;
+  productId?: number;
+  variantId?: number;
   name: string;
+  baseName?: string;
+  variantName?: string;
   price: number;
   quantity: number;
   total: number;
+  discount?: number;
+  discountType?: 'percentage' | 'fixed';
+  tax?: number;
+  category?: string;
+  isVariant?: boolean;
 }
 
 export interface PaymentMethod {

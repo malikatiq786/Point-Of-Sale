@@ -14,6 +14,26 @@ export class SaleController {
   processSale = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.id;
+      console.log('SaleController: Received sale data:', JSON.stringify({
+        items: req.body.items,
+        totalAmount: req.body.totalAmount,
+        itemsCount: req.body.items?.length
+      }, null, 2));
+      
+      // Log each item's structure for debugging
+      if (req.body.items) {
+        req.body.items.forEach((item: any, index: number) => {
+          console.log(`SaleController: Item ${index + 1}:`, JSON.stringify({
+            productId: item.productId,
+            variantId: item.variantId,
+            productVariantId: item.productVariantId,
+            quantity: item.quantity,
+            price: item.price,
+            unitPrice: item.unitPrice
+          }, null, 2));
+        });
+      }
+      
       const result = await this.saleService.processSale(req.body, userId);
 
       if (result.success) {
