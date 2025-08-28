@@ -8,8 +8,10 @@ export const saleCreateSchema = z.object({
   customerId: z.number().optional(),
   items: z.array(z.object({
     productId: z.number().positive('Product ID is required'),
+    variantId: z.number().positive('Variant ID is required'),
     quantity: z.number().positive('Quantity must be positive'),
     unitPrice: z.number().positive('Unit price must be positive'),
+    price: z.number().positive().optional(),
     discount: z.number().min(0).optional(),
   })).optional(),
 });

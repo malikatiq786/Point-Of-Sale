@@ -31,6 +31,16 @@ export class SaleService {
 
       const { items = [], ...saleInfo } = validation.data!;
 
+      // Debug: Log items after validation
+      console.log('SaleService: Items after validation:', JSON.stringify(items.map((item: any) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        productVariantId: item.productVariantId,
+        quantity: item.quantity,
+        price: item.price,
+        unitPrice: item.unitPrice
+      })), null, 2));
+
       // Check stock availability for all items
       for (const item of items) {
         const product = await this.productRepository.findById(item.productId);
