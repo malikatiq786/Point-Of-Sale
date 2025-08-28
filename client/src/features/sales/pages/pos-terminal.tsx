@@ -2151,6 +2151,8 @@ export default function POSTerminal() {
                                   setAbsoluteQuantity(item.id, newQty);
                                   setEditingQuantityItem(null);
                                   setEditQuantity('');
+                                  // Complete sale when Enter is pressed
+                                  setTimeout(() => setShowPaymentDialog(true), 100);
                                 }
                               }}
                               className="w-16 h-5 text-center text-xs rounded"
@@ -2860,18 +2862,13 @@ export default function POSTerminal() {
                                       }, 50);
                                     } else if (e.key === 'Enter') {
                                       e.preventDefault();
-                                      // Save price and add product to cart
+                                      // Save price and complete sale
                                       const newPrice = parseFloat(editPrice) || item.price;
                                       updateItemPrice(item.id, newPrice);
                                       setEditingPriceItem(null);
                                       setEditPrice('');
-                                      // Focus back to search input for next product
-                                      setTimeout(() => {
-                                        if (searchInputRef.current) {
-                                          searchInputRef.current.focus();
-                                          searchInputRef.current.select();
-                                        }
-                                      }, 50);
+                                      // Complete sale when Enter is pressed
+                                      setTimeout(() => setShowPaymentDialog(true), 100);
                                     }
                                   }}
                                   className="w-20 h-6 text-xs text-right rounded"
