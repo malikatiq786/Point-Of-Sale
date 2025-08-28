@@ -1216,7 +1216,7 @@ export default function POSTerminal() {
       taxes: getTaxBreakdown(),
       status: unpaidAmount > 0 ? "pending" : "completed",
       paymentMethod,
-      customerId: selectedCustomerId || null,
+      customerId: selectedCustomerId || undefined,
       customer: selectedCustomer || { name: 'Walk-in Customer' },
       // Kitchen order fields
       orderType: orderType,
@@ -2215,6 +2215,8 @@ export default function POSTerminal() {
                                     applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
                                   }
                                   setEditingDiscount(null);
+                                  // Complete sale when Enter is pressed
+                                  setTimeout(() => setShowPaymentDialog(true), 100);
                                 }
                               }}
                               className="w-20 h-5 text-xs text-center rounded"
