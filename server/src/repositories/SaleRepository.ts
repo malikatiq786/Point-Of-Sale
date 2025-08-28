@@ -489,20 +489,8 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
   async findByCustomerId(customerId: number) {
     try {
       console.log(`SaleRepository: Finding sales for customer ID: ${customerId}`);
-      const salesData = await db.select({
-        id: sales.id,
-        totalAmount: sales.totalAmount,
-        paidAmount: sales.paidAmount,
-        status: sales.status,
-        saleDate: sales.saleDate,
-        customerName: sales.customerName,
-        customerPhone: sales.customerPhone,
-        paymentMethod: sales.paymentMethod,
-        customerId: sales.customerId,
-      })
+      const salesData = await db.select()
       .from(sales)
-      .leftJoin(customers, eq(sales.customerId, customers.id))
-      .leftJoin(users, eq(sales.userId, users.id))
       .where(eq(sales.customerId, customerId))
       .orderBy(desc(sales.saleDate));
 

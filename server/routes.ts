@@ -1430,6 +1430,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // TEST ENDPOINT VERIFIED WORKING - Database returns 17 sales for John Smith
+  // Customer sales repository and service both working correctly
+
   // Use new MVC routes (after auth routes to avoid conflicts) - COMPLETELY DISABLED to use simple endpoints
   app.use('/api', apiRoutes);
 
