@@ -4209,10 +4209,37 @@ export default function POSTerminal() {
                           ))}
                         </tbody>
                         <tfoot className="bg-gray-50">
-                          <tr>
-                            <td colSpan={4} className="py-3 px-4 text-right font-semibold">Total:</td>
-                            <td className="py-3 px-4 text-center font-bold">{formatCurrencyValue(selectedSaleForView.totalAmount)}</td>
-                          </tr>
+                          {(() => {
+                            // Calculate subtotal from item totals
+                            const subtotal = selectedSaleForView.items?.reduce((sum: number, item: any) => 
+                              sum + parseFloat(item.total || 0), 0) || 0;
+                            
+                            // Calculate tax amount (total - subtotal)
+                            const totalAmount = parseFloat(selectedSaleForView.totalAmount || 0);
+                            const taxAmount = totalAmount - subtotal;
+                            const taxRate = subtotal > 0 ? (taxAmount / subtotal) * 100 : 0;
+                            
+                            return (
+                              <>
+                                <tr>
+                                  <td colSpan={4} className="py-2 px-4 text-right text-sm">Subtotal:</td>
+                                  <td className="py-2 px-4 text-center text-sm">{formatCurrencyValue(subtotal)}</td>
+                                </tr>
+                                {taxAmount > 0 && (
+                                  <tr>
+                                    <td colSpan={4} className="py-2 px-4 text-right text-sm">
+                                      Tax ({taxRate.toFixed(1)}%):
+                                    </td>
+                                    <td className="py-2 px-4 text-center text-sm">{formatCurrencyValue(taxAmount)}</td>
+                                  </tr>
+                                )}
+                                <tr className="border-t-2">
+                                  <td colSpan={4} className="py-3 px-4 text-right font-bold">Total:</td>
+                                  <td className="py-3 px-4 text-center font-bold">{formatCurrencyValue(totalAmount)}</td>
+                                </tr>
+                              </>
+                            );
+                          })()}
                         </tfoot>
                       </table>
                     </div>
