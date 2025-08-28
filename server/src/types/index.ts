@@ -57,3 +57,39 @@ export interface ApiResponse<T = any> {
     totalPages: number;
   };
 }
+
+// Database operation result
+export interface DatabaseResult<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+// Sale request types
+export interface SaleRequest {
+  totalAmount: number;
+  paidAmount: number;
+  status?: 'pending' | 'completed' | 'cancelled';
+  customerId?: number;
+  branchId?: number;
+  saleDate?: string;
+  items?: SaleItemRequest[];
+}
+
+export interface SaleItemRequest {
+  productId: number;
+  quantity: number;
+  price: number;
+  unitPrice?: number;
+  discount?: number;
+  id?: number;
+}
+
+// Activity log interface
+export interface ActivityLog {
+  id: string;
+  action: string;
+  details: string;
+  userId?: number;
+  timestamp: Date;
+}

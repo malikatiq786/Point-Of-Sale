@@ -6,6 +6,7 @@ import { DashboardController } from '../controllers/DashboardController';
 import { UserController } from '../controllers/UserController';
 import { InventoryController } from '../controllers/InventoryController';
 import { CustomerController } from '../controllers/CustomerController';
+import { CustomerLedgerController } from '../controllers/CustomerLedgerController';
 import { SupplierController } from '../controllers/SupplierController';
 import { ExpenseController } from '../controllers/ExpenseController';
 import { FinancialReportController } from '../controllers/FinancialReportController';
@@ -29,6 +30,7 @@ const dashboardController = new DashboardController();
 const userController = new UserController();
 const inventoryController = new InventoryController();
 const customerController = new CustomerController();
+const customerLedgerController = new CustomerLedgerController();
 const supplierController = new SupplierController();
 const expenseController = new ExpenseController();
 const financialReportController = new FinancialReportController();
@@ -1195,6 +1197,12 @@ router.post('/customers', isAuthenticated, customerController.createCustomer as 
 router.put('/customers/:id', isAuthenticated, customerController.updateCustomer as any);
 router.delete('/customers/bulk-delete', isAuthenticated, customerController.bulkDeleteCustomers as any);
 router.delete('/customers/:id', isAuthenticated, customerController.deleteCustomer as any);
+
+// Customer Ledger routes
+router.get('/customer-ledgers', isAuthenticated, customerLedgerController.getAllEntries as any);
+router.get('/customer-ledgers/:customerId', isAuthenticated, customerLedgerController.getCustomerLedger as any);
+router.get('/customer-ledgers/:customerId/balance', isAuthenticated, customerLedgerController.getCustomerBalance as any);
+router.post('/customer-ledgers', isAuthenticated, customerLedgerController.createEntry as any);
 
 // =========================================
 // 💸 EXPENSE MANAGEMENT ROUTES

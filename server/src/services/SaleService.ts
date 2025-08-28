@@ -1,17 +1,20 @@
 import { SaleRepository } from '../repositories/SaleRepository';
 import { ProductRepository } from '../repositories/ProductRepository';
+import { CustomerLedgerService } from './CustomerLedgerService';
 import { CogsTrackingService } from './CogsTrackingService';
 import { validateInput, saleCreateSchema } from '../validators';
 import { formatCurrency, generateId } from '../utils';
-import { SaleRequest, DatabaseResult, ActivityLog } from '../types';
+import { SaleRequest, DatabaseResult, ActivityLog } from '../types/index';
 
 export class SaleService {
   private saleRepository: SaleRepository;
   private productRepository: ProductRepository;
+  private customerLedgerService: CustomerLedgerService;
 
   constructor() {
     this.saleRepository = new SaleRepository();
     this.productRepository = new ProductRepository();
+    this.customerLedgerService = new CustomerLedgerService();
   }
 
   // Process a new sale
@@ -81,6 +84,36 @@ export class SaleService {
       };
 
       console.log('Sale activity logged:', activityLog);
+
+      // Handle customer ledger updates for non-cash payments or partial payments
+      if (saleInfo.customerId) {
+        const totalAmount = parseFloat(sale.totalAmount);
+        const paidAmount = parseFloat(sale.paidAmount || '0');
+        
+        if (paidAmount < totalAmount) {
+          // Customer owes money - create debit entry
+          const unpaidAmount = totalAmount - paidAmount;
+          await this.customerLedgerService.createEntry({
+            customerId: saleInfo.customerId,
+            amount: unpaidAmount.toFixed(2),
+            type: 'debit',
+            reference: `SALE-${sale.id}`,
+            description: `Sale #${sale.id} - Outstanding amount`,
+          });
+          console.log(`Created debit entry for customer ${saleInfo.customerId}: ${unpaidAmount.toFixed(2)}`);
+        } else if (paidAmount > totalAmount) {
+          // Customer paid more - create credit entry
+          const overpaidAmount = paidAmount - totalAmount;
+          await this.customerLedgerService.createEntry({
+            customerId: saleInfo.customerId,
+            amount: overpaidAmount.toFixed(2),
+            type: 'credit',
+            reference: `SALE-${sale.id}`,
+            description: `Sale #${sale.id} - Overpayment credit`,
+          });
+          console.log(`Created credit entry for customer ${saleInfo.customerId}: ${overpaidAmount.toFixed(2)}`);
+        }
+      }
 
       return {
         success: true,
