@@ -274,6 +274,16 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       .leftJoin(units, eq(products.unitId, units.id))
       .where(eq(saleItems.saleId, saleId));
 
+      // Get the sale total for fallback price calculation
+      const saleInfo = await db.select({
+        totalAmount: sales.totalAmount
+      })
+      .from(sales)
+      .where(eq(sales.id, saleId))
+      .limit(1);
+
+      const saleTotal = saleInfo[0]?.totalAmount ? parseFloat(saleInfo[0].totalAmount) : 0;
+
       // Get return information for this sale
       const returnItemsQuery = await db.execute(sql`
         SELECT 
@@ -292,14 +302,42 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
         returnedQuantities.set(row.product_variant_id, parseFloat(row.total_returned || '0'));
       });
 
-      // Add return information to each item
+      // Add return information to each item and handle missing data
       return items.map(item => {
         const originalQuantity = parseFloat(item.quantity || '0');
         const returnedQuantity = returnedQuantities.get(item.productVariantId) || 0;
         const netQuantity = originalQuantity - returnedQuantity;
 
+        // Handle missing product information - use fallback values
+        let itemPrice = parseFloat(item.price || '0');
+        let productName = item.product?.name || 'Product';
+        
+        // If price is missing but we have a sale total, use that as fallback
+        if (!itemPrice && saleTotal && items.length === 1) {
+          itemPrice = saleTotal;
+        } else if (!itemPrice && saleTotal) {
+          // If multiple items, distribute total evenly as fallback
+          itemPrice = saleTotal / items.length;
+        }
+
+        // If product name is missing, try to create a descriptive fallback
+        if (!item.product?.name) {
+          productName = `Sale Item ${item.id}`;
+        }
+
         return {
           ...item,
+          // Ensure price is set
+          price: itemPrice.toString(),
+          // Ensure product object exists with fallback data
+          product: {
+            id: item.product?.id || null,
+            name: productName,
+            barcode: item.product?.barcode || null,
+            categoryName: item.product?.categoryName || null,
+            brandName: item.product?.brandName || null,
+            unitName: item.product?.unitName || null,
+          },
           originalQuantity: originalQuantity,
           returnedQuantity: returnedQuantity,
           netQuantity: netQuantity,
@@ -346,6 +384,19 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
       .leftJoin(units, eq(products.unitId, units.id))
       .where(inArray(saleItems.saleId, saleIds));
 
+      // Get sales totals for fallback price calculation
+      const salesTotals = await db.select({
+        id: sales.id,
+        totalAmount: sales.totalAmount
+      })
+      .from(sales)
+      .where(inArray(sales.id, saleIds));
+
+      const salesTotalsMap = new Map();
+      salesTotals.forEach(sale => {
+        salesTotalsMap.set(sale.id, parseFloat(sale.totalAmount || '0'));
+      });
+
       // Get all return information for these sales
       const returnItemsData = await db.select({
         saleId: returns.saleId,
@@ -373,17 +424,49 @@ export class SaleRepository extends BaseRepository<typeof sales, any, typeof sal
         returnedQuantities.get(saleId).set(variantId, returnedQty);
       });
 
-      // Add return information to items and group by sale ID
+      // Add return information to items and group by sale ID with fallback data
       const groupedItems: Record<number, any[]> = {};
       allItems.forEach(item => {
         const saleReturns = returnedQuantities.get(item.saleId) || new Map();
         const returnedQuantity = saleReturns.get(item.productVariantId) || 0;
+        const saleTotal = salesTotalsMap.get(item.saleId) || 0;
         
         const originalQuantity = parseFloat(item.quantity || '0');
         const netQuantity = originalQuantity - returnedQuantity;
 
+        // Handle missing product information - use fallback values
+        let itemPrice = parseFloat(item.price || '0');
+        let productName = item.product?.name || 'Product';
+        
+        // Get items for this sale to calculate distributed prices
+        const saleItemsCount = allItems.filter(i => i.saleId === item.saleId).length;
+        
+        // If price is missing but we have a sale total, use that as fallback
+        if (!itemPrice && saleTotal && saleItemsCount === 1) {
+          itemPrice = saleTotal;
+        } else if (!itemPrice && saleTotal && saleItemsCount > 0) {
+          // If multiple items, distribute total evenly as fallback
+          itemPrice = saleTotal / saleItemsCount;
+        }
+
+        // If product name is missing, try to create a descriptive fallback
+        if (!item.product?.name) {
+          productName = `Sale Item ${item.id}`;
+        }
+
         const enrichedItem = {
           ...item,
+          // Ensure price is set
+          price: itemPrice.toString(),
+          // Ensure product object exists with fallback data
+          product: {
+            id: item.product?.id || null,
+            name: productName,
+            barcode: item.product?.barcode || null,
+            categoryName: item.product?.categoryName || null,
+            brandName: item.product?.brandName || null,
+            unitName: item.product?.unitName || null,
+          },
           originalQuantity: originalQuantity,
           returnedQuantity: returnedQuantity,
           netQuantity: netQuantity,
