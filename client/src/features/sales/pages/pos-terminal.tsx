@@ -3923,6 +3923,14 @@ export default function POSTerminal() {
                                   ...prev,
                                   [key]: parseInt(e.target.value) || 0
                                 }))}
+                                onFocus={(e) => {
+                                  // Prevent auto-selection - place cursor at end
+                                  const input = e.target as HTMLInputElement;
+                                  setTimeout(() => {
+                                    const len = input.value.length;
+                                    input.setSelectionRange(len, len);
+                                  }, 0);
+                                }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') {
                                     e.preventDefault();
