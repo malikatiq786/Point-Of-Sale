@@ -1736,7 +1736,7 @@ export default function POSTerminal() {
             <div className="flex items-center space-x-3">
               <div className="bg-green-100 backdrop-blur-sm rounded-xl px-4 py-2 border border-green-200">
                 <span className="text-sm font-semibold text-green-800">
-                  Main Register - {formatCurrencyValue(selectedRegister?.openingBalance || 0)}
+                  {selectedRegister?.name || 'Main Register'} - {formatCurrencyValue(cashDrawerBalance)}
                 </span>
               </div>
               <Button 
