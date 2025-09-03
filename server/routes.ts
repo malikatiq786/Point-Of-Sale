@@ -8,6 +8,7 @@ import { insertCustomerSchema, insertSaleSchema } from "@shared/schema";
 import { apiRoutes } from "./src/routes/index";
 import { db } from "./db";
 import { units } from "@shared/schema";
+import { sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware

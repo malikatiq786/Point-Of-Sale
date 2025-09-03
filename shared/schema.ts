@@ -1,6 +1,7 @@
 
 import { pgTable, serial, varchar, text, timestamp, integer, numeric, boolean, date, jsonb, index } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
+import { createInsertSchema } from "drizzle-zod";
 
 // =========================================
 // 🔐 Authentication & Access Control
@@ -356,8 +357,8 @@ export const returns = pgTable("returns", {
   status: varchar("status", { length: 20 }).default('pending'),
   totalAmount: numeric("total_amount", { precision: 12, scale: 2 }),
   customerName: varchar("customer_name", { length: 150 }),
-  createdAt: timestamp("created_at").default('CURRENT_TIMESTAMP'),
-  updatedAt: timestamp("updated_at").default('CURRENT_TIMESTAMP'),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const returnItems = pgTable("return_items", {
@@ -642,3 +643,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   unit: one(units, { fields: [products.unitId], references: [units.id] }),
   variants: many(productVariants),
 }));
+
+// Insert schemas
+export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true });
+export const insertSaleSchema = createInsertSchema(sales).omit({ id: true });
