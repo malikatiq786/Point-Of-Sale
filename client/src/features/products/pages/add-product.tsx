@@ -22,7 +22,6 @@ export default function AddProduct() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    barcode: generateProductBarcode(), // Auto-generate barcode on component load
     categoryId: "",
     brandId: "",
     unitId: "",
@@ -34,6 +33,7 @@ export default function AddProduct() {
   const [variants, setVariants] = useState([
     { 
       variantName: "Default", 
+      barcode: generateProductBarcode(), // Auto-generate barcode for each variant
       initialStock: "0",
       purchasePrice: "",
       salePrice: "",
@@ -180,6 +180,7 @@ export default function AddProduct() {
   const addVariant = () => {
     setVariants(prev => [...prev, { 
       variantName: "", 
+      barcode: generateProductBarcode(), // Auto-generate unique barcode for new variant
       initialStock: "0",
       purchasePrice: "",
       salePrice: "",
@@ -308,6 +309,7 @@ export default function AddProduct() {
       lowStockAlert: formData.lowStockAlert ? parseInt(formData.lowStockAlert) : 0,
       variants: variants.map(variant => ({
         variantName: variant.variantName || "Default",
+        barcode: variant.barcode, // Include variant-level barcode
         initialStock: parseInt(variant.initialStock) || 0,
         purchasePrice: parseFloat(variant.purchasePrice) || 0,
         salePrice: parseFloat(variant.salePrice) || 0,
@@ -358,35 +360,6 @@ export default function AddProduct() {
                       placeholder="Enter product name"
                       required
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="barcode">Barcode</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="barcode"
-                        type="text"
-                        value={formatBarcodeForDisplay(formData.barcode)}
-                        onChange={(e) => handleInputChange('barcode', e.target.value.replace(/\s/g, ''))}
-                        placeholder="Enter barcode or use auto-generated"
-                        className="font-mono"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleInputChange('barcode', generateProductBarcode())}
-                        className="px-3 whitespace-nowrap"
-                      >
-                        <RefreshCw className="w-4 h-4 mr-1" />
-                        Generate
-                      </Button>
-                    </div>
-                    {formData.barcode && !validateEAN13Barcode(formData.barcode) && (
-                      <p className="text-sm text-yellow-600">⚠ Invalid barcode format (should be 13 digits)</p>
-                    )}
-                    {formData.barcode && validateEAN13Barcode(formData.barcode) && (
-                      <p className="text-sm text-green-600">✓ Valid barcode format</p>
-                    )}
                   </div>
                 </div>
                 
@@ -476,8 +449,8 @@ export default function AddProduct() {
               <CardContent className="space-y-4">
                 {variants.map((variant, index) => (
                   <div key={index} className="p-4 border rounded-lg space-y-4">
-                    <div className="flex items-end space-x-4">
-                      <div className="flex-1 space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                      <div className="space-y-2">
                         <Label htmlFor={`variant-name-${index}`}>Variant Name</Label>
                         <Input
                           id={`variant-name-${index}`}
@@ -487,7 +460,35 @@ export default function AddProduct() {
                           placeholder={index === 0 ? "Default" : `Variant ${index + 1}`}
                         />
                       </div>
-                      <div className="w-32 space-y-2">
+                      <div className="space-y-2">
+                        <Label htmlFor={`variant-barcode-${index}`}>Barcode</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id={`variant-barcode-${index}`}
+                            type="text"
+                            value={formatBarcodeForDisplay(variant.barcode)}
+                            onChange={(e) => updateVariant(index, 'barcode', e.target.value.replace(/\s/g, ''))}
+                            placeholder="Enter barcode or use auto-generated"
+                            className="font-mono"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateVariant(index, 'barcode', generateProductBarcode())}
+                            className="px-3 whitespace-nowrap"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        {variant.barcode && !validateEAN13Barcode(variant.barcode) && (
+                          <p className="text-sm text-yellow-600">⚠ Invalid barcode format</p>
+                        )}
+                        {variant.barcode && validateEAN13Barcode(variant.barcode) && (
+                          <p className="text-sm text-green-600">✓ Valid barcode format</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor={`variant-stock-${index}`}>Initial Stock</Label>
                         <Input
                           id={`variant-stock-${index}`}
