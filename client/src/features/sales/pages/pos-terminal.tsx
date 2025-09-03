@@ -831,17 +831,6 @@ export default function POSTerminal() {
       return;
     }
 
-    // Validate opening balance matches register's expected opening balance
-    const expectedBalance = parseFloat(String(register.openingBalance));
-    if (Math.abs(openingBalance - expectedBalance) > 0.01) {
-      toast({
-        title: "Opening Balance Mismatch",
-        description: `Expected: ${formatCurrencyValue(expectedBalance)}, Entered: ${formatCurrencyValue(openingBalance)}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     setSelectedRegisterId(registerId);
     setCashDrawerBalance(openingBalance);
     setRegisterStatus('open');
