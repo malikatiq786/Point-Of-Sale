@@ -67,6 +67,9 @@ export const validateEAN13Barcode = (barcode: string): boolean => {
  * @returns formatted barcode string
  */
 export const formatBarcodeForDisplay = (barcode: string): string => {
+  if (!barcode) {
+    return '';
+  }
   if (barcode.length === 13) {
     return `${barcode.slice(0, 1)} ${barcode.slice(1, 7)} ${barcode.slice(7, 13)}`;
   }
