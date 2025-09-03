@@ -3916,15 +3916,20 @@ export default function POSTerminal() {
                             <div key={denomination} className="flex items-center space-x-2">
                               <Label className="text-xs min-w-[50px]">Rs {denomination}</Label>
                               <Input
-                                type="number"
-                                min="0"
-                                value={currencyNotes[key]}
-                                onChange={(e) => setCurrencyNotes(prev => ({
-                                  ...prev,
-                                  [key]: parseInt(e.target.value) || 0
-                                }))}
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={currencyNotes[key].toString()}
+                                onChange={(e) => {
+                                  // Only allow numbers
+                                  const value = e.target.value.replace(/[^0-9]/g, '');
+                                  setCurrencyNotes(prev => ({
+                                    ...prev,
+                                    [key]: parseInt(value) || 0
+                                  }));
+                                }}
                                 onFocus={(e) => {
-                                  // Prevent auto-selection - place cursor at end
+                                  // Place cursor at end, don't select all
                                   const input = e.target as HTMLInputElement;
                                   setTimeout(() => {
                                     const len = input.value.length;
