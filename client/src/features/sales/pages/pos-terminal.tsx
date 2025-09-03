@@ -3890,6 +3890,15 @@ export default function POSTerminal() {
                         placeholder="Enter actual cash amount"
                         value={cashDrawerBalance}
                         onChange={(e) => setCashDrawerBalance(parseFloat(e.target.value) || 0)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (selectedRegisterId && cashDrawerBalance > 0) {
+                              openRegister(selectedRegisterId, cashDrawerBalance);
+                            }
+                          }
+                        }}
                         className="text-lg font-semibold text-center"
                       />
                     ) : (
@@ -3914,6 +3923,15 @@ export default function POSTerminal() {
                                   ...prev,
                                   [key]: parseInt(e.target.value) || 0
                                 }))}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (selectedRegisterId && cashDrawerBalance > 0) {
+                                      openRegister(selectedRegisterId, cashDrawerBalance);
+                                    }
+                                  }
+                                }}
                                 className="text-center h-8"
                                 placeholder="0"
                               />
@@ -3943,7 +3961,15 @@ export default function POSTerminal() {
 
               <div className="flex space-x-2">
                 <Button
+                  type="button"
                   onClick={() => openRegister(selectedRegisterId!, cashDrawerBalance)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openRegister(selectedRegisterId!, cashDrawerBalance);
+                    }
+                  }}
                   disabled={!selectedRegisterId || cashDrawerBalance === 0 || registerStatus === 'opening'}
                   className="w-full bg-green-600 hover:bg-green-700 text-white"
                   size="lg"
