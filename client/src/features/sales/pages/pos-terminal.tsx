@@ -646,6 +646,17 @@ export default function POSTerminal() {
   const [registerStatus, setRegisterStatus] = useState<'closed' | 'opening' | 'open'>('closed');
   const [cashDrawerBalance, setCashDrawerBalance] = useState(0);
   const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(true); // Show register setup when closed
+  
+  // Currency notes breakdown state
+  const [showNotesBreakdown, setShowNotesBreakdown] = useState(false);
+  const [currencyNotes, setCurrencyNotes] = useState({
+    note5000: 0,
+    note1000: 0,
+    note500: 0,
+    note100: 0,
+    note50: 0,
+    note10: 0,
+  });
 
   // Fetch all products with variants for POS
   const { data: products = [], isLoading } = useQuery<any[]>({
@@ -778,6 +789,35 @@ export default function POSTerminal() {
 
   // Get selected register info
   const selectedRegister = registers.find((r) => r.id === selectedRegisterId);
+  
+  // Auto-fill opening balance when register is selected
+  useEffect(() => {
+    if (selectedRegisterId && selectedRegister) {
+      const expectedBalance = parseFloat(String(selectedRegister.openingBalance));
+      setCashDrawerBalance(expectedBalance);
+      // Reset currency notes when changing register
+      setCurrencyNotes({ note5000: 0, note1000: 0, note500: 0, note100: 0, note50: 0, note10: 0 });
+    }
+  }, [selectedRegisterId, selectedRegister]);
+  
+  // Calculate total from currency notes
+  const calculateNotesTotal = () => {
+    return (
+      currencyNotes.note5000 * 5000 +
+      currencyNotes.note1000 * 1000 +
+      currencyNotes.note500 * 500 +
+      currencyNotes.note100 * 100 +
+      currencyNotes.note50 * 50 +
+      currencyNotes.note10 * 10
+    );
+  };
+  
+  // Update cash drawer balance when notes change
+  useEffect(() => {
+    if (showNotesBreakdown) {
+      setCashDrawerBalance(calculateNotesTotal());
+    }
+  }, [currencyNotes, showNotesBreakdown]);
 
   // Register opening balance validation
   const openRegister = (registerId: number, openingBalance: number) => {
@@ -3832,15 +3872,82 @@ export default function POSTerminal() {
                     </div>
                   </div>
                   
-                  <div className="mt-3">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Enter actual cash amount"
-                      value={cashDrawerBalance}
-                      onChange={(e) => setCashDrawerBalance(parseFloat(e.target.value) || 0)}
-                      className="text-lg font-semibold text-center"
-                    />
+                  <div className="mt-3 space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        type="button"
+                        variant={!showNotesBreakdown ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setShowNotesBreakdown(false)}
+                        className="flex-1"
+                      >
+                        Manual Amount
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={showNotesBreakdown ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setShowNotesBreakdown(true)}
+                        className="flex-1"
+                      >
+                        Count Notes
+                      </Button>
+                    </div>
+
+                    {!showNotesBreakdown ? (
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Enter actual cash amount"
+                        value={cashDrawerBalance}
+                        onChange={(e) => setCashDrawerBalance(parseFloat(e.target.value) || 0)}
+                        className="text-lg font-semibold text-center"
+                      />
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="text-sm font-medium text-gray-700">Currency Notes Breakdown</div>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          {[
+                            { denomination: 5000, key: 'note5000' as keyof typeof currencyNotes },
+                            { denomination: 1000, key: 'note1000' as keyof typeof currencyNotes },
+                            { denomination: 500, key: 'note500' as keyof typeof currencyNotes },
+                            { denomination: 100, key: 'note100' as keyof typeof currencyNotes },
+                            { denomination: 50, key: 'note50' as keyof typeof currencyNotes },
+                            { denomination: 10, key: 'note10' as keyof typeof currencyNotes },
+                          ].map(({ denomination, key }) => (
+                            <div key={denomination} className="flex items-center space-x-2">
+                              <Label className="text-xs min-w-[50px]">Rs {denomination}</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={currencyNotes[key]}
+                                onChange={(e) => setCurrencyNotes(prev => ({
+                                  ...prev,
+                                  [key]: parseInt(e.target.value) || 0
+                                }))}
+                                className="text-center h-8"
+                                placeholder="0"
+                              />
+                              <span className="text-xs text-gray-500 min-w-[60px]">
+                                = {formatCurrencyValue(currencyNotes[key] * denomination)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="pt-2 border-t">
+                          <div className="flex justify-between items-center font-semibold">
+                            <span>Total Cash:</span>
+                            <span className="text-lg">{formatCurrencyValue(calculateNotesTotal())}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="text-xs text-gray-500 mt-2">
+                      {!showNotesBreakdown 
+                        ? "Tip: Use 'Count Notes' for easier cash counting with denominations"
+                        : "Cash total calculated from notes count automatically"}
+                    </div>
                   </div>
                 </div>
               )}
