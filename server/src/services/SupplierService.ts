@@ -90,8 +90,17 @@ export class SupplierService {
         return { success: false, error: 'Supplier not found' };
       }
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       console.error('SupplierService: Error deleting supplier:', error);
+      
+      // Check for foreign key constraint violation
+      if (error?.code === '23503' || error?.message?.includes('foreign key constraint')) {
+        return { 
+          success: false, 
+          error: 'Cannot delete supplier because it has associated purchase records. Please remove all related purchases first.' 
+        };
+      }
+      
       return { success: false, error: 'Failed to delete supplier' };
     }
   }
@@ -124,8 +133,12 @@ export class SupplierService {
             console.log(`Failed to delete supplier ${supplierId} - not found`);
             failedIds.push(supplierId);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error(`Error deleting supplier ${supplierId}:`, error);
+          // Check for foreign key constraint violation
+          if (error?.code === '23503' || error?.message?.includes('foreign key constraint')) {
+            console.log(`Cannot delete supplier ${supplierId} - has associated purchase records`);
+          }
           failedIds.push(supplierId);
         }
       }
@@ -136,7 +149,7 @@ export class SupplierService {
         console.log('Failed to delete suppliers:', failedIds);
         return { 
           success: false, 
-          error: `Failed to delete suppliers with IDs: ${failedIds.join(', ')}`,
+          error: `Failed to delete suppliers with IDs: ${failedIds.join(', ')}. Some suppliers cannot be deleted because they have associated purchase records.`,
           deletedCount 
         };
       }
