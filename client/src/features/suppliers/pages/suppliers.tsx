@@ -52,7 +52,7 @@ export default function Suppliers() {
   );
 
   const createSupplierMutation = useMutation({
-    mutationFn: (supplierData: any) => apiRequest("POST", "/api/suppliers", supplierData),
+    mutationFn: (supplierData: any) => apiRequest("/api/suppliers", { method: "POST", body: JSON.stringify(supplierData) }),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -72,7 +72,7 @@ export default function Suppliers() {
   });
 
   const updateSupplierMutation = useMutation({
-    mutationFn: (supplierData: any) => apiRequest("PUT", `/api/suppliers/${supplierData.id}`, supplierData),
+    mutationFn: (supplierData: any) => apiRequest(`/api/suppliers/${supplierData.id}`, { method: "PUT", body: JSON.stringify(supplierData) }),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -92,7 +92,7 @@ export default function Suppliers() {
   });
 
   const deleteSupplierMutation = useMutation({
-    mutationFn: (supplierId: number) => apiRequest("DELETE", `/api/suppliers/${supplierId}`),
+    mutationFn: (supplierId: number) => apiRequest(`/api/suppliers/${supplierId}`, { method: "DELETE" }),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -110,7 +110,7 @@ export default function Suppliers() {
   });
 
   const bulkDeleteMutation = useMutation({
-    mutationFn: (supplierIds: number[]) => apiRequest("DELETE", "/api/suppliers/bulk-delete", { supplierIds }),
+    mutationFn: (supplierIds: number[]) => apiRequest("/api/suppliers/bulk-delete", { method: "DELETE", body: JSON.stringify({ supplierIds }) }),
     onSuccess: (data: any) => {
       toast({
         title: "Success",
