@@ -429,52 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Suppliers API - Removed old hardcoded routes, using database-backed routes from apiRoutes instead
 
   // Customer Ledgers API
-  let customerLedgersStorage: any[] = [
-    {
-      id: 1,
-      customerId: 1,
-      customerName: "John Smith",
-      amount: "500.00",
-      type: "debit",
-      reference: "INV-001",
-      description: "Invoice for services rendered",
-      date: "2025-07-28",
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 2,
-      customerId: 1,
-      customerName: "John Smith",
-      amount: "250.00",
-      type: "credit",
-      reference: "PAY-001",
-      description: "Payment received against invoice",
-      date: "2025-07-27",
-      createdAt: new Date(Date.now() - 86400000).toISOString()
-    },
-    {
-      id: 3,
-      customerId: 2,
-      customerName: "Jane Doe",
-      amount: "750.00",
-      type: "debit",
-      reference: "INV-002",
-      description: "Product purchase invoice",
-      date: "2025-07-26",
-      createdAt: new Date(Date.now() - 172800000).toISOString()
-    },
-    {
-      id: 4,
-      customerId: 2,
-      customerName: "Jane Doe",
-      amount: "400.00",
-      type: "credit",
-      reference: "PAY-002",
-      description: "Partial payment received",
-      date: "2025-07-25",
-      createdAt: new Date(Date.now() - 259200000).toISOString()
-    }
-  ];
+  let customerLedgersStorage: any[] = [];
 
   app.get('/api/customer-ledgers', (req, res) => {
     console.log('Fetching customer ledgers, total:', customerLedgersStorage.length);
@@ -513,52 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Supplier Ledgers API
-  let supplierLedgersStorage: any[] = [
-    {
-      id: 1,
-      supplierId: 1,
-      supplierName: "ABC Supplies Co",
-      amount: "1200.00",
-      type: "debit",
-      reference: "PO-001",
-      description: "Purchase order for inventory",
-      date: "2025-07-28",
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 2,
-      supplierId: 1,
-      supplierName: "ABC Supplies Co",
-      amount: "600.00",
-      type: "credit",
-      reference: "PAY-SUP-001",
-      description: "Payment made to supplier",
-      date: "2025-07-27",
-      createdAt: new Date(Date.now() - 86400000).toISOString()
-    },
-    {
-      id: 3,
-      supplierId: 2,
-      supplierName: "XYZ Materials Ltd",
-      amount: "2500.00",
-      type: "debit",
-      reference: "PO-002",
-      description: "Raw materials purchase",
-      date: "2025-07-26",
-      createdAt: new Date(Date.now() - 172800000).toISOString()
-    },
-    {
-      id: 4,
-      supplierId: 2,
-      supplierName: "XYZ Materials Ltd",
-      amount: "1500.00",
-      type: "credit",
-      reference: "PAY-SUP-002",
-      description: "Advance payment to supplier",
-      date: "2025-07-25",
-      createdAt: new Date(Date.now() - 259200000).toISOString()
-    }
-  ];
+  let supplierLedgersStorage: any[] = [];
 
   app.get('/api/supplier-ledgers', (req, res) => {
     console.log('Fetching supplier ledgers, total:', supplierLedgersStorage.length);
