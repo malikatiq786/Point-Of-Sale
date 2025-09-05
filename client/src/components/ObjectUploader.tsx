@@ -59,8 +59,8 @@ export function ObjectUploader({
   children,
 }: ObjectUploaderProps) {
   const [showModal, setShowModal] = useState(false);
-  const [uppy] = useState(() =>
-    new Uppy({
+  const [uppy] = useState(() => {
+    const uppyInstance = new Uppy({
       restrictions: {
         maxNumberOfFiles,
         maxFileSize,
@@ -72,13 +72,33 @@ export function ObjectUploader({
         getUploadParameters: onGetUploadParameters,
       })
       .on("complete", (result) => {
+        console.log("Upload complete:", result);
         onComplete?.(result);
+        setShowModal(false);
       })
-  );
+      .on("upload-success", (file, response) => {
+        console.log("File uploaded successfully:", file, response);
+      })
+      .on("upload-error", (file, error, response) => {
+        console.error("Upload error:", file, error, response);
+      });
+
+    return uppyInstance;
+  });
+
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowModal(true);
+  };
 
   return (
     <div>
-      <Button onClick={() => setShowModal(true)} className={buttonClassName}>
+      <Button 
+        type="button"
+        onClick={handleButtonClick} 
+        className={buttonClassName}
+      >
         {children}
       </Button>
 
@@ -86,7 +106,17 @@ export function ObjectUploader({
         uppy={uppy}
         open={showModal}
         onRequestClose={() => setShowModal(false)}
+        closeAfterFinish={false}
         proudlyDisplayPoweredByUppy={false}
+        showProgressDetails={true}
+        hideUploadButton={false}
+        hideRetryButton={false}
+        hidePauseResumeButton={false}
+        hideCancelButton={false}
+        hideProgressAfterFinish={false}
+        showSelectedFiles={true}
+        showRemoveButtonAfterComplete={false}
+        note="Images up to 5MB"
       />
     </div>
   );
