@@ -728,8 +728,22 @@ export default function Categories() {
                 )}
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-center h-20 bg-gray-100 rounded-lg mb-4">
-                  <Tags className="w-8 h-8 text-gray-400" />
+                <div className="flex items-center justify-center h-20 bg-gray-100 rounded-lg mb-4 overflow-hidden">
+                  {category.image ? (
+                    <img 
+                      src={category.image} 
+                      alt={category.name} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to icon if image fails to load
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        if (e.target.parentElement?.querySelector('.fallback-icon')) {
+                          (e.target.parentElement.querySelector('.fallback-icon') as HTMLElement).style.display = 'block';
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <Tags className={`w-8 h-8 text-gray-400 fallback-icon ${category.image ? 'hidden' : ''}`} />
                 </div>
                 
                 {/* Show description if available */}

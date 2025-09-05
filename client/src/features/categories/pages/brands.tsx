@@ -481,8 +481,25 @@ export default function Brands() {
                       onCheckedChange={() => handleSelectBrand(brand.id)}
                       data-testid={`checkbox-brand-${brand.id}`}
                     />
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Package className="w-5 h-5 text-blue-600" />
+                    <div className="p-2 bg-blue-100 rounded-lg w-10 h-10 flex items-center justify-center overflow-hidden">
+                      {brand.image ? (
+                        <img 
+                          src={brand.image} 
+                          alt={brand.name} 
+                          className="w-full h-full object-cover rounded"
+                          onError={(e) => {
+                            // Fallback to icon if image fails to load
+                            (e.target as HTMLImageElement).style.display = 'none';
+                            (e.target as HTMLImageElement).parentElement!.classList.add('bg-blue-100');
+                            if (e.target.parentElement?.querySelector('.fallback-icon')) {
+                              (e.target.parentElement.querySelector('.fallback-icon') as HTMLElement).style.display = 'block';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <Package 
+                        className={`w-5 h-5 text-blue-600 fallback-icon ${brand.image ? 'hidden' : ''}`} 
+                      />
                     </div>
                     <div>
                       <CardTitle className="text-lg">{brand.name}</CardTitle>
