@@ -199,24 +199,6 @@ export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) 
         </Link>
       </div>
 
-      {/* User Role Badge */}
-      <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary-100 to-secondary-100 rounded-full flex items-center justify-center">
-            <span className="text-sm font-semibold text-primary-600">
-              {user?.name?.charAt(0) || user?.firstName?.charAt(0) || 'U'}
-            </span>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">
-              {user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'User'}
-            </p>
-            <Badge variant="outline" className="text-xs bg-primary-50 text-primary-600 border-primary-200">
-              {typeof user?.role === 'string' ? user.role : user?.role?.name || 'User'}
-            </Badge>
-          </div>
-        </div>
-      </div>
 
       {/* Navigation Menu */}
       <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto max-h-[calc(100vh-200px)]">

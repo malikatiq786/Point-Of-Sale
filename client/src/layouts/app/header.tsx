@@ -37,31 +37,31 @@ function AppHeader({ onMenuClick }: AppHeaderProps) {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+    <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 shadow-lg border-b border-blue-200 px-4 sm:px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2 sm:space-x-4">
           {/* Mobile menu button */}
           <Button 
             variant="ghost" 
             size="sm" 
-            className="lg:hidden p-2"
+            className="lg:hidden p-2 text-white hover:bg-white/10"
             onClick={onMenuClick}
           >
             <Menu className="h-5 w-5" />
           </Button>
           
-          <h1 className="text-lg sm:text-xl font-semibold text-gray-900">
+          <h1 className="text-lg sm:text-xl font-semibold text-white">
             <span className="hidden sm:inline">Universal POS System</span>
             <span className="sm:hidden">Universal POS</span>
           </h1>
-          <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
+          <Badge variant="secondary" className="text-xs hidden sm:inline-flex bg-white/20 text-white border-white/30">
             v1.0
           </Badge>
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-4">
           {/* Notifications */}
-          <Button variant="ghost" size="sm" className="relative hidden sm:flex">
+          <Button variant="ghost" size="sm" className="relative hidden sm:flex text-white hover:bg-white/10">
             <Bell className="h-5 w-5" />
             <Badge 
               variant="destructive" 
@@ -81,7 +81,7 @@ function AppHeader({ onMenuClick }: AppHeaderProps) {
             variant="outline" 
             size="sm" 
             onClick={() => window.open('/login', '_blank')}
-            className="hidden md:flex"
+            className="hidden md:flex text-white border-white/30 hover:bg-white/10"
           >
             Test Login
           </Button>
@@ -89,7 +89,7 @@ function AppHeader({ onMenuClick }: AppHeaderProps) {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+              <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-white hover:bg-white/10">
                 <User className="h-5 w-5" />
                 <span className="text-sm font-medium hidden sm:inline">{user?.name || 'User'}</span>
               </Button>
