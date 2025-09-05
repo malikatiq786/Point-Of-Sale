@@ -1184,6 +1184,9 @@ router.delete('/warehouses/:id', isAuthenticated, inventoryController.deleteWare
 // Stock management routes
 router.get('/stock', isAuthenticated, inventoryController.getStock as any);
 
+// Product variants with barcodes for barcode management
+router.get('/product-variants/barcodes', isAuthenticated, inventoryController.getProductVariantsWithBarcodes as any);
+
 router.get('/stock/transfers', isAuthenticated, inventoryController.getStockTransfers as any);
 
 router.post('/stock/transfers', isAuthenticated, inventoryController.createStockTransfer as any);

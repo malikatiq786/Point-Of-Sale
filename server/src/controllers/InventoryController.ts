@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import { InventoryService } from '../services/InventoryService';
+import { db } from '../../db';
+import { productVariants, products, categories, brands, units } from '../../../shared/schema';
+import { eq } from 'drizzle-orm';
 import { HTTP_STATUS, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants';
 
 export class InventoryController {
@@ -240,6 +243,52 @@ export class InventoryController {
       }
     } catch (error) {
       console.error('InventoryController: Error in getStockAdjustments:', error);
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        message: ERROR_MESSAGES.INTERNAL_ERROR
+      });
+    }
+  };
+
+  // Get product variants with barcodes for barcode management
+  getProductVariantsWithBarcodes = async (req: Request, res: Response) => {
+    try {
+      console.log('InventoryController: Getting product variants with barcodes...');
+      
+      const variants = await db
+        .select({
+          id: productVariants.id,
+          productId: productVariants.productId,
+          variantName: productVariants.variantName,
+          barcode: productVariants.barcode,
+          purchasePrice: productVariants.purchasePrice,
+          salePrice: productVariants.salePrice,
+          wholesalePrice: productVariants.wholesalePrice,
+          retailPrice: productVariants.retailPrice,
+          productName: products.name,
+          productDescription: products.description,
+          categoryId: products.categoryId,
+          brandId: products.brandId,
+          unitId: products.unitId,
+          categoryName: categories.name,
+          brandName: brands.name,
+          unitName: units.name,
+        })
+        .from(productVariants)
+        .leftJoin(products, eq(productVariants.productId, products.id))
+        .leftJoin(categories, eq(products.categoryId, categories.id))
+        .leftJoin(brands, eq(products.brandId, brands.id))
+        .leftJoin(units, eq(products.unitId, units.id))
+        .where(eq(productVariants.barcode, productVariants.barcode)) // This ensures we only get variants with barcodes
+        .orderBy(productVariants.id);
+
+      // Filter out variants without barcodes
+      const validVariants = variants.filter(variant => variant.barcode && variant.barcode.trim() !== '');
+
+      console.log('InventoryController: Found', validVariants.length, 'variants with barcodes');
+      
+      res.status(HTTP_STATUS.OK).json(validVariants);
+    } catch (error) {
+      console.error('InventoryController: Error getting product variants with barcodes:', error);
       res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
         message: ERROR_MESSAGES.INTERNAL_ERROR
       });

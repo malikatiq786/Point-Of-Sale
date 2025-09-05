@@ -97,12 +97,12 @@ export default function BarcodeManagement() {
 
   const products = productsResponse?.products || [];
 
-  // Fetch product variants data
+  // Fetch product variants with barcodes data
   const { data: variantsData = [] } = useQuery({
     queryKey: [`product-variants-barcodes`, new Date().toISOString().split('T')[0]], // Add date to ensure fresh data
     queryFn: async () => {
       const timestamp = new Date().getTime();
-      const response = await fetch(`/api/stock?_t=${timestamp}`, {
+      const response = await fetch(`/api/product-variants/barcodes?_t=${timestamp}`, {
         credentials: 'include',
         cache: 'no-cache',
         headers: {
@@ -125,38 +125,34 @@ export default function BarcodeManagement() {
     refetchOnWindowFocus: true,
   });
 
-  // Transform variants data to include product info and create separate items for each variant
-  const productVariants = variantsData.filter((stock: any) => {
-    // Find the product by matching product name
-    const product = products.find((p: any) => p.name === stock.productName);
-    return product && product.barcode && product.barcode.trim() !== "";
-  }).map((stock: any) => {
-    // Find the matching product by name
-    const product = products.find((p: any) => p.name === stock.productName);
-    
-    if (!product) return null;
-    
+  // Transform variants data - now we get variant barcodes directly
+  const productVariants = variantsData.map((variant: any) => {
     return {
-      ...product,
-      variantId: stock.id, // Use stock ID as unique identifier
-      variantName: stock.variantName || 'Default',
-      quantity: stock.quantity || 0,
-      warehouseName: stock.warehouseName || 'N/A',
-      location: stock.location || 'N/A',
-      productVariantId: stock.productVariantId,
-      // Update category and brand from stock data if available
+      id: variant.productId, // Use product ID for compatibility
+      variantId: variant.id, // Unique variant ID
+      productVariantId: variant.id,
+      name: variant.productName || 'Unknown Product',
+      variantName: variant.variantName || 'Default',
+      barcode: variant.barcode, // Now using variant barcode
+      price: variant.salePrice || variant.retailPrice || '0',
       category: { 
-        ...product.category, 
-        name: stock.categoryName || product.category?.name || 'N/A' 
+        id: variant.categoryId,
+        name: variant.categoryName || 'N/A' 
       },
       brand: { 
-        ...product.brand, 
-        name: stock.brandName || product.brand?.name || 'N/A' 
+        id: variant.brandId,
+        name: variant.brandName || 'N/A' 
       },
-      // Use product barcode for now - we might generate variant-specific barcodes later
-      displayName: `${product.name} - ${stock.variantName || 'Default'}`
+      unit: {
+        id: variant.unitId,
+        name: variant.unitName || 'N/A'
+      },
+      quantity: 0, // Will be updated if we fetch stock data
+      warehouseName: 'N/A',
+      location: 'N/A',
+      displayName: `${variant.productName || 'Unknown'} - ${variant.variantName || 'Default'}`
     };
-  }).filter(Boolean); // Remove any null entries
+  });
 
   // Fetch categories for filter dropdown
   const { data: categories = [] } = useQuery({
