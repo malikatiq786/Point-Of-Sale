@@ -653,12 +653,12 @@ export default function AddProduct() {
                                 console.log("Original upload URL:", uploadURL);
                                 
                                 // Convert the upload URL to serving URL format
-                                // Extract the object path from the upload URL
+                                // Extract the object ID from the upload URL
                                 const urlParts = uploadURL.split('/');
-                                const bucketIndex = urlParts.findIndex(part => part.startsWith('replit-objstore'));
-                                if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
-                                  const objectPath = urlParts.slice(bucketIndex + 1).join('/').split('?')[0];
-                                  const servingURL = `/objects/${objectPath}`;
+                                const uploadsIndex = urlParts.findIndex(part => part === 'uploads');
+                                if (uploadsIndex !== -1 && uploadsIndex < urlParts.length - 1) {
+                                  const objectId = urlParts[uploadsIndex + 1].split('?')[0];
+                                  const servingURL = `/api/objects/uploads/${objectId}`;
                                   console.log("Serving URL:", servingURL);
                                   updateVariant(index, 'image', servingURL);
                                 } else {

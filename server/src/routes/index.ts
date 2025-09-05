@@ -1969,15 +1969,18 @@ router.get('/public-objects/:filePath(*)', async (req: any, res: any) => {
 // This endpoint is used to serve private objects that can be accessed publicly
 // (i.e.: without authentication and ACL check).
 router.get('/objects/:objectPath(*)', async (req: any, res: any) => {
+  console.log("Object serving request - Path:", req.path, "Params:", req.params);
   const objectStorageService = new ObjectStorageService();
   try {
     const objectFile = await objectStorageService.getObjectEntityFile(
       req.path,
     );
-    objectStorageService.downloadObject(objectFile, res);
+    console.log("Object file found, serving...");
+    await objectStorageService.downloadObject(objectFile, res);
   } catch (error) {
-    console.error("Error checking object access:", error);
+    console.error("Error serving object:", error);
     if (error instanceof ObjectNotFoundError) {
+      console.log("Object not found:", req.path);
       return res.sendStatus(404);
     }
     return res.sendStatus(500);
