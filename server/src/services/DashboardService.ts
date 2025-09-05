@@ -20,30 +20,46 @@ export class DashboardService {
   // Get dashboard statistics
   async getDashboardStats(): Promise<DatabaseResult<DashboardStats>> {
     try {
-      // Get counts for dashboard stats using direct database queries
-      const [productsResult] = await this.db.execute(sql`SELECT COUNT(*) as count FROM products`);
-      const [customersResult] = await this.db.execute(sql`SELECT COUNT(*) as count FROM customers`);
-      const [suppliersResult] = await this.db.execute(sql`SELECT COUNT(*) as count FROM suppliers`);
-
-      // Get recent sales count (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const [salesResult] = await this.db.execute(sql`
+      // Get total products count
+      const productsResult = await db.execute(sql`SELECT COUNT(*) as count FROM products`);
+      
+      // Get total customers count
+      const customersResult = await db.execute(sql`SELECT COUNT(*) as count FROM customers`);
+      
+      // Get total suppliers count  
+      const suppliersResult = await db.execute(sql`SELECT COUNT(*) as count FROM suppliers`);
+      
+      // Get total sales count and amount
+      const salesCountResult = await db.execute(sql`SELECT COUNT(*) as count FROM sales`);
+      const salesTotalResult = await db.execute(sql`SELECT COALESCE(SUM(CAST(total_amount as DECIMAL)), 0) as total FROM sales`);
+      
+      // Get low stock items (where stock <= low_stock_alert)
+      const lowStockResult = await db.execute(sql`
         SELECT COUNT(*) as count 
-        FROM sales 
-        WHERE sale_date >= ${thirtyDaysAgo.toISOString()}
+        FROM products 
+        WHERE stock <= COALESCE(low_stock_alert, 5)
       `);
 
+      const stats = {
+        totalProducts: parseInt(productsResult.rows[0]?.count as string) || 0,
+        totalCustomers: parseInt(customersResult.rows[0]?.count as string) || 0,
+        totalSuppliers: parseInt(suppliersResult.rows[0]?.count as string) || 0,
+        totalSales: parseInt(salesCountResult.rows[0]?.count as string) || 0,
+        totalSalesAmount: parseFloat(salesTotalResult.rows[0]?.total as string) || 0,
+        lowStockItems: parseInt(lowStockResult.rows[0]?.count as string) || 0,
+        activeCustomers: parseInt(customersResult.rows[0]?.count as string) || 0, // For now, all customers are considered active
+      };
+
       return {
-        totalProducts: parseInt(productsResult.count as string) || 0,
-        totalCustomers: parseInt(customersResult.count as string) || 0,
-        totalSuppliers: parseInt(suppliersResult.count as string) || 0,
-        recentSales: parseInt(salesResult.count as string) || 0,
+        success: true,
+        data: stats
       };
     } catch (error) {
       console.error('DashboardService: Error getting dashboard stats:', error);
-      throw new Error('Failed to fetch dashboard statistics');
+      return {
+        success: false,
+        error: 'Failed to fetch dashboard statistics'
+      };
     }
   }
 
