@@ -89,6 +89,7 @@ export default function Brands() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/brands'] });
+      setIsAddDialogOpen(false);
       setEditingBrand(null);
       form.reset();
       toast({ title: "Success", description: "Brand updated successfully" });
@@ -152,9 +153,12 @@ export default function Brands() {
   });
 
   const onSubmit = (data: BrandFormData) => {
+    console.log('Form submission data:', data);
     if (editingBrand) {
+      console.log('Updating brand with ID:', editingBrand.id, 'Data:', data);
       updateBrandMutation.mutate({ ...data, id: editingBrand.id });
     } else {
+      console.log('Creating new brand with data:', data);
       createBrandMutation.mutate(data);
     }
   };

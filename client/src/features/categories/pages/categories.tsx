@@ -155,9 +155,12 @@ export default function Categories() {
   });
 
   const onSubmit = (data: CategoryFormData) => {
+    console.log('Category form submission data:', data);
     if (editingCategory) {
+      console.log('Updating category with ID:', editingCategory.id, 'Data:', data);
       updateCategoryMutation.mutate({ ...data, id: editingCategory.id });
     } else {
+      console.log('Creating new category with data:', data);
       createCategoryMutation.mutate(data);
     }
   };
