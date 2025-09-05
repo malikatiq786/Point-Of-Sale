@@ -73,15 +73,12 @@ export class CustomerLedgerController {
   // Get all ledger entries (admin)
   getAllEntries = async (req: Request, res: Response) => {
     try {
-      console.log('CustomerLedgerController: getAllEntries called');
       const result = await this.customerLedgerService.getAllEntries();
-      console.log('CustomerLedgerController: Service result:', result);
       
       if (!result.success) {
         return res.status(500).json({ error: result.error });
       }
 
-      console.log(`CustomerLedgerController: Returning ${result.data?.length || 0} entries`);
       res.json(result.data);
     } catch (error) {
       console.error('CustomerLedgerController: Error getting all ledger entries:', error);

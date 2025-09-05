@@ -13,27 +13,21 @@ export abstract class BaseRepository<TTable, TInsert, TSelect> {
   // Generic find all with optional conditions
   async findAll(conditions?: any, limit?: number, offset?: number): Promise<TSelect[]> {
     try {
-      console.log(`BaseRepository: Building query for table`);
       let query = this.db.select().from(this.table);
       
       if (conditions) {
         query = query.where(conditions);
-        console.log('BaseRepository: Added where conditions');
       }
       
       if (limit) {
         query = query.limit(limit);
-        console.log(`BaseRepository: Added limit ${limit}`);
       }
       
       if (offset) {
         query = query.offset(offset);
-        console.log(`BaseRepository: Added offset ${offset}`);
       }
       
-      const results = await query;
-      console.log(`BaseRepository: Query returned ${results.length} rows`);
-      return results;
+      return await query;
     } catch (error) {
       console.error(`Error finding all:`, error);
       throw error;

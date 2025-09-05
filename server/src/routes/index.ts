@@ -8,6 +8,7 @@ import { InventoryController } from '../controllers/InventoryController';
 import { CustomerController } from '../controllers/CustomerController';
 import { CustomerLedgerController } from '../controllers/CustomerLedgerController';
 import { SupplierController } from '../controllers/SupplierController';
+import { SupplierLedgerController } from '../controllers/SupplierLedgerController';
 import { ExpenseController } from '../controllers/ExpenseController';
 import { FinancialReportController } from '../controllers/FinancialReportController';
 import { ProfitLossController } from '../controllers/ProfitLossController';
@@ -32,6 +33,7 @@ const inventoryController = new InventoryController();
 const customerController = new CustomerController();
 const customerLedgerController = new CustomerLedgerController();
 const supplierController = new SupplierController();
+const supplierLedgerController = new SupplierLedgerController();
 const expenseController = new ExpenseController();
 const financialReportController = new FinancialReportController();
 const profitLossController = new ProfitLossController();
@@ -1204,6 +1206,12 @@ router.get('/customer-ledgers', isAuthenticated, customerLedgerController.getAll
 router.get('/customer-ledgers/:customerId', isAuthenticated, customerLedgerController.getCustomerLedger as any);
 router.get('/customer-ledgers/:customerId/balance', isAuthenticated, customerLedgerController.getCustomerBalance as any);
 router.post('/customer-ledgers', isAuthenticated, customerLedgerController.createEntry as any);
+
+// Supplier Ledger routes
+router.get('/supplier-ledgers', isAuthenticated, supplierLedgerController.getAllEntries as any);
+router.get('/supplier-ledgers/:supplierId', isAuthenticated, supplierLedgerController.getSupplierLedger as any);
+router.get('/supplier-ledgers/:supplierId/balance', isAuthenticated, supplierLedgerController.getSupplierBalance as any);
+router.post('/supplier-ledgers', isAuthenticated, supplierLedgerController.createEntry as any);
 
 // =========================================
 // 💸 EXPENSE MANAGEMENT ROUTES

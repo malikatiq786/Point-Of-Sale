@@ -80,9 +80,7 @@ export class CustomerLedgerService {
   // Get all ledger entries (for admin purposes)
   async getAllEntries(): Promise<DatabaseResult> {
     try {
-      console.log('CustomerLedgerService: Fetching all ledger entries...');
       const entries = await this.customerLedgerRepository.findAll();
-      console.log('CustomerLedgerService: Found entries:', entries.length);
       
       return {
         success: true,

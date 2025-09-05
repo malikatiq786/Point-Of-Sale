@@ -467,44 +467,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   }
   // });
 
-  // Supplier Ledgers API
-  let supplierLedgersStorage: any[] = [];
+  // Supplier Ledgers API - REMOVED: Now handled by proper MVC structure in /server/src/routes/
+  // let supplierLedgersStorage: any[] = [];
 
-  app.get('/api/supplier-ledgers', (req, res) => {
-    console.log('Fetching supplier ledgers, total:', supplierLedgersStorage.length);
-    const sortedLedgers = supplierLedgersStorage.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    res.json(sortedLedgers);
-  });
+  // app.get('/api/supplier-ledgers', (req, res) => {
+  //   console.log('Fetching supplier ledgers, total:', supplierLedgersStorage.length);
+  //   const sortedLedgers = supplierLedgersStorage.sort((a, b) => 
+  //     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  //   );
+  //   res.json(sortedLedgers);
+  // });
 
-  app.post('/api/supplier-ledgers', (req, res) => {
-    try {
-      const { supplierId, amount, type, reference, description } = req.body;
-      
-      // Get supplier data for the ledger entry
-      const supplier = suppliersStorage.find((s: any) => s.id == supplierId) || { name: 'Unknown Supplier' };
-      
-      const ledgerData = {
-        id: Date.now(),
-        supplierId: parseInt(supplierId),
-        supplierName: supplier.name,
-        amount: amount,
-        type,
-        reference: reference || '',
-        description: description || '',
-        date: new Date().toISOString().split('T')[0],
-        createdAt: new Date().toISOString()
-      };
+  // app.post('/api/supplier-ledgers', (req, res) => {
+  //   try {
+  //     const { supplierId, amount, type, reference, description } = req.body;
+  //     
+  //     // Get supplier data for the ledger entry
+  //     const supplier = suppliersStorage.find((s: any) => s.id == supplierId) || { name: 'Unknown Supplier' };
+  //     
+  //     const ledgerData = {
+  //       id: Date.now(),
+  //       supplierId: parseInt(supplierId),
+  //       supplierName: supplier.name,
+  //       amount: amount,
+  //       type,
+  //       reference: reference || '',
+  //       description: description || '',
+  //       date: new Date().toISOString().split('T')[0],
+  //       createdAt: new Date().toISOString()
+  //     };
 
-      supplierLedgersStorage.unshift(ledgerData);
-      console.log('Supplier ledger entry created:', ledgerData);
-      res.status(201).json(ledgerData);
-    } catch (error) {
-      console.error('Create supplier ledger error:', error);
-      res.status(500).json({ message: 'Failed to create supplier ledger entry' });
-    }
-  });
+  //     supplierLedgersStorage.unshift(ledgerData);
+  //     console.log('Supplier ledger entry created:', ledgerData);
+  //     res.status(201).json(ledgerData);
+  //   } catch (error) {
+  //     console.error('Create supplier ledger error:', error);
+  //     res.status(500).json({ message: 'Failed to create supplier ledger entry' });
+  //   }
+  // });
 
   // HR Modules APIs
   
