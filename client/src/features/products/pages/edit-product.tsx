@@ -476,7 +476,7 @@ export default function EditProduct() {
               <CardContent className="space-y-4">
                 {variants.map((variant, index) => (
                   <div key={index} className="p-4 border rounded-lg space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor={`variant-name-${index}`}>Variant Name</Label>
                         <Input
@@ -486,49 +486,6 @@ export default function EditProduct() {
                           onChange={(e) => updateVariant(index, 'variantName', e.target.value)}
                           placeholder={index === 0 ? "Default" : `Variant ${index + 1}`}
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`variant-image-${index}`}>Image</Label>
-                        <div className="flex flex-col items-start space-y-2">
-                          {variant.image && (
-                            <div className="w-16 h-16 rounded-lg overflow-hidden border">
-                              <img 
-                                src={variant.image.startsWith('/objects/') ? variant.image : `/public-objects/${variant.image}`}
-                                alt={`${variant.variantName} image`} 
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
-                            </div>
-                          )}
-                          <ObjectUploader
-                            maxNumberOfFiles={1}
-                            maxFileSize={5485760}
-                            buttonClassName="text-sm px-2 py-1"
-                            onGetUploadParameters={async () => {
-                              const response = await apiRequest('/api/objects/upload', {
-                                method: 'POST'
-                              });
-                              return {
-                                method: 'PUT' as const,
-                                url: response.uploadURL
-                              };
-                            }}
-                            onComplete={(result: UploadResult) => {
-                              if (result.successful && result.successful.length > 0) {
-                                const uploadURL = result.successful[0].uploadURL;
-                                updateVariant(index, 'image', uploadURL);
-                                toast({
-                                  title: "Success",
-                                  description: "Image uploaded successfully",
-                                });
-                              }
-                            }}
-                          >
-                            📷 Upload Image
-                          </ObjectUploader>
-                        </div>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor={`variant-barcode-${index}`}>Barcode</Label>
@@ -640,6 +597,53 @@ export default function EditProduct() {
                         {variantErrors[index] && variantErrors[index].includes('Shopkeeper') && (
                           <p className="text-sm text-red-500 mt-1">{variantErrors[index]}</p>
                         )}
+                      </div>
+                    </div>
+                    
+                    {/* Variant Image Upload - Full width at the end */}
+                    <div className="border-t pt-4 mt-4">
+                      <div className="space-y-4">
+                        <Label htmlFor={`variant-image-${index}`}>Variant Image</Label>
+                        <div className="flex flex-col items-center space-y-4">
+                          {variant.image && (
+                            <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-gray-200">
+                              <img 
+                                src={variant.image.startsWith('/objects/') ? variant.image : `/public-objects/${variant.image}`}
+                                alt={`${variant.variantName} image`} 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
+                          <ObjectUploader
+                            maxNumberOfFiles={1}
+                            maxFileSize={5485760}
+                            buttonClassName="px-4 py-2"
+                            onGetUploadParameters={async () => {
+                              const response = await apiRequest('/api/objects/upload', {
+                                method: 'POST'
+                              });
+                              return {
+                                method: 'PUT' as const,
+                                url: response.uploadURL
+                              };
+                            }}
+                            onComplete={(result: UploadResult) => {
+                              if (result.successful && result.successful.length > 0) {
+                                const uploadURL = result.successful[0].uploadURL;
+                                updateVariant(index, 'image', uploadURL);
+                                toast({
+                                  title: "Success",
+                                  description: "Image uploaded successfully",
+                                });
+                              }
+                            }}
+                          >
+                            📷 Upload Image
+                          </ObjectUploader>
+                        </div>
                       </div>
                     </div>
                   </div>
