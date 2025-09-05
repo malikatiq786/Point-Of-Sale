@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Package, Save, Plus, Minus, List, Warehouse } from "lucide-react";
+import { ArrowLeft, Package, Save, Plus, Minus, List, Warehouse, RefreshCw } from "lucide-react";
+import { generateProductBarcode } from '@/utils/barcode';
 import { Link, useLocation } from "wouter";
 
 export default function EditProduct() {
@@ -25,7 +26,6 @@ export default function EditProduct() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    barcode: "",
     categoryId: "",
     brandId: "",
     unitId: "",
@@ -37,6 +37,7 @@ export default function EditProduct() {
   const [variants, setVariants] = useState([
     { 
       variantName: "Default", 
+      barcode: "",
       initialStock: "0",
       purchasePrice: "",
       salePrice: "",
@@ -92,7 +93,6 @@ export default function EditProduct() {
       setFormData({
         name: existingProduct.name || "",
         description: existingProduct.description || "",
-        barcode: existingProduct.barcode || "",
         categoryId: existingProduct.category?.id ? existingProduct.category.id.toString() : "",
         brandId: existingProduct.brand?.id ? existingProduct.brand.id.toString() : "",
         unitId: existingProduct.unit?.id ? existingProduct.unit.id.toString() : "",
@@ -105,6 +105,7 @@ export default function EditProduct() {
       if (existingVariants.length > 0) {
         setVariants(existingVariants.map(variant => ({
           variantName: variant.variantName || "Default",
+          barcode: variant.barcode || "",
           initialStock: variant.stock?.toString() || "0",
           purchasePrice: variant.purchasePrice?.toString() || "",
           salePrice: variant.salePrice?.toString() || "",
@@ -181,6 +182,7 @@ export default function EditProduct() {
   const addVariant = () => {
     setVariants(prev => [...prev, { 
       variantName: "", 
+      barcode: generateProductBarcode(), // Auto-generate barcode for new variant
       initialStock: "0",
       purchasePrice: "",
       salePrice: "",
@@ -298,6 +300,7 @@ export default function EditProduct() {
       lowStockAlert: formData.lowStockAlert ? parseInt(formData.lowStockAlert) : 0,
       variants: variants.map(variant => ({
         variantName: variant.variantName || "Default",
+        barcode: variant.barcode || "", // Include barcode in submission
         initialStock: parseInt(variant.initialStock) || 0,
         purchasePrice: parseFloat(variant.purchasePrice) || 0,
         salePrice: parseFloat(variant.salePrice) || 0,
@@ -369,28 +372,16 @@ export default function EditProduct() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Product Name *</Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      placeholder="Enter product name"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="barcode">Barcode</Label>
-                    <Input
-                      id="barcode"
-                      type="text"
-                      value={formData.barcode}
-                      onChange={(e) => handleInputChange('barcode', e.target.value)}
-                      placeholder="Enter barcode"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Product Name *</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    placeholder="Enter product name"
+                    required
+                  />
                 </div>
                 
                 <div className="space-y-2">
@@ -479,8 +470,8 @@ export default function EditProduct() {
               <CardContent className="space-y-4">
                 {variants.map((variant, index) => (
                   <div key={index} className="p-4 border rounded-lg space-y-4">
-                    <div className="flex items-end space-x-4">
-                      <div className="flex-1 space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
                         <Label htmlFor={`variant-name-${index}`}>Variant Name</Label>
                         <Input
                           id={`variant-name-${index}`}
@@ -490,6 +481,31 @@ export default function EditProduct() {
                           placeholder={index === 0 ? "Default" : `Variant ${index + 1}`}
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`variant-barcode-${index}`}>Barcode</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id={`variant-barcode-${index}`}
+                            type="text"
+                            value={variant.barcode || ''}
+                            onChange={(e) => updateVariant(index, 'barcode', e.target.value)}
+                            placeholder="Enter barcode or auto-generate"
+                            className="font-mono"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateVariant(index, 'barcode', generateProductBarcode())}
+                            className="px-3 whitespace-nowrap"
+                            title="Generate barcode"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-end space-x-4">
                       <div className="w-32 space-y-2">
                         <Label htmlFor={`variant-stock-${index}`}>Current Stock</Label>
                         <Input
