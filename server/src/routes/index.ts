@@ -957,7 +957,7 @@ router.get('/brands', async (req: any, res: any) => {
 
 router.post('/brands', isAuthenticated, async (req: any, res: any) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, image } = req.body;
     
     if (!name) {
       return res.status(400).json({ message: "Brand name is required" });
@@ -974,7 +974,7 @@ router.post('/brands', isAuthenticated, async (req: any, res: any) => {
     }
 
     const [brand] = await db.insert(schema.brands)
-      .values({ name, description })
+      .values({ name, description, image })
       .returning();
     res.status(201).json(brand);
   } catch (error) {
@@ -990,7 +990,7 @@ router.post('/brands', isAuthenticated, async (req: any, res: any) => {
 router.put('/brands/:id', isAuthenticated, async (req: any, res: any) => {
   try {
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, description, image } = req.body;
     
     if (!name) {
       return res.status(400).json({ message: "Brand name is required" });
@@ -1008,7 +1008,7 @@ router.put('/brands/:id', isAuthenticated, async (req: any, res: any) => {
     }
 
     const [brand] = await db.update(schema.brands)
-      .set({ name, description })
+      .set({ name, description, image })
       .where(eq(schema.brands.id, parseInt(id)))
       .returning();
     res.json(brand);
