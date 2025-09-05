@@ -19,6 +19,10 @@ import { db } from '../../db';
 import * as schema from '../../../shared/schema';
 import { eq, sql, and, or, like, desc, count, inArray } from 'drizzle-orm';
 import { isAuthenticated } from '../../customAuth';
+import {
+  ObjectStorageService,
+  ObjectNotFoundError,
+} from "../../objectStorage";
 import { WacCalculationService } from '../services/WacCalculationService';
 import { PurchaseOrderService } from '../services/PurchaseOrderService';
 import { CogsTrackingService } from '../services/CogsTrackingService';
@@ -345,6 +349,7 @@ router.get('/products/:id/variants', isAuthenticated, async (req: any, res: any)
         schema.productVariants.id,
         schema.productVariants.variantName,
         schema.productVariants.barcode,
+        schema.productVariants.image,
         schema.productVariants.purchasePrice,
         schema.productVariants.salePrice,
         schema.productVariants.wholesalePrice,
@@ -356,6 +361,7 @@ router.get('/products/:id/variants', isAuthenticated, async (req: any, res: any)
       id: variant.id,
       variantName: variant.variantName || 'Default',
       barcode: variant.barcode || '',
+      image: variant.image || '',
       stock: variant.totalStock || 0,
       purchasePrice: variant.purchasePrice || '0',
       salePrice: variant.salePrice || '0',
@@ -1942,5 +1948,52 @@ router.put('/taxes/:id', isAuthenticated, taxController.updateTax);
 router.delete('/taxes/:id', isAuthenticated, taxController.deleteTax);
 router.patch('/taxes/:id/toggle', isAuthenticated, taxController.toggleTaxEnabled);
 router.patch('/taxes/sort-order', isAuthenticated, taxController.updateTaxSortOrders);
+
+// Object Storage routes
+// This endpoint is used to serve public assets.
+router.get('/public-objects/:filePath(*)', async (req: any, res: any) => {
+  const filePath = req.params.filePath;
+  const objectStorageService = new ObjectStorageService();
+  try {
+    const file = await objectStorageService.searchPublicObject(filePath);
+    if (!file) {
+      return res.status(404).json({ error: "File not found" });
+    }
+    objectStorageService.downloadObject(file, res);
+  } catch (error) {
+    console.error("Error searching for public object:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// This endpoint is used to serve private objects that can be accessed publicly
+// (i.e.: without authentication and ACL check).
+router.get('/objects/:objectPath(*)', async (req: any, res: any) => {
+  const objectStorageService = new ObjectStorageService();
+  try {
+    const objectFile = await objectStorageService.getObjectEntityFile(
+      req.path,
+    );
+    objectStorageService.downloadObject(objectFile, res);
+  } catch (error) {
+    console.error("Error checking object access:", error);
+    if (error instanceof ObjectNotFoundError) {
+      return res.sendStatus(404);
+    }
+    return res.sendStatus(500);
+  }
+});
+
+// This endpoint is used to get the upload URL for an object entity.
+router.post('/objects/upload', async (req: any, res: any) => {
+  const objectStorageService = new ObjectStorageService();
+  try {
+    const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+    res.json({ uploadURL });
+  } catch (error) {
+    console.error("Error getting upload URL:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 export { router as apiRoutes };

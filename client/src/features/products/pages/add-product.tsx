@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Package, Save, Plus, Minus, List, Warehouse, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { generateProductBarcode, validateEAN13Barcode, formatBarcodeForDisplay } from "@/utils/barcode";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import type { UploadResult } from "@uppy/core";
 
 export default function AddProduct() {
   const { user } = useAuth();
@@ -34,6 +36,7 @@ export default function AddProduct() {
     { 
       variantName: "Default", 
       barcode: generateProductBarcode(), // Auto-generate barcode for each variant
+      image: "",
       initialStock: "0",
       purchasePrice: "",
       salePrice: "",
@@ -181,6 +184,7 @@ export default function AddProduct() {
     setVariants(prev => [...prev, { 
       variantName: "", 
       barcode: generateProductBarcode(), // Auto-generate unique barcode for new variant
+      image: "",
       initialStock: "0",
       purchasePrice: "",
       salePrice: "",
@@ -310,6 +314,7 @@ export default function AddProduct() {
       variants: variants.map(variant => ({
         variantName: variant.variantName || "Default",
         barcode: variant.barcode, // Include variant-level barcode
+        image: variant.image || "",
         initialStock: parseInt(variant.initialStock) || 0,
         purchasePrice: parseFloat(variant.purchasePrice) || 0,
         salePrice: parseFloat(variant.salePrice) || 0,
@@ -449,7 +454,7 @@ export default function AddProduct() {
               <CardContent className="space-y-4">
                 {variants.map((variant, index) => (
                   <div key={index} className="p-4 border rounded-lg space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                       <div className="space-y-2">
                         <Label htmlFor={`variant-name-${index}`}>Variant Name</Label>
                         <Input
@@ -487,6 +492,49 @@ export default function AddProduct() {
                         {variant.barcode && validateEAN13Barcode(variant.barcode) && (
                           <p className="text-sm text-green-600">✓ Valid barcode format</p>
                         )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`variant-image-${index}`}>Image</Label>
+                        <div className="flex flex-col items-start space-y-2">
+                          {variant.image && (
+                            <div className="w-16 h-16 rounded-lg overflow-hidden border">
+                              <img 
+                                src={variant.image.startsWith('/objects/') ? variant.image : `/public-objects/${variant.image}`}
+                                alt={`${variant.variantName} image`} 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
+                          <ObjectUploader
+                            maxNumberOfFiles={1}
+                            maxFileSize={5485760}
+                            buttonClassName="text-sm px-2 py-1"
+                            onGetUploadParameters={async () => {
+                              const response = await apiRequest('/api/objects/upload', {
+                                method: 'POST'
+                              });
+                              return {
+                                method: 'PUT' as const,
+                                url: response.uploadURL
+                              };
+                            }}
+                            onComplete={(result: UploadResult) => {
+                              if (result.successful && result.successful.length > 0) {
+                                const uploadURL = result.successful[0].uploadURL;
+                                updateVariant(index, 'image', uploadURL);
+                                toast({
+                                  title: "Success",
+                                  description: "Image uploaded successfully",
+                                });
+                              }
+                            }}
+                          >
+                            📷 Upload Image
+                          </ObjectUploader>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor={`variant-stock-${index}`}>Initial Stock</Label>
