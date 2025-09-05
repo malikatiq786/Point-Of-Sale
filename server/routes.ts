@@ -428,44 +428,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Suppliers API - Removed old hardcoded routes, using database-backed routes from apiRoutes instead
 
-  // Customer Ledgers API
-  let customerLedgersStorage: any[] = [];
+  // Customer Ledgers API - REMOVED: Now handled by proper MVC structure in /server/src/routes/
+  // let customerLedgersStorage: any[] = [];
 
-  app.get('/api/customer-ledgers', (req, res) => {
-    console.log('Fetching customer ledgers, total:', customerLedgersStorage.length);
-    const sortedLedgers = customerLedgersStorage.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    res.json(sortedLedgers);
-  });
+  // app.get('/api/customer-ledgers', (req, res) => {
+  //   console.log('Fetching customer ledgers, total:', customerLedgersStorage.length);
+  //   const sortedLedgers = customerLedgersStorage.sort((a, b) => 
+  //     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  //   );
+  //   res.json(sortedLedgers);
+  // });
 
-  app.post('/api/customer-ledgers', (req, res) => {
-    try {
-      const { customerId, amount, type, reference, description } = req.body;
-      
-      // Get customer data for the ledger entry
-      const customer = customersStorage.find((c: any) => c.id == customerId) || { name: 'Unknown Customer' };
-      
-      const ledgerData = {
-        id: Date.now(),
-        customerId: parseInt(customerId),
-        customerName: customer.name,
-        amount: amount,
-        type,
-        reference: reference || '',
-        description: description || '',
-        date: new Date().toISOString().split('T')[0],
-        createdAt: new Date().toISOString()
-      };
+  // app.post('/api/customer-ledgers', (req, res) => {
+  //   try {
+  //     const { customerId, amount, type, reference, description } = req.body;
+  //     
+  //     // Get customer data for the ledger entry
+  //     const customer = customersStorage.find((c: any) => c.id == customerId) || { name: 'Unknown Customer' };
+  //     
+  //     const ledgerData = {
+  //       id: Date.now(),
+  //       customerId: parseInt(customerId),
+  //       customerName: customer.name,
+  //       amount: amount,
+  //       type,
+  //       reference: reference || '',
+  //       description: description || '',
+  //       date: new Date().toISOString().split('T')[0],
+  //       createdAt: new Date().toISOString()
+  //     };
 
-      customerLedgersStorage.unshift(ledgerData);
-      console.log('Customer ledger entry created:', ledgerData);
-      res.status(201).json(ledgerData);
-    } catch (error) {
-      console.error('Create customer ledger error:', error);
-      res.status(500).json({ message: 'Failed to create customer ledger entry' });
-    }
-  });
+  //     customerLedgersStorage.unshift(ledgerData);
+  //     console.log('Customer ledger entry created:', ledgerData);
+  //     res.status(201).json(ledgerData);
+  //   } catch (error) {
+  //     console.error('Create customer ledger error:', error);
+  //     res.status(500).json({ message: 'Failed to create customer ledger entry' });
+  //   }
+  // });
 
   // Supplier Ledgers API
   let supplierLedgersStorage: any[] = [];
