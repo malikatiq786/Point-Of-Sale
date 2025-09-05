@@ -603,13 +603,18 @@ export default function AddProduct() {
                             maxFileSize={5485760}
                             buttonClassName="px-4 py-2"
                             onGetUploadParameters={async () => {
-                              const response = await apiRequest('/api/objects/upload', {
-                                method: 'POST'
-                              });
-                              return {
-                                method: 'PUT' as const,
-                                url: response.uploadURL
-                              };
+                              try {
+                                console.log("Requesting upload URL...");
+                                const response = await apiRequest('POST', '/api/objects/upload', {});
+                                console.log("Upload URL response:", response);
+                                return {
+                                  method: 'PUT' as const,
+                                  url: response.uploadURL
+                                };
+                              } catch (error) {
+                                console.error("Failed to get upload URL:", error);
+                                throw error;
+                              }
                             }}
                             onComplete={(result: UploadResult) => {
                               if (result.successful && result.successful.length > 0) {
