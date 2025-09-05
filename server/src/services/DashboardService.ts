@@ -45,8 +45,8 @@ export class DashboardService {
         totalCustomers: parseInt(customersResult.rows[0]?.count as string) || 0,
         totalSuppliers: parseInt(suppliersResult.rows[0]?.count as string) || 0,
         totalSales: parseInt(salesCountResult.rows[0]?.count as string) || 0,
-        totalSalesAmount: parseFloat(salesTotalResult.rows[0]?.total as string) || 0,
-        lowStockItems: parseInt(lowStockResult.rows[0]?.count as string) || 0,
+        todaySales: (parseFloat(salesTotalResult.rows[0]?.total as string) || 0).toString(),
+        lowStock: parseInt(lowStockResult.rows[0]?.count as string) || 0,
         activeCustomers: parseInt(customersResult.rows[0]?.count as string) || 0, // For now, all customers are considered active
       };
 
