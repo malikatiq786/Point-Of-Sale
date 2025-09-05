@@ -76,15 +76,6 @@ function AppHeader({ onMenuClick }: AppHeaderProps) {
             <LogoutButton />
           </div>
           
-          {/* Test Login Page Button */}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => window.open('/login', '_blank')}
-            className="hidden md:flex text-white border-white/30 hover:bg-white/10"
-          >
-            Test Login
-          </Button>
 
           {/* User Menu */}
           <DropdownMenu>

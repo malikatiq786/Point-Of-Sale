@@ -182,22 +182,6 @@ export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) 
     <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
       isOpen ? 'translate-x-0' : '-translate-x-full'
     } lg:translate-x-0`}>
-      {/* Logo & Brand */}
-      <div className="flex items-center justify-between h-16 px-6 bg-gradient-to-r from-primary-500 to-secondary-500">
-        {/* Close button for mobile */}
-        <button 
-          onClick={onClose}
-          className="lg:hidden p-1 text-white hover:bg-white hover:bg-opacity-10 rounded"
-        >
-          <X className="w-5 h-5" />
-        </button>
-        <Link href="/" className="flex items-center space-x-3 flex-1 lg:justify-center">
-          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-            <Store className="w-5 h-5 text-primary-500" />
-          </div>
-          <span className="text-lg lg:text-xl font-bold text-white">Universal POS</span>
-        </Link>
-      </div>
 
 
       {/* Navigation Menu */}
