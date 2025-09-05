@@ -587,15 +587,27 @@ export default function AddProduct() {
                         <Label htmlFor={`variant-image-${index}`}>Variant Image</Label>
                         <div className="flex flex-col items-center space-y-4">
                           {variant.image && (
-                            <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-gray-200">
+                            <div className="relative w-32 h-32 rounded-lg overflow-hidden border-2 border-gray-200">
                               <img 
-                                src={variant.image.startsWith('/objects/') ? variant.image : `/public-objects/${variant.image}`}
+                                src={variant.image}
                                 alt={`${variant.variantName} image`} 
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
+                                  console.log('Image load error:', variant.image);
                                   (e.target as HTMLImageElement).style.display = 'none';
                                 }}
+                                onLoad={() => {
+                                  console.log('Image loaded successfully:', variant.image);
+                                }}
                               />
+                              <button
+                                type="button"
+                                onClick={() => updateVariant(index, 'image', '')}
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 text-xs font-bold"
+                                title="Remove image"
+                              >
+                                ✕
+                              </button>
                             </div>
                           )}
                           <ObjectUploader
@@ -635,9 +647,25 @@ export default function AddProduct() {
                               }
                             }}
                             onComplete={(result: UploadResult) => {
+                              console.log("Upload result:", result);
                               if (result.successful && result.successful.length > 0) {
                                 const uploadURL = result.successful[0].uploadURL;
-                                updateVariant(index, 'image', uploadURL);
+                                console.log("Original upload URL:", uploadURL);
+                                
+                                // Convert the upload URL to serving URL format
+                                // Extract the object path from the upload URL
+                                const urlParts = uploadURL.split('/');
+                                const bucketIndex = urlParts.findIndex(part => part.startsWith('replit-objstore'));
+                                if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
+                                  const objectPath = urlParts.slice(bucketIndex + 1).join('/').split('?')[0];
+                                  const servingURL = `/objects/${objectPath}`;
+                                  console.log("Serving URL:", servingURL);
+                                  updateVariant(index, 'image', servingURL);
+                                } else {
+                                  // Fallback to original URL if parsing fails
+                                  updateVariant(index, 'image', uploadURL);
+                                }
+                                
                                 toast({
                                   title: "Success",
                                   description: "Image uploaded successfully",
