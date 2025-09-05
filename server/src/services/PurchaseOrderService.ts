@@ -122,6 +122,23 @@ export class PurchaseOrderService {
 
       await db.insert(purchaseOrderItems).values(itemsData);
 
+      // Create supplier ledger entry for credit (amount owed to supplier)
+      try {
+        const { SupplierLedgerService } = await import('./SupplierLedgerService');
+        const supplierLedgerService = new SupplierLedgerService();
+        await supplierLedgerService.createEntry({
+          supplierId: data.supplierId,
+          amount: grandTotal.toString(),
+          type: 'credit',
+          reference: purchaseOrderNumber,
+          description: `Purchase order ${purchaseOrderNumber} - Amount owed to supplier`,
+        });
+        console.log(`Supplier ledger entry created for PO ${purchaseOrderNumber}: credit ${grandTotal}`);
+      } catch (ledgerError) {
+        console.error('Error creating supplier ledger entry:', ledgerError);
+        // Don't fail the purchase order creation if ledger fails
+      }
+
       console.log('Purchase order created successfully:', purchaseOrder.id);
       return purchaseOrder;
     } catch (error) {
