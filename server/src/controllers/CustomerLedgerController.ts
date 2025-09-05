@@ -9,7 +9,7 @@ export class CustomerLedgerController {
   }
 
   // Get ledger entries for a specific customer
-  async getCustomerLedger(req: Request, res: Response) {
+  getCustomerLedger = async (req: Request, res: Response) => {
     try {
       const customerId = parseInt(req.params.customerId);
       
@@ -31,7 +31,7 @@ export class CustomerLedgerController {
   }
 
   // Create a new ledger entry
-  async createEntry(req: Request, res: Response) {
+  createEntry = async (req: Request, res: Response) => {
     try {
       const entryData = req.body;
       
@@ -49,7 +49,7 @@ export class CustomerLedgerController {
   }
 
   // Get customer balance
-  async getCustomerBalance(req: Request, res: Response) {
+  getCustomerBalance = async (req: Request, res: Response) => {
     try {
       const customerId = parseInt(req.params.customerId);
       
@@ -71,7 +71,7 @@ export class CustomerLedgerController {
   }
 
   // Get all ledger entries (admin)
-  async getAllEntries(req: Request, res: Response) {
+  getAllEntries = async (req: Request, res: Response) => {
     try {
       console.log('CustomerLedgerController: getAllEntries called');
       const result = await this.customerLedgerService.getAllEntries();
