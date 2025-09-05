@@ -13,10 +13,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Search, Plus, Edit, Trash2, Package, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import type { UploadResult } from "@uppy/core";
 
 const brandSchema = z.object({
   name: z.string().min(1, "Brand name is required"),
   description: z.string().optional(),
+  image: z.string().optional(),
 });
 
 type BrandFormData = z.infer<typeof brandSchema>;
@@ -35,6 +38,7 @@ export default function Brands() {
     defaultValues: {
       name: "",
       description: "",
+      image: "",
     },
   });
 
@@ -160,6 +164,7 @@ export default function Brands() {
     form.reset({
       name: brand.name,
       description: brand.description || "",
+      image: brand.image || "",
     });
   };
 
@@ -310,6 +315,113 @@ export default function Brands() {
                       <FormLabel>Description (Optional)</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter brand description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="image"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Brand Image (Optional)</FormLabel>
+                      <FormControl>
+                        <div className="flex flex-col items-center space-y-4">
+                          {field.value && (
+                            <div className="relative w-32 h-32 rounded-lg overflow-hidden border-2 border-gray-200">
+                              <img 
+                                src={field.value}
+                                alt="Brand image preview" 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  console.log('Image load error:', field.value);
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                                onLoad={() => {
+                                  console.log('Image loaded successfully:', field.value);
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => field.onChange('')}
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 text-xs font-bold"
+                                title="Remove image"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          )}
+                          <ObjectUploader
+                            maxNumberOfFiles={1}
+                            maxFileSize={5485760}
+                            buttonClassName="px-4 py-2"
+                            onGetUploadParameters={async () => {
+                              try {
+                                console.log("Requesting upload URL...");
+                                const response = await fetch('/api/objects/upload', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                  credentials: 'include',
+                                  body: JSON.stringify({})
+                                });
+                                
+                                if (!response.ok) {
+                                  throw new Error(`HTTP error! status: ${response.status}`);
+                                }
+                                
+                                const data = await response.json();
+                                console.log("Upload URL response:", data);
+                                
+                                if (!data.uploadURL) {
+                                  throw new Error('No upload URL received from server');
+                                }
+                                
+                                return {
+                                  method: 'PUT' as const,
+                                  url: data.uploadURL
+                                };
+                              } catch (error) {
+                                console.error("Failed to get upload URL:", error);
+                                throw error;
+                              }
+                            }}
+                            onComplete={(result: UploadResult) => {
+                              console.log("Upload result:", result);
+                              if (result.successful && result.successful.length > 0) {
+                                const uploadURL = result.successful[0].uploadURL;
+                                console.log("Original upload URL:", uploadURL);
+                                
+                                // Convert the upload URL to serving URL format
+                                // Extract the object ID from the upload URL
+                                const urlParts = uploadURL.split('/');
+                                const uploadsIndex = urlParts.findIndex(part => part === 'uploads');
+                                if (uploadsIndex !== -1 && uploadsIndex < urlParts.length - 1) {
+                                  const objectId = urlParts[uploadsIndex + 1].split('?')[0];
+                                  const servingURL = `/api/objects/uploads/${objectId}`;
+                                  console.log("Serving URL:", servingURL);
+                                  field.onChange(servingURL);
+                                } else {
+                                  // Fallback to original URL if parsing fails
+                                  field.onChange(uploadURL);
+                                }
+                                
+                                toast({
+                                  title: "Success",
+                                  description: "Image uploaded successfully",
+                                });
+                              }
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>📁</span>
+                              <span>Upload Image</span>
+                            </div>
+                          </ObjectUploader>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
