@@ -391,31 +391,58 @@ export default function Settings() {
   };
 
   // Database backup functions
-  const handleManualBackup = () => {
+  const handleManualBackup = async () => {
     toast({
       title: "Backup Started",
       description: "Database backup is being generated...",
     });
-    // Simulate backup process
-    setTimeout(() => {
-      const backupName = `backup_${new Date().toISOString().split('T')[0]}_${new Date().getTime()}.sql`;
-      const backupContent = `-- Database Backup Created: ${new Date().toISOString()}\n-- Universal POS System Database Backup\n\n-- This is a simulated backup file\n-- In production, this would contain actual SQL data`;
-      
-      const blob = new Blob([backupContent], { type: 'text/plain' });
+    
+    try {
+      const response = await fetch('/api/backup/download', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Backup failed');
+      }
+
+      // Get the filename from the Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'database_backup.sql';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Convert response to blob and download
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = backupName;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast({
         title: "Backup Complete",
-        description: `Database backup downloaded as ${backupName}`,
+        description: `Complete database backup downloaded as ${filename}`,
       });
-    }, 2000);
+    } catch (error: any) {
+      console.error('Backup error:', error);
+      toast({
+        title: "Backup Failed",
+        description: error.message || "Failed to create database backup",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSelectBackupFolder = () => {

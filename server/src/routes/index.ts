@@ -19,6 +19,9 @@ import { db } from '../../db';
 import * as schema from '../../../shared/schema';
 import { eq, sql, and, or, like, desc, count, inArray } from 'drizzle-orm';
 import { isAuthenticated } from '../../customAuth';
+import { spawn } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -625,6 +628,127 @@ router.post('/users', isAuthenticated, userController.createUser as any);
 router.put('/users/:id', isAuthenticated, userController.updateUser as any);
 router.delete('/users/:id', isAuthenticated, userController.deleteUser as any);
 router.patch('/users/:id/role', isAuthenticated, userController.updateUserRole as any);
+
+// Database backup route
+router.get('/backup/download', isAuthenticated, async (req: any, res: any) => {
+  try {
+    console.log('Database backup requested');
+
+    // Get database connection details from environment
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL not found in environment');
+    }
+
+    // Parse the database URL to extract connection details
+    const url = new URL(databaseUrl);
+    const hostname = url.hostname;
+    const port = url.port || '5432';
+    const database = url.pathname.substring(1); // Remove leading '/'
+    const username = url.username;
+    const password = url.password;
+
+    // Create backup filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFileName = `universal_pos_backup_${timestamp}.sql`;
+    const backupPath = path.join(process.cwd(), 'temp', backupFileName);
+
+    // Ensure temp directory exists
+    const tempDir = path.dirname(backupPath);
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    // Use pg_dump to create database backup
+    const pgDumpArgs = [
+      '-h', hostname,
+      '-p', port,
+      '-U', username,
+      '-d', database,
+      '--verbose',
+      '--clean',
+      '--if-exists',
+      '--create',
+      '--no-password',
+      '-f', backupPath
+    ];
+
+    console.log('Running pg_dump with args:', pgDumpArgs.filter(arg => arg !== password));
+
+    const pgDump = spawn('pg_dump', pgDumpArgs, {
+      env: {
+        ...process.env,
+        PGPASSWORD: password
+      }
+    });
+
+    let errorOutput = '';
+
+    pgDump.stderr.on('data', (data) => {
+      const output = data.toString();
+      console.log('pg_dump stderr:', output);
+      errorOutput += output;
+    });
+
+    pgDump.on('close', (code) => {
+      console.log(`pg_dump process exited with code ${code}`);
+      
+      if (code === 0) {
+        // Backup successful, send file to client
+        res.setHeader('Content-Disposition', `attachment; filename="${backupFileName}"`);
+        res.setHeader('Content-Type', 'application/sql');
+        
+        const fileStream = fs.createReadStream(backupPath);
+        
+        fileStream.on('end', () => {
+          // Clean up temp file after sending
+          fs.unlink(backupPath, (err) => {
+            if (err) console.error('Error deleting temp backup file:', err);
+            else console.log('Temp backup file deleted successfully');
+          });
+        });
+        
+        fileStream.pipe(res);
+      } else {
+        // Backup failed
+        console.error('pg_dump failed with code:', code);
+        console.error('Error output:', errorOutput);
+        
+        // Clean up temp file if it exists
+        if (fs.existsSync(backupPath)) {
+          fs.unlinkSync(backupPath);
+        }
+        
+        res.status(500).json({ 
+          message: 'Database backup failed', 
+          error: `pg_dump exited with code ${code}`,
+          details: errorOutput
+        });
+      }
+    });
+
+    pgDump.on('error', (error) => {
+      console.error('pg_dump spawn error:', error);
+      
+      // Clean up temp file if it exists
+      if (fs.existsSync(backupPath)) {
+        fs.unlinkSync(backupPath);
+      }
+      
+      res.status(500).json({ 
+        message: 'Failed to start database backup process', 
+        error: error.message 
+      });
+    });
+
+  } catch (error) {
+    console.error('Database backup error:', error);
+    res.status(500).json({ 
+      message: 'Failed to create database backup', 
+      error: error.message 
+    });
+  }
+});
 
 // Role and permission routes
 router.get('/roles', isAuthenticated, userController.getAllRoles as any);
