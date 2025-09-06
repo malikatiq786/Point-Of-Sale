@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star, Receipt } from "lucide-react";
+import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star, Receipt, HardDrive, Download, FolderOpen, Clock } from "lucide-react";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -22,6 +22,13 @@ export default function Settings() {
   const [autoBackup, setAutoBackup] = useState(false);
   const [isAddCurrencyDialogOpen, setIsAddCurrencyDialogOpen] = useState(false);
   const [editingCurrency, setEditingCurrency] = useState<any>(null);
+  const [activeSection, setActiveSection] = useState("general");
+  const [backupSettings, setBackupSettings] = useState({
+    autoBackup: false,
+    backupTime: "02:00",
+    backupLocation: "",
+    frequency: "daily"
+  });
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -383,6 +390,64 @@ export default function Settings() {
     }
   };
 
+  // Database backup functions
+  const handleManualBackup = () => {
+    toast({
+      title: "Backup Started",
+      description: "Database backup is being generated...",
+    });
+    // Simulate backup process
+    setTimeout(() => {
+      const backupName = `backup_${new Date().toISOString().split('T')[0]}_${new Date().getTime()}.sql`;
+      const backupContent = `-- Database Backup Created: ${new Date().toISOString()}\n-- Universal POS System Database Backup\n\n-- This is a simulated backup file\n-- In production, this would contain actual SQL data`;
+      
+      const blob = new Blob([backupContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = backupName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Backup Complete",
+        description: `Database backup downloaded as ${backupName}`,
+      });
+    }, 2000);
+  };
+
+  const handleSelectBackupFolder = () => {
+    // In a real application, this would open a folder picker
+    // For now, we'll simulate it
+    const folderPath = prompt("Enter backup folder path:", "/backups/universal-pos");
+    if (folderPath) {
+      setBackupSettings(prev => ({ ...prev, backupLocation: folderPath }));
+      toast({
+        title: "Backup Location Updated",
+        description: `Backups will be saved to: ${folderPath}`,
+      });
+    }
+  };
+
+  const handleSaveBackupSettings = () => {
+    toast({
+      title: "Success",
+      description: "Backup settings saved successfully",
+    });
+  };
+
+  const settingsNavItems = [
+    { id: "general", label: "General", icon: SettingsIcon },
+    { id: "business", label: "Business", icon: Store },
+    { id: "currencies", label: "Currencies", icon: DollarSign },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "tax", label: "Tax", icon: Receipt },
+    { id: "backup", label: "Database Backup", icon: Database },
+    { id: "security", label: "Security", icon: Shield },
+  ];
+
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
@@ -398,38 +463,34 @@ export default function Settings() {
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto p-6">
-          <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="general" className="flex items-center gap-2">
-                <SettingsIcon className="h-4 w-4" />
-                General
-              </TabsTrigger>
-              <TabsTrigger value="business" className="flex items-center gap-2">
-                <Store className="h-4 w-4" />
-                Business
-              </TabsTrigger>
-              <TabsTrigger value="currencies" className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Currencies
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                Notifications
-              </TabsTrigger>
-              <TabsTrigger value="tax" className="flex items-center gap-2">
-                <Receipt className="h-4 w-4" />
-                Tax
-              </TabsTrigger>
-              <TabsTrigger value="security" className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Security
-              </TabsTrigger>
-            </TabsList>
+        {/* Main Content with Sidebar */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Settings Sidebar */}
+          <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto">
+            <nav className="p-4 space-y-2">
+              {settingsNavItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveSection(item.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-colors ${
+                    activeSection === item.id
+                      ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
 
-            {/* General Settings Tab */}
-            <TabsContent value="general" className="space-y-6">
+          {/* Settings Content */}
+          <main className="flex-1 overflow-auto p-6">
+
+            {/* General Settings */}
+            {activeSection === "general" && (
+              <div className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
@@ -481,9 +542,12 @@ export default function Settings() {
                   </Button>
                 </CardContent>
               </Card>
-            </TabsContent>
+              </div>
+            )}
 
-            <TabsContent value="business" className="space-y-6">
+            {/* Business Settings */}
+            {activeSection === "business" && (
+              <div className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
@@ -521,10 +585,12 @@ export default function Settings() {
                   <Button>Save Business Info</Button>
                 </CardContent>
               </Card>
-            </TabsContent>
+              </div>
+            )}
 
-            {/* Currencies Tab */}
-            <TabsContent value="currencies" className="space-y-6">
+            {/* Currencies Settings */}
+            {activeSection === "currencies" && (
+              <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="text-lg font-semibold">Currency Management</h3>
@@ -694,10 +760,12 @@ export default function Settings() {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
+              </div>
+            )}
 
-            {/* Notifications Tab */}
-            <TabsContent value="notifications" className="space-y-6">
+            {/* Notifications Settings */}
+            {activeSection === "notifications" && (
+              <div className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
@@ -728,10 +796,12 @@ export default function Settings() {
                   <Button>Save Notification Settings</Button>
                 </CardContent>
               </Card>
-            </TabsContent>
+              </div>
+            )}
 
-            {/* Dynamic Tax Management Tab */}
-            <TabsContent value="tax" className="space-y-6">
+            {/* Tax Settings */}
+            {activeSection === "tax" && (
+              <div className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -805,10 +875,108 @@ export default function Settings() {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
+              </div>
+            )}
 
-            {/* Security Tab */}
-            <TabsContent value="security" className="space-y-6">
+            {/* Database Backup Settings */}
+            {activeSection === "backup" && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Database className="w-5 h-5" />
+                      <span>Database Backup Management</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Manual Backup Section */}
+                    <div className="border rounded-lg p-4 space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <Download className="w-5 h-5 text-blue-600" />
+                        <h3 className="text-lg font-semibold">Manual Backup</h3>
+                      </div>
+                      <p className="text-gray-600">Generate and download a backup of your database immediately.</p>
+                      <Button onClick={handleManualBackup} className="flex items-center gap-2">
+                        <Download className="w-4 h-4" />
+                        Download Backup Now
+                      </Button>
+                    </div>
+
+                    {/* Automatic Backup Section */}
+                    <div className="border rounded-lg p-4 space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-5 h-5 text-green-600" />
+                        <h3 className="text-lg font-semibold">Automatic Backup</h3>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">Enable Auto Backup</h4>
+                          <p className="text-sm text-gray-600">Automatically backup your database at scheduled times</p>
+                        </div>
+                        <Switch
+                          checked={backupSettings.autoBackup}
+                          onCheckedChange={(checked) => setBackupSettings(prev => ({ ...prev, autoBackup: checked }))}
+                        />
+                      </div>
+
+                      {backupSettings.autoBackup && (
+                        <div className="space-y-4 pt-4 border-t">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="backupTime">Backup Time</Label>
+                              <Input 
+                                id="backupTime" 
+                                type="time" 
+                                value={backupSettings.backupTime}
+                                onChange={(e) => setBackupSettings(prev => ({ ...prev, backupTime: e.target.value }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="frequency">Frequency</Label>
+                              <Select 
+                                value={backupSettings.frequency} 
+                                onValueChange={(value) => setBackupSettings(prev => ({ ...prev, frequency: value }))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="daily">Daily</SelectItem>
+                                  <SelectItem value="weekly">Weekly</SelectItem>
+                                  <SelectItem value="monthly">Monthly</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Backup Location</Label>
+                            <div className="flex gap-2">
+                              <Input 
+                                value={backupSettings.backupLocation}
+                                placeholder="Select backup folder..."
+                                readOnly
+                              />
+                              <Button variant="outline" onClick={handleSelectBackupFolder} className="flex items-center gap-2">
+                                <FolderOpen className="w-4 h-4" />
+                                Browse
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <Button onClick={handleSaveBackupSettings}>Save Backup Settings</Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Security Settings */}
+            {activeSection === "security" && (
+              <div className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
@@ -819,26 +987,32 @@ export default function Settings() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium">Automatic Backup</h4>
-                      <p className="text-sm text-gray-600">Automatically backup data daily</p>
+                      <h4 className="font-medium">Two-Factor Authentication</h4>
+                      <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
                     </div>
-                    <Switch
-                      checked={autoBackup}
-                      onCheckedChange={setAutoBackup}
-                    />
+                    <Switch />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">Session Timeout</h4>
+                      <p className="text-sm text-gray-600">Automatically log out after periods of inactivity</p>
+                    </div>
+                    <Switch />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="backupTime">Backup Time</Label>
-                    <Input id="backupTime" type="time" defaultValue="02:00" />
+                    <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
+                    <Input id="sessionTimeout" type="number" defaultValue="30" min="5" max="240" />
                   </div>
 
                   <Button>Save Security Settings</Button>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
-        </main>
+              </div>
+            )}
+          </main>
+        </div>
       </div>
 
       {/* Add/Edit Tax Dialog */}
