@@ -187,14 +187,20 @@ export default function CustomerLedgers() {
                 margin-bottom: 30px;
                 border: 1px solid #e2e8f0;
               }
-              .customer-info h2 {
-                margin: 0 0 10px 0;
-                font-size: 18px;
-                color: #334155;
+              .info-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+                align-items: center;
               }
-              .date-range {
-                color: #64748b;
-                font-size: 14px;
+              .info-row .label {
+                font-weight: 600;
+                color: #374151;
+                min-width: 140px;
+              }
+              .info-row .value {
+                color: #1f2937;
+                font-weight: 500;
               }
               .summary {
                 display: flex;
@@ -260,11 +266,17 @@ export default function CustomerLedgers() {
             </div>
             
             <div class="customer-info">
-              <h2>${customerName}</h2>
-              <div class="date-range">
-                ${fromDate && toDate ? `From: ${fromDate} To: ${toDate}` : 
-                  fromDate ? `From: ${fromDate}` : 
-                  toDate ? `To: ${toDate}` : 'All Dates'}
+              <div class="info-row">
+                <span class="label">Customer Name:</span>
+                <span class="value">${customerName}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Date Range:</span>
+                <span class="value">
+                  ${fromDate && toDate ? `${fromDate} to ${toDate}` : 
+                    fromDate ? `From ${fromDate}` : 
+                    toDate ? `Until ${toDate}` : 'All Dates'}
+                </span>
               </div>
             </div>
             
@@ -299,6 +311,16 @@ export default function CustomerLedgers() {
               <tbody>
                 ${tableRows}
               </tbody>
+              <tfoot>
+                <tr style="background-color: #fbbf24; font-weight: bold; font-size: 16px;">
+                  <td colspan="3" style="text-align: right; padding: 12px 8px; background-color: #fbbf24; color: #92400e;">Total:</td>
+                  <td style="text-align: right; color: #dc2626; background-color: #fbbf24;">${formatCurrencyValue(totalDebit)}</td>
+                  <td style="text-align: right; color: #16a34a; background-color: #fbbf24;">${formatCurrencyValue(totalCredit)}</td>
+                  <td style="text-align: right; color: #92400e; background-color: #fbbf24;">
+                    ${formatCurrencyValue(Math.abs(balance))} ${balance > 0 ? '(DR)' : balance < 0 ? '(CR)' : ''}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
             
             <script>
