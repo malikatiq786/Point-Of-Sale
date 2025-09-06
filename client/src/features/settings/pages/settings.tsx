@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star, Receipt, HardDrive, Download, FolderOpen, Clock } from "lucide-react";
+import { Settings as SettingsIcon, Store, Users, Bell, Shield, Database, Palette, DollarSign, Plus, Edit, Trash2, Star, Receipt, HardDrive, Download, FolderOpen, Clock, History, Calendar, FileText } from "lucide-react";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -76,6 +76,11 @@ export default function Settings() {
 
   const { data: enabledTaxes = [] } = useQuery<any[]>({
     queryKey: ['/api/taxes/enabled'],
+  });
+
+  // Fetch backup files
+  const { data: backupFiles = [], isLoading: backupFilesLoading, refetch: refetchBackupFiles } = useQuery<any[]>({
+    queryKey: ['/api/backup/files'],
   });
 
   // Update generalSettings when systemSettings loads
@@ -435,6 +440,9 @@ export default function Settings() {
         title: "Backup Complete",
         description: `Complete database backup downloaded as ${filename}`,
       });
+      
+      // Refresh backup files list
+      refetchBackupFiles();
     } catch (error: any) {
       console.error('Backup error:', error);
       toast({
@@ -463,6 +471,82 @@ export default function Settings() {
       title: "Success",
       description: "Backup settings saved successfully",
     });
+  };
+
+  const handleDownloadBackup = async (backupId: number, filename: string) => {
+    try {
+      const response = await fetch(`/api/backup/files/${backupId}/download`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download backup');
+      }
+
+      // Convert response to blob and download
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Started",
+        description: `Downloading ${filename}`,
+      });
+    } catch (error: any) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download Failed",
+        description: error.message || "Failed to download backup file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteBackup = async (backupId: number, filename: string) => {
+    if (!confirm(`Are you sure you want to delete ${filename}?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/backup/files/${backupId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete backup');
+      }
+
+      toast({
+        title: "Backup Deleted",
+        description: `${filename} has been deleted successfully`,
+      });
+
+      // Refresh backup files list
+      refetchBackupFiles();
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete backup file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
   };
 
   const settingsNavItems = [
@@ -996,6 +1080,74 @@ export default function Settings() {
                     </div>
 
                     <Button onClick={handleSaveBackupSettings}>Save Backup Settings</Button>
+                  </CardContent>
+                </Card>
+
+                {/* Backup History Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <History className="w-5 h-5" />
+                      <span>Backup History</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {backupFilesLoading ? (
+                      <div className="text-center py-4">Loading backup history...</div>
+                    ) : backupFiles.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                        <p>No backup files found</p>
+                        <p className="text-sm">Create your first backup to see it here</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {backupFiles.map((backup: any) => (
+                          <div key={backup.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3">
+                                <FileText className="w-5 h-5 text-blue-600" />
+                                <div>
+                                  <h4 className="font-medium text-gray-900">{backup.filename}</h4>
+                                  <div className="flex items-center space-x-4 text-sm text-gray-500">
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {formatDate(backup.createdAt)}
+                                    </span>
+                                    <span>{backup.formattedSize}</span>
+                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                                      {backup.status}
+                                    </span>
+                                  </div>
+                                  {backup.description && (
+                                    <p className="text-sm text-gray-600 mt-1">{backup.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDownloadBackup(backup.id, backup.filename)}
+                                className="flex items-center gap-2"
+                              >
+                                <Download className="w-4 h-4" />
+                                Download
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteBackup(backup.id, backup.filename)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>

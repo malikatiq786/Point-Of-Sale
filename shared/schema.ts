@@ -553,6 +553,17 @@ export const settings = pgTable("settings", {
   value: text("value"),
 });
 
+export const backupFiles = pgTable("backup_files", {
+  id: serial("id").primaryKey(),
+  filename: varchar("filename", { length: 255 }).notNull(),
+  filePath: text("file_path").notNull(),
+  fileSize: integer("file_size"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  status: varchar("status", { length: 20 }).default('completed'), // 'completed', 'failed'
+  description: text("description"),
+});
+
 export const taxes = pgTable("taxes", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
@@ -653,3 +664,4 @@ export const productsRelations = relations(products, ({ one, many }) => ({
 // Insert schemas
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true });
 export const insertSaleSchema = createInsertSchema(sales).omit({ id: true });
+export const insertBackupFileSchema = createInsertSchema(backupFiles).omit({ id: true });

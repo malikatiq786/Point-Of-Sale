@@ -651,12 +651,12 @@ router.get('/backup/download', isAuthenticated, async (req: any, res: any) => {
     // Create backup filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupFileName = `universal_pos_backup_${timestamp}.sql`;
-    const backupPath = path.join(process.cwd(), 'temp', backupFileName);
+    const backupPath = path.join(process.cwd(), 'backups', backupFileName);
 
-    // Ensure temp directory exists
-    const tempDir = path.dirname(backupPath);
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
+    // Ensure backup directory exists
+    const backupDir = path.dirname(backupPath);
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
     }
 
     // Use pg_dump to create database backup
@@ -690,25 +690,41 @@ router.get('/backup/download', isAuthenticated, async (req: any, res: any) => {
       errorOutput += output;
     });
 
-    pgDump.on('close', (code) => {
+    pgDump.on('close', async (code) => {
       console.log(`pg_dump process exited with code ${code}`);
       
       if (code === 0) {
-        // Backup successful, send file to client
-        res.setHeader('Content-Disposition', `attachment; filename="${backupFileName}"`);
-        res.setHeader('Content-Type', 'application/sql');
-        
-        const fileStream = fs.createReadStream(backupPath);
-        
-        fileStream.on('end', () => {
-          // Clean up temp file after sending
-          fs.unlink(backupPath, (err) => {
-            if (err) console.error('Error deleting temp backup file:', err);
-            else console.log('Temp backup file deleted successfully');
+        try {
+          // Get file size
+          const stats = fs.statSync(backupPath);
+          const fileSize = stats.size;
+
+          // Save backup metadata to database
+          await db.insert(schema.backupFiles).values({
+            filename: backupFileName,
+            filePath: backupPath,
+            fileSize: fileSize,
+            createdBy: req.user?.id || null,
+            description: 'Manual database backup'
           });
-        });
-        
-        fileStream.pipe(res);
+
+          console.log('Backup metadata saved to database');
+
+          // Backup successful, send file to client
+          res.setHeader('Content-Disposition', `attachment; filename="${backupFileName}"`);
+          res.setHeader('Content-Type', 'application/sql');
+          
+          const fileStream = fs.createReadStream(backupPath);
+          fileStream.pipe(res);
+        } catch (dbError) {
+          console.error('Error saving backup metadata:', dbError);
+          // Still send the file even if metadata save fails
+          res.setHeader('Content-Disposition', `attachment; filename="${backupFileName}"`);
+          res.setHeader('Content-Type', 'application/sql');
+          
+          const fileStream = fs.createReadStream(backupPath);
+          fileStream.pipe(res);
+        }
       } else {
         // Backup failed
         console.error('pg_dump failed with code:', code);
@@ -749,6 +765,105 @@ router.get('/backup/download', isAuthenticated, async (req: any, res: any) => {
     });
   }
 });
+
+// List backup files
+router.get('/backup/files', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const backupFiles = await db.select({
+      id: schema.backupFiles.id,
+      filename: schema.backupFiles.filename,
+      fileSize: schema.backupFiles.fileSize,
+      createdAt: schema.backupFiles.createdAt,
+      status: schema.backupFiles.status,
+      description: schema.backupFiles.description,
+      createdBy: schema.backupFiles.createdBy
+    })
+    .from(schema.backupFiles)
+    .orderBy(desc(schema.backupFiles.createdAt))
+    .limit(50);
+
+    // Format file sizes for display
+    const formattedBackups = backupFiles.map(backup => ({
+      ...backup,
+      formattedSize: backup.fileSize ? formatFileSize(backup.fileSize) : 'Unknown'
+    }));
+
+    res.json(formattedBackups);
+  } catch (error) {
+    console.error('Error fetching backup files:', error);
+    res.status(500).json({ message: 'Failed to fetch backup files' });
+  }
+});
+
+// Download specific backup file
+router.get('/backup/files/:id/download', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const backupId = parseInt(req.params.id);
+    
+    const [backup] = await db.select()
+      .from(schema.backupFiles)
+      .where(eq(schema.backupFiles.id, backupId));
+
+    if (!backup) {
+      return res.status(404).json({ message: 'Backup file not found' });
+    }
+
+    // Check if file exists on disk
+    if (!fs.existsSync(backup.filePath)) {
+      return res.status(404).json({ message: 'Backup file not found on disk' });
+    }
+
+    // Send the file
+    res.setHeader('Content-Disposition', `attachment; filename="${backup.filename}"`);
+    res.setHeader('Content-Type', 'application/sql');
+    
+    const fileStream = fs.createReadStream(backup.filePath);
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error('Error downloading backup file:', error);
+    res.status(500).json({ message: 'Failed to download backup file' });
+  }
+});
+
+// Delete backup file
+router.delete('/backup/files/:id', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const backupId = parseInt(req.params.id);
+    
+    const [backup] = await db.select()
+      .from(schema.backupFiles)
+      .where(eq(schema.backupFiles.id, backupId));
+
+    if (!backup) {
+      return res.status(404).json({ message: 'Backup file not found' });
+    }
+
+    // Delete file from disk if it exists
+    if (fs.existsSync(backup.filePath)) {
+      fs.unlinkSync(backup.filePath);
+    }
+
+    // Delete record from database
+    await db.delete(schema.backupFiles)
+      .where(eq(schema.backupFiles.id, backupId));
+
+    res.json({ message: 'Backup file deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting backup file:', error);
+    res.status(500).json({ message: 'Failed to delete backup file' });
+  }
+});
+
+// Helper function to format file sizes
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
 
 // Role and permission routes
 router.get('/roles', isAuthenticated, userController.getAllRoles as any);
