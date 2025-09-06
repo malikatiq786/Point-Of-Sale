@@ -641,11 +641,28 @@ export default function POSTerminal() {
     setSearchResults([]);
   };
 
-  // Register management state
-  const [selectedRegisterId, setSelectedRegisterId] = useState<number | null>(null);
-  const [registerStatus, setRegisterStatus] = useState<'closed' | 'opening' | 'open'>('closed');
-  const [cashDrawerBalance, setCashDrawerBalance] = useState(0);
-  const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(true); // Show register setup when closed
+  // Register management state with persistent storage
+  const getStoredRegisterState = () => {
+    try {
+      const stored = localStorage.getItem('posRegisterState');
+      if (stored) {
+        const state = JSON.parse(stored);
+        // Validate stored state structure
+        if (state.selectedRegisterId && state.registerStatus === 'open' && state.cashDrawerBalance !== undefined) {
+          return state;
+        }
+      }
+    } catch (error) {
+      console.log('Error reading stored register state:', error);
+    }
+    return null;
+  };
+
+  const storedState = getStoredRegisterState();
+  const [selectedRegisterId, setSelectedRegisterId] = useState<number | null>(storedState?.selectedRegisterId || null);
+  const [registerStatus, setRegisterStatus] = useState<'closed' | 'opening' | 'open'>(storedState?.registerStatus || 'closed');
+  const [cashDrawerBalance, setCashDrawerBalance] = useState(storedState?.cashDrawerBalance || 0);
+  const [isRegisterSetupOpen, setIsRegisterSetupOpen] = useState(!storedState); // Only show setup if no stored register
   
   // Currency notes breakdown state
   const [showNotesBreakdown, setShowNotesBreakdown] = useState(false);
@@ -819,6 +836,19 @@ export default function POSTerminal() {
     }
   }, [currencyNotes, showNotesBreakdown]);
 
+  // Sync register state to localStorage whenever it changes
+  useEffect(() => {
+    if (registerStatus === 'open' && selectedRegisterId) {
+      const registerState = {
+        selectedRegisterId,
+        registerStatus,
+        cashDrawerBalance,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem('posRegisterState', JSON.stringify(registerState));
+    }
+  }, [selectedRegisterId, registerStatus, cashDrawerBalance]);
+
   // Register opening balance validation
   const openRegister = (registerId: number, openingBalance: number) => {
     const register = registers.find((r) => r.id === registerId);
@@ -835,6 +865,15 @@ export default function POSTerminal() {
     setCashDrawerBalance(openingBalance);
     setRegisterStatus('open');
     setIsRegisterSetupOpen(false);
+    
+    // Save register state to localStorage
+    const registerState = {
+      selectedRegisterId: registerId,
+      registerStatus: 'open',
+      cashDrawerBalance: openingBalance,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('posRegisterState', JSON.stringify(registerState));
     
     toast({
       title: "Register Opened",
@@ -868,6 +907,10 @@ export default function POSTerminal() {
       setSelectedRegisterId(null);
       setCashDrawerBalance(0);
       setRegisterStatus('closed');
+      setIsRegisterSetupOpen(true); // Show register setup again when closed
+      
+      // Clear register state from localStorage
+      localStorage.removeItem('posRegisterState');
       
       toast({
         title: "Register Closed",
