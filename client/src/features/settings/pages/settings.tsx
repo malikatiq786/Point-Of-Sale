@@ -27,7 +27,8 @@ export default function Settings() {
     autoBackup: false,
     backupTime: "02:00",
     backupLocation: "",
-    frequency: "daily"
+    frequency: "daily",
+    closeRegisterBackup: false
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -83,6 +84,11 @@ export default function Settings() {
     queryKey: ['/api/backup/files'],
   });
 
+  // Fetch close register backup setting
+  const { data: closeRegisterBackupSetting } = useQuery({
+    queryKey: ['/api/settings/close_register_backup'],
+  });
+
   // Update generalSettings when systemSettings loads
   React.useEffect(() => {
     if (systemSettings?.data?.value) {
@@ -92,6 +98,16 @@ export default function Settings() {
       }));
     }
   }, [systemSettings]);
+
+  // Update backup settings when close register backup setting loads
+  React.useEffect(() => {
+    if (closeRegisterBackupSetting?.data?.value) {
+      setBackupSettings(prev => ({
+        ...prev,
+        closeRegisterBackup: closeRegisterBackupSetting.data.value === 'true'
+      }));
+    }
+  }, [closeRegisterBackupSetting]);
 
   // Reset tax form when dialog closes
   React.useEffect(() => {
@@ -466,7 +482,35 @@ export default function Settings() {
     }
   };
 
+  // Update close register backup setting mutation
+  const updateCloseRegisterBackupMutation = useMutation({
+    mutationFn: async (value: string) => {
+      const response = await apiRequest(`/api/settings/close_register_backup`, {
+        method: 'PUT',
+        body: JSON.stringify({ value })
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/close_register_backup'] });
+      toast({
+        title: "Success",
+        description: "Close register backup setting updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error", 
+        description: error.message || "Failed to update close register backup setting",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSaveBackupSettings = () => {
+    // Update close register backup setting
+    updateCloseRegisterBackupMutation.mutate(backupSettings.closeRegisterBackup.toString());
+    
     toast({
       title: "Success",
       description: "Backup settings saved successfully",
@@ -1079,7 +1123,39 @@ export default function Settings() {
                       )}
                     </div>
 
-                    <Button onClick={handleSaveBackupSettings}>Save Backup Settings</Button>
+                    {/* Close Register Auto Backup Section */}
+                    <div className="border rounded-lg p-4 space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <Database className="w-5 h-5 text-purple-600" />
+                        <h3 className="text-lg font-semibold">Close Register Auto Backup</h3>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">Enable Auto Backup on Register Close</h4>
+                          <p className="text-sm text-gray-600">Automatically create a database backup when closing a register</p>
+                        </div>
+                        <Switch
+                          checked={backupSettings.closeRegisterBackup}
+                          onCheckedChange={(checked) => setBackupSettings(prev => ({ ...prev, closeRegisterBackup: checked }))}
+                        />
+                      </div>
+
+                      {backupSettings.closeRegisterBackup && (
+                        <div className="pt-4 border-t">
+                          <div className="bg-blue-50 p-3 rounded-lg">
+                            <p className="text-sm text-blue-700">
+                              <strong>Note:</strong> When enabled, a complete database backup will be automatically generated 
+                              each time you close a register. This ensures your data is safely backed up at the end of each business day.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <Button onClick={handleSaveBackupSettings} disabled={updateCloseRegisterBackupMutation.isPending}>
+                      {updateCloseRegisterBackupMutation.isPending ? "Saving..." : "Save Backup Settings"}
+                    </Button>
                   </CardContent>
                 </Card>
 

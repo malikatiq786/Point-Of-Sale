@@ -865,6 +865,121 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+// Helper function to create automatic backup
+export async function createAutomaticBackup(description: string, userId?: string): Promise<boolean> {
+  try {
+    console.log('Creating automatic backup:', description);
+
+    // Get database connection details from environment
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL not found in environment');
+    }
+
+    // Parse the database URL to extract connection details
+    const url = new URL(databaseUrl);
+    const hostname = url.hostname;
+    const port = url.port || '5432';
+    const database = url.pathname.substring(1); // Remove leading '/'
+    const username = url.username;
+    const password = url.password;
+
+    // Create backup filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFileName = `auto_backup_${timestamp}.sql`;
+    const backupPath = path.join(process.cwd(), 'backups', backupFileName);
+
+    // Ensure backup directory exists
+    const backupDir = path.dirname(backupPath);
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    // Use pg_dump to create database backup
+    const pgDumpArgs = [
+      '-h', hostname,
+      '-p', port,
+      '-U', username,
+      '-d', database,
+      '--verbose',
+      '--clean',
+      '--if-exists',
+      '--create',
+      '--no-password',
+      '-f', backupPath
+    ];
+
+    return new Promise((resolve, reject) => {
+      const pgDump = spawn('pg_dump', pgDumpArgs, {
+        env: {
+          ...process.env,
+          PGPASSWORD: password
+        }
+      });
+
+      let errorOutput = '';
+
+      pgDump.stderr.on('data', (data) => {
+        const output = data.toString();
+        console.log('Auto backup pg_dump stderr:', output);
+        errorOutput += output;
+      });
+
+      pgDump.on('close', async (code) => {
+        console.log(`Auto backup pg_dump process exited with code ${code}`);
+        
+        if (code === 0) {
+          try {
+            // Get file size
+            const stats = fs.statSync(backupPath);
+            const fileSize = stats.size;
+
+            // Save backup metadata to database
+            await db.insert(schema.backupFiles).values({
+              filename: backupFileName,
+              filePath: backupPath,
+              fileSize: fileSize,
+              createdBy: userId || null,
+              description: description
+            });
+
+            console.log('Auto backup metadata saved to database');
+            resolve(true);
+          } catch (dbError) {
+            console.error('Error saving auto backup metadata:', dbError);
+            // Still consider it successful if the file was created
+            resolve(true);
+          }
+        } else {
+          console.error('Auto backup pg_dump failed with code:', code);
+          console.error('Auto backup error output:', errorOutput);
+          
+          // Clean up failed backup file
+          if (fs.existsSync(backupPath)) {
+            fs.unlinkSync(backupPath);
+          }
+          
+          reject(new Error(`Auto backup failed with code ${code}: ${errorOutput}`));
+        }
+      });
+
+      pgDump.on('error', (error) => {
+        console.error('Auto backup pg_dump spawn error:', error);
+        
+        // Clean up temp file if it exists
+        if (fs.existsSync(backupPath)) {
+          fs.unlinkSync(backupPath);
+        }
+        
+        reject(error);
+      });
+    });
+  } catch (error) {
+    console.error('Auto backup error:', error);
+    return false;
+  }
+}
+
 // Role and permission routes
 router.get('/roles', isAuthenticated, userController.getAllRoles as any);
 router.get('/permissions', isAuthenticated, userController.getAllPermissions as any);
@@ -2177,6 +2292,33 @@ router.post('/cogs/backfill', isAuthenticated, async (req: any, res: any) => {
 // Settings routes
 router.get('/settings/:key', isAuthenticated, settingsController.getSetting);
 router.put('/settings/:key', isAuthenticated, settingsController.updateSetting);
+
+// Specific route for close register backup setting to avoid conflicts
+router.get('/settings/close_register_backup', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const result = await settingsController.getSetting({
+      ...req,
+      params: { key: 'close_register_backup' }
+    }, res);
+    return result;
+  } catch (error) {
+    console.error('Error getting close register backup setting:', error);
+    res.status(500).json({ message: 'Failed to get close register backup setting' });
+  }
+});
+
+router.put('/settings/close_register_backup', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const result = await settingsController.updateSetting({
+      ...req,
+      params: { key: 'close_register_backup' }
+    }, res);
+    return result;
+  } catch (error) {
+    console.error('Error updating close register backup setting:', error);
+    res.status(500).json({ message: 'Failed to update close register backup setting' });
+  }
+});
 
 // Tax routes
 router.get('/taxes', isAuthenticated, taxController.getAllTaxes);

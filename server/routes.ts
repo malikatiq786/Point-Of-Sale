@@ -1079,7 +1079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/registers/:id/close', (req, res) => {
+  app.patch('/api/registers/:id/close', async (req, res) => {
     try {
       const registerId = parseInt(req.params.id);
       const { closingBalance } = req.body;
@@ -1096,6 +1096,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log('Register closed:', registersStorage[registerIndex]);
+      
+      // Check if close register backup is enabled and trigger backup
+      try {
+        const { db } = await import('./db');
+        const { settings } = await import('@shared/schema');
+        const { eq } = await import('drizzle-orm');
+        
+        const [backupSetting] = await db.select()
+          .from(settings)
+          .where(eq(settings.key, 'close_register_backup'))
+          .limit(1);
+        
+        if (backupSetting && backupSetting.value === 'true') {
+          console.log('Close register backup is enabled, triggering automatic backup...');
+          
+          // Import the createAutomaticBackup function from the API routes
+          const { createAutomaticBackup } = await import('./src/routes/index');
+          
+          // Trigger automatic backup in the background
+          const registerName = registersStorage[registerIndex].name;
+          const description = `Automatic backup on register close: ${registerName} (${new Date().toLocaleString()})`;
+          const userId = req.user?.id;
+          
+          createAutomaticBackup(description, userId)
+            .then((success) => {
+              if (success) {
+                console.log('Automatic backup completed successfully after register close');
+              } else {
+                console.error('Automatic backup failed after register close');
+              }
+            })
+            .catch((error) => {
+              console.error('Error during automatic backup after register close:', error);
+            });
+        }
+      } catch (backupError) {
+        console.error('Error checking/triggering backup on register close:', backupError);
+        // Don't fail the register close if backup fails
+      }
+      
       res.json(registersStorage[registerIndex]);
     } catch (error) {
       console.error('Close register error:', error);
