@@ -436,6 +436,7 @@ export const customerLedgers = pgTable("customer_ledgers", {
   amount: numeric("amount", { precision: 12, scale: 2 }),
   type: varchar("type", { length: 20 }),
   reference: text("reference"),
+  description: text("description"),
   date: timestamp("date").defaultNow(),
 });
 

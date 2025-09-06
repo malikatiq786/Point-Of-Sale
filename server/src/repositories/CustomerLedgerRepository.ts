@@ -1,5 +1,5 @@
 import { BaseRepository } from './BaseRepository';
-import { customerLedgers } from '../../../shared/schema';
+import { customerLedgers, customers } from '../../../shared/schema';
 import { eq, desc } from 'drizzle-orm';
 
 type CustomerLedgerInsert = typeof customerLedgers.$inferInsert;
@@ -8,6 +8,31 @@ type CustomerLedgerSelect = typeof customerLedgers.$inferSelect;
 export class CustomerLedgerRepository extends BaseRepository<typeof customerLedgers, CustomerLedgerInsert, CustomerLedgerSelect> {
   constructor() {
     super(customerLedgers);
+  }
+
+  // Get all ledger entries with customer names
+  async findAllWithCustomerNames() {
+    try {
+      const result = await this.db
+        .select({
+          id: customerLedgers.id,
+          customerId: customerLedgers.customerId,
+          amount: customerLedgers.amount,
+          type: customerLedgers.type,
+          reference: customerLedgers.reference,
+          description: customerLedgers.description,
+          date: customerLedgers.date,
+          customerName: customers.name,
+        })
+        .from(customerLedgers)
+        .leftJoin(customers, eq(customerLedgers.customerId, customers.id))
+        .orderBy(desc(customerLedgers.date));
+      
+      return result;
+    } catch (error) {
+      console.error('Error finding all customer ledger entries with names:', error);
+      throw error;
+    }
   }
 
   // Get ledger entries for a specific customer
@@ -36,6 +61,7 @@ export class CustomerLedgerRepository extends BaseRepository<typeof customerLedg
         amount: entryData.amount,
         type: entryData.type,
         reference: entryData.reference,
+        description: entryData.description,
         date: entryData.date ? new Date(entryData.date) : new Date(),
       });
       
