@@ -4,6 +4,7 @@ import { AppLayout } from "@/layouts";
 import UserNav from "../components/user-nav";
 import AddUserDialog from "../components/add-user-dialog";
 import UserPermissionsDialog from "../components/user-permissions-dialog";
+import EditUserDialog from "../components/edit-user-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,10 +135,7 @@ export default function UsersPage() {
                     </Badge>
                     
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" className="text-blue-600 hover:text-blue-700">
-                        <Edit className="w-3 h-3 mr-1" />
-                        Edit
-                      </Button>
+                      <EditUserDialog user={user} />
                       
                       <UserPermissionsDialog user={user} />
                       

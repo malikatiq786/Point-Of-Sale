@@ -629,6 +629,54 @@ router.put('/users/:id', isAuthenticated, userController.updateUser as any);
 router.delete('/users/:id', isAuthenticated, userController.deleteUser as any);
 router.patch('/users/:id/role', isAuthenticated, userController.updateUserRole as any);
 
+// Password change route
+router.post('/auth/change-password', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user?.id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+    }
+
+    // Import bcrypt here to avoid import issues
+    const bcrypt = await import('bcryptjs');
+    
+    // Get user from database
+    const [user] = await db.select()
+      .from(schema.users)
+      .where(eq(schema.users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password in database
+    await db.update(schema.users)
+      .set({ password: hashedNewPassword })
+      .where(eq(schema.users.id, userId));
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ message: 'Failed to change password' });
+  }
+});
+
 // Database backup route
 router.get('/backup/download', isAuthenticated, async (req: any, res: any) => {
   try {

@@ -36,6 +36,7 @@ import { BusinessProfile, Branches, Registers } from "@/features/business";
 import { Payments, Accounts, Transactions, Reports } from "@/features/financial";
 import CustomerLedgers from "@/features/customers/pages/customer-ledgers";
 import SupplierLedgers from "@/features/suppliers/pages/supplier-ledgers";
+import ProfilePage from "@/pages/profile";
 import KitchenPOS from "@/features/kitchen/pages/kitchen-pos";
 import RestaurantApp from "@/pages/restaurant";
 import ProfitLossReports from "@/features/reports/pages/profit-loss-reports";
@@ -125,6 +126,7 @@ function Router() {
           <Route path="/registers" component={Registers} />
           <Route path="/restaurant-management" component={RestaurantManagement} />
           <Route path="/settings" component={Settings} />
+          <Route path="/profile" component={ProfilePage} />
         </>
       )}
       <Route component={NotFound} />
