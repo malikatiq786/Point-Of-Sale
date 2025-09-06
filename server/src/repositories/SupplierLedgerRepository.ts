@@ -1,5 +1,5 @@
 import { BaseRepository } from './BaseRepository';
-import { supplierLedgers } from '../../../shared/schema';
+import { supplierLedgers, suppliers } from '../../../shared/schema';
 import { eq, desc } from 'drizzle-orm';
 
 type SupplierLedgerInsert = typeof supplierLedgers.$inferInsert;
@@ -8,6 +8,31 @@ type SupplierLedgerSelect = typeof supplierLedgers.$inferSelect;
 export class SupplierLedgerRepository extends BaseRepository<typeof supplierLedgers, SupplierLedgerInsert, SupplierLedgerSelect> {
   constructor() {
     super(supplierLedgers);
+  }
+
+  // Get all ledger entries with supplier names
+  async findAllWithSupplierNames() {
+    try {
+      const result = await this.db
+        .select({
+          id: supplierLedgers.id,
+          supplierId: supplierLedgers.supplierId,
+          amount: supplierLedgers.amount,
+          type: supplierLedgers.type,
+          reference: supplierLedgers.reference,
+          description: supplierLedgers.description,
+          date: supplierLedgers.date,
+          supplierName: suppliers.name,
+        })
+        .from(supplierLedgers)
+        .leftJoin(suppliers, eq(supplierLedgers.supplierId, suppliers.id))
+        .orderBy(desc(supplierLedgers.date));
+      
+      return result;
+    } catch (error) {
+      console.error('Error finding all supplier ledger entries with names:', error);
+      throw error;
+    }
   }
 
   // Get ledger entries for a specific supplier
@@ -36,6 +61,7 @@ export class SupplierLedgerRepository extends BaseRepository<typeof supplierLedg
         amount: entryData.amount,
         type: entryData.type,
         reference: entryData.reference,
+        description: entryData.description,
         date: entryData.date ? new Date(entryData.date) : new Date(),
       });
       

@@ -10,12 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Truck, Calendar, DollarSign, Plus, TrendingUp, TrendingDown, FileText, Eye } from "lucide-react";
+import { Search, Truck, Calendar, DollarSign, Plus, TrendingUp, TrendingDown, FileText, Eye, Printer } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 
 export default function SupplierLedgers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -87,7 +89,9 @@ export default function SupplierLedgers() {
     const matchesSearch = ledger.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          ledger.reference?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          ledger.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDate = !dateFilter || ledger.date?.startsWith(dateFilter);
+    const matchesDate = (!dateFilter || ledger.date?.startsWith(dateFilter)) &&
+                        (!fromDate || new Date(ledger.date) >= new Date(fromDate)) &&
+                        (!toDate || new Date(ledger.date) <= new Date(toDate));
     const matchesSupplier = !supplierFilter || supplierFilter === 'all' || ledger.supplierId === parseInt(supplierFilter);
     const matchesType = !typeFilter || typeFilter === 'all' || ledger.type === typeFilter;
     
@@ -121,6 +125,166 @@ export default function SupplierLedgers() {
     }
 
     createLedgerMutation.mutate(ledgerData);
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      // Generate the table content with proper formatting
+      const tableRows = filteredLedgers.map((ledger: any) => `
+        <tr>
+          <td>${ledger.date ? new Date(ledger.date).toLocaleDateString() : 'N/A'}</td>
+          <td><span style="margin-right: 8px;">🚛</span>${ledger.supplierName || 'Unknown Supplier'}</td>
+          <td>${ledger.reference || 'No reference'}</td>
+          <td>${ledger.description || 'No description'}</td>
+          <td style="text-align: right; color: ${ledger.type === 'debit' ? '#dc2626' : '#666'}; font-weight: ${ledger.type === 'debit' ? 'bold' : 'normal'};">
+            ${ledger.type === 'debit' ? `Rs${parseFloat(ledger.amount || '0').toFixed(2)}` : '-'}
+          </td>
+          <td style="text-align: right; color: ${ledger.type === 'credit' ? '#16a34a' : '#666'}; font-weight: ${ledger.type === 'credit' ? 'bold' : 'normal'};">
+            ${ledger.type === 'credit' ? `Rs${parseFloat(ledger.amount || '0').toFixed(2)}` : '-'}
+          </td>
+        </tr>
+      `).join('');
+
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Supplier Ledger History</title>
+            <style>
+              body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                margin: 20px; 
+                color: #374151;
+                line-height: 1.4;
+              }
+              .header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 30px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #e5e7eb;
+              }
+              .header h1 {
+                margin: 0;
+                font-size: 24px;
+                font-weight: bold;
+                color: #111827;
+              }
+              .header-icon {
+                margin-right: 12px;
+                font-size: 20px;
+              }
+              .summary {
+                display: flex;
+                gap: 30px;
+                margin-bottom: 30px;
+                flex-wrap: wrap;
+              }
+              .summary-card {
+                padding: 16px 20px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                background-color: #f9fafb;
+                min-width: 180px;
+              }
+              .summary-card .label {
+                font-size: 14px;
+                color: #6b7280;
+                margin-bottom: 4px;
+              }
+              .summary-card .value {
+                font-size: 20px;
+                font-weight: bold;
+              }
+              .debit-value { color: #dc2626; }
+              .credit-value { color: #16a34a; }
+              .balance-value { color: ${balance >= 0 ? '#dc2626' : '#16a34a'}; }
+              table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin-top: 20px;
+                font-size: 14px;
+              }
+              th {
+                background-color: #f3f4f6;
+                color: #374151;
+                font-weight: 600;
+                padding: 12px 8px;
+                text-align: left;
+                border: 1px solid #d1d5db;
+              }
+              td {
+                padding: 10px 8px;
+                border: 1px solid #e5e7eb;
+                vertical-align: middle;
+              }
+              tr:nth-child(even) {
+                background-color: #f9fafb;
+              }
+              tr:hover {
+                background-color: #f3f4f6;
+              }
+              .text-right { text-align: right; }
+              @media print {
+                body { margin: 0; }
+                .summary { page-break-inside: avoid; }
+                table { page-break-inside: auto; }
+                tr { page-break-inside: avoid; page-break-after: auto; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <span class="header-icon">🚛</span>
+              <h1>Supplier Ledger History</h1>
+            </div>
+            
+            <div class="summary">
+              <div class="summary-card">
+                <div class="label">Total Debit (We Owe)</div>
+                <div class="value debit-value">${formatCurrencyValue(totalDebit)}</div>
+              </div>
+              <div class="summary-card">
+                <div class="label">Total Credit (We Paid)</div>
+                <div class="value credit-value">${formatCurrencyValue(totalCredit)}</div>
+              </div>
+              <div class="summary-card">
+                <div class="label">Outstanding Balance</div>
+                <div class="value balance-value">
+                  ${formatCurrencyValue(Math.abs(balance))} ${balance >= 0 ? '(Overpaid)' : '(Underpaid)'}
+                </div>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Supplier</th>
+                  <th>Reference</th>
+                  <th>Description</th>
+                  <th style="text-align: right;">Debit</th>
+                  <th style="text-align: right;">Credit</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRows}
+              </tbody>
+            </table>
+            
+            <script>
+              window.onload = function() {
+                window.print();
+              };
+              window.onafterprint = function() {
+                window.close();
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
   };
 
   // Calculate summary statistics
@@ -196,9 +360,18 @@ export default function SupplierLedgers() {
         
         <Input
           type="date"
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="w-full sm:w-48"
+          placeholder="From Date"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+          className="w-full sm:w-40"
+        />
+
+        <Input
+          type="date"
+          placeholder="To Date"
+          value={toDate}
+          onChange={(e) => setToDate(e.target.value)}
+          className="w-full sm:w-40"
         />
 
         <Select value={supplierFilter} onValueChange={setSupplierFilter}>
@@ -225,6 +398,11 @@ export default function SupplierLedgers() {
             <SelectItem value="credit">Credit (We Paid)</SelectItem>
           </SelectContent>
         </Select>
+
+        <Button onClick={handlePrint} variant="outline">
+          <Printer className="w-4 h-4 mr-2" />
+          Print
+        </Button>
 
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -278,7 +456,7 @@ export default function SupplierLedgers() {
                         <span className="ml-1">{ledger.type.toUpperCase()}</span>
                       </Badge>
                       <div className={`text-lg font-bold ${ledger.type === 'debit' ? 'text-red-600' : 'text-green-600'}`}>
-                        ${parseFloat(ledger.amount || '0').toFixed(2)}
+                        Rs{parseFloat(ledger.amount || '0').toFixed(2)}
                       </div>
                     </div>
                     
