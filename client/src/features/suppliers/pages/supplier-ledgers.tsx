@@ -267,10 +267,10 @@ export default function SupplierLedgers() {
                 ${tableRows}
               </tbody>
               <tfoot>
-                <tr style="background-color: #fbbf24; font-weight: bold; font-size: 16px;">
-                  <td colspan="3" style="text-align: right; padding: 12px 8px; background-color: #fbbf24; color: #92400e;">Total:</td>
-                  <td style="text-align: right; color: #dc2626; background-color: #fbbf24;">${formatCurrencyValue(totalDebit)}</td>
-                  <td style="text-align: right; color: #16a34a; background-color: #fbbf24;">${formatCurrencyValue(totalCredit)}</td>
+                <tr style="background-color: #f3f4f6; font-weight: bold; font-size: 16px;">
+                  <td colspan="3" style="text-align: right; padding: 12px 8px; background-color: #f3f4f6; color: #374151;">Total:</td>
+                  <td style="text-align: right; color: #dc2626; background-color: #f3f4f6;">${formatCurrencyValue(totalDebit)}</td>
+                  <td style="text-align: right; color: #16a34a; background-color: #f3f4f6;">${formatCurrencyValue(totalCredit)}</td>
                 </tr>
               </tfoot>
             </table>
