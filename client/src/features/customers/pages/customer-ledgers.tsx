@@ -128,41 +128,166 @@ export default function CustomerLedgers() {
   };
 
   const handlePrint = () => {
-    const printContent = document.getElementById('ledger-table')?.innerHTML;
     const printWindow = window.open('', '_blank');
     if (printWindow) {
+      // Generate the table content with proper formatting
+      const tableRows = ledgersWithBalance.map((ledger: any) => `
+        <tr>
+          <td>${ledger.date ? new Date(ledger.date).toLocaleDateString() : 'N/A'}</td>
+          <td><span style="margin-right: 8px;">👤</span>${ledger.customerName || 'Unknown Customer'}</td>
+          <td>${ledger.reference || 'No reference'}</td>
+          <td>${ledger.description || 'No description'}</td>
+          <td style="text-align: right; color: ${ledger.type === 'debit' ? '#dc2626' : '#666'}; font-weight: ${ledger.type === 'debit' ? 'bold' : 'normal'};">
+            ${ledger.type === 'debit' ? `Rs${parseFloat(ledger.amount || '0').toFixed(2)}` : '-'}
+          </td>
+          <td style="text-align: right; color: ${ledger.type === 'credit' ? '#16a34a' : '#666'}; font-weight: ${ledger.type === 'credit' ? 'bold' : 'normal'};">
+            ${ledger.type === 'credit' ? `Rs${parseFloat(ledger.amount || '0').toFixed(2)}` : '-'}
+          </td>
+          <td style="text-align: right;">
+            <span style="font-weight: bold; color: ${ledger.runningBalance > 0 ? '#dc2626' : ledger.runningBalance < 0 ? '#16a34a' : '#374151'};">
+              Rs${Math.abs(ledger.runningBalance).toFixed(2)}
+            </span>
+            ${ledger.runningBalance > 0 ? '<span style="margin-left: 8px; padding: 2px 6px; background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 4px; font-size: 11px;">DR</span>' : ''}
+            ${ledger.runningBalance < 0 ? '<span style="margin-left: 8px; padding: 2px 6px; background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; border-radius: 4px; font-size: 11px;">CR</span>' : ''}
+          </td>
+        </tr>
+      `).join('');
+
       printWindow.document.write(`
         <html>
           <head>
             <title>Customer Ledger History</title>
             <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f2f2f2; font-weight: bold; }
+              body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                margin: 20px; 
+                color: #374151;
+                line-height: 1.4;
+              }
+              .header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 30px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #e5e7eb;
+              }
+              .header h1 {
+                margin: 0;
+                font-size: 24px;
+                font-weight: bold;
+                color: #111827;
+              }
+              .header-icon {
+                margin-right: 12px;
+                font-size: 20px;
+              }
+              .summary {
+                display: flex;
+                gap: 30px;
+                margin-bottom: 30px;
+                flex-wrap: wrap;
+              }
+              .summary-card {
+                padding: 16px 20px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                background-color: #f9fafb;
+                min-width: 180px;
+              }
+              .summary-card .label {
+                font-size: 14px;
+                color: #6b7280;
+                margin-bottom: 4px;
+              }
+              .summary-card .value {
+                font-size: 20px;
+                font-weight: bold;
+              }
+              .debit-value { color: #dc2626; }
+              .credit-value { color: #16a34a; }
+              .balance-value { color: #dc2626; }
+              table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin-top: 20px;
+                font-size: 14px;
+              }
+              th {
+                background-color: #f3f4f6;
+                color: #374151;
+                font-weight: 600;
+                padding: 12px 8px;
+                text-align: left;
+                border: 1px solid #d1d5db;
+              }
+              td {
+                padding: 10px 8px;
+                border: 1px solid #e5e7eb;
+                vertical-align: middle;
+              }
+              tr:nth-child(even) {
+                background-color: #f9fafb;
+              }
+              tr:hover {
+                background-color: #f3f4f6;
+              }
               .text-right { text-align: right; }
-              .text-red-600 { color: #dc2626; }
-              .text-green-600 { color: #16a34a; }
-              .summary { margin-bottom: 30px; }
-              .summary-item { display: inline-block; margin-right: 30px; padding: 10px; border: 1px solid #ddd; }
-              @media print { .no-print { display: none; } }
+              @media print {
+                body { margin: 0; }
+                .summary { page-break-inside: avoid; }
+                table { page-break-inside: auto; }
+                tr { page-break-inside: avoid; page-break-after: auto; }
+              }
             </style>
           </head>
           <body>
-            <h1>Customer Ledger History</h1>
+            <div class="header">
+              <span class="header-icon">👤</span>
+              <h1>Customer Ledger History</h1>
+            </div>
+            
             <div class="summary">
-              <div class="summary-item">
-                <strong>Total Debit:</strong> ${formatCurrencyValue(totalDebit)}
+              <div class="summary-card">
+                <div class="label">Total Debit</div>
+                <div class="value debit-value">${formatCurrencyValue(totalDebit)}</div>
               </div>
-              <div class="summary-item">
-                <strong>Total Credit:</strong> ${formatCurrencyValue(totalCredit)}
+              <div class="summary-card">
+                <div class="label">Total Credit</div>
+                <div class="value credit-value">${formatCurrencyValue(totalCredit)}</div>
               </div>
-              <div class="summary-item">
-                <strong>Net Balance:</strong> ${formatCurrencyValue(Math.abs(balance))} ${balance > 0 ? '(DR)' : balance < 0 ? '(CR)' : ''}
+              <div class="summary-card">
+                <div class="label">Net Balance</div>
+                <div class="value balance-value">
+                  ${formatCurrencyValue(Math.abs(balance))} ${balance > 0 ? '(DR)' : balance < 0 ? '(CR)' : ''}
+                </div>
               </div>
             </div>
-            ${printContent}
-            <script>window.print(); window.onafterprint = function(){ window.close(); }</script>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Reference</th>
+                  <th>Description</th>
+                  <th style="text-align: right;">Debit</th>
+                  <th style="text-align: right;">Credit</th>
+                  <th style="text-align: right;">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRows}
+              </tbody>
+            </table>
+            
+            <script>
+              window.onload = function() {
+                window.print();
+              };
+              window.onafterprint = function() {
+                window.close();
+              };
+            </script>
           </body>
         </html>
       `);
