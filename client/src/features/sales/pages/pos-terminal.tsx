@@ -3910,9 +3910,7 @@ export default function POSTerminal() {
                     <SelectValue placeholder="Choose a register" />
                   </SelectTrigger>
                   <SelectContent>
-                    {registers
-                      .filter((register) => register.isActive)
-                      .map((register) => (
+                    {registers.map((register) => (
                       <SelectItem key={register.id} value={register.id.toString()}>
                         {register.name} ({register.branchName}) - Expected: {formatCurrencyValue(parseFloat(String(register.openingBalance)))}
                       </SelectItem>
