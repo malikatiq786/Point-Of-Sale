@@ -225,24 +225,6 @@ export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) 
               {isExpanded && (
                 <div className="mt-2 space-y-1">
                   {visibleItems.map((item) => {
-                    // Special handling for Sales POS to open in new tab
-                    if (item.name === "Sales POS") {
-                      return (
-                        <Button
-                          key={item.name}
-                          variant={isActive(item.href) ? "default" : "ghost"}
-                          className={`w-full justify-start px-4 py-3 ${
-                            isActive(item.href) 
-                              ? "bg-primary-500 text-white hover:bg-primary-600" 
-                              : "text-gray-700 hover:bg-gray-100"
-                          }`}
-                          onClick={() => window.open(item.href, '_blank')}
-                        >
-                          <item.icon className="w-5 h-5 mr-3" />
-                          {item.name}
-                        </Button>
-                      );
-                    }
                     
                     // Regular navigation for other items
                     return (
