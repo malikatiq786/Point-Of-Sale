@@ -130,11 +130,15 @@ export default function CustomerLedgers() {
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      // Generate the table content with proper formatting
+      // Get the customer name (assuming filtered data or most common customer)
+      const customerName = customerFilter !== 'all' ? 
+        customers.find((c: any) => c.id.toString() === customerFilter)?.name || 'Multiple Customers' : 
+        'All Customers';
+      
+      // Generate the table content with simplified format (no customer column)
       const tableRows = ledgersWithBalance.map((ledger: any) => `
         <tr>
           <td>${ledger.date ? new Date(ledger.date).toLocaleDateString() : 'N/A'}</td>
-          <td><span style="margin-right: 8px;">👤</span>${ledger.customerName || 'Unknown Customer'}</td>
           <td>${ledger.reference || 'No reference'}</td>
           <td>${ledger.description || 'No description'}</td>
           <td style="text-align: right; color: ${ledger.type === 'debit' ? '#dc2626' : '#666'}; font-weight: ${ledger.type === 'debit' ? 'bold' : 'normal'};">
@@ -165,27 +169,39 @@ export default function CustomerLedgers() {
                 line-height: 1.4;
               }
               .header {
-                display: flex;
-                align-items: center;
+                text-align: center;
                 margin-bottom: 30px;
                 padding-bottom: 15px;
                 border-bottom: 2px solid #e5e7eb;
               }
               .header h1 {
-                margin: 0;
+                margin: 0 0 10px 0;
                 font-size: 24px;
                 font-weight: bold;
                 color: #111827;
               }
-              .header-icon {
-                margin-right: 12px;
-                font-size: 20px;
+              .customer-info {
+                background-color: #f8fafc;
+                padding: 20px;
+                border-radius: 8px;
+                margin-bottom: 30px;
+                border: 1px solid #e2e8f0;
+              }
+              .customer-info h2 {
+                margin: 0 0 10px 0;
+                font-size: 18px;
+                color: #334155;
+              }
+              .date-range {
+                color: #64748b;
+                font-size: 14px;
               }
               .summary {
                 display: flex;
                 gap: 30px;
                 margin-bottom: 30px;
                 flex-wrap: wrap;
+                justify-content: center;
               }
               .summary-card {
                 padding: 16px 20px;
@@ -193,6 +209,7 @@ export default function CustomerLedgers() {
                 border-radius: 8px;
                 background-color: #f9fafb;
                 min-width: 180px;
+                text-align: center;
               }
               .summary-card .label {
                 font-size: 14px;
@@ -228,9 +245,6 @@ export default function CustomerLedgers() {
               tr:nth-child(even) {
                 background-color: #f9fafb;
               }
-              tr:hover {
-                background-color: #f3f4f6;
-              }
               .text-right { text-align: right; }
               @media print {
                 body { margin: 0; }
@@ -242,8 +256,16 @@ export default function CustomerLedgers() {
           </head>
           <body>
             <div class="header">
-              <span class="header-icon">👤</span>
               <h1>Customer Ledger History</h1>
+            </div>
+            
+            <div class="customer-info">
+              <h2>${customerName}</h2>
+              <div class="date-range">
+                ${fromDate && toDate ? `From: ${fromDate} To: ${toDate}` : 
+                  fromDate ? `From: ${fromDate}` : 
+                  toDate ? `To: ${toDate}` : 'All Dates'}
+              </div>
             </div>
             
             <div class="summary">
@@ -267,7 +289,6 @@ export default function CustomerLedgers() {
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Customer</th>
                   <th>Reference</th>
                   <th>Description</th>
                   <th style="text-align: right;">Debit</th>
