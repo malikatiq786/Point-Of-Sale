@@ -842,22 +842,51 @@ export default function POSTerminal() {
     });
   };
 
-  const closeRegister = () => {
+  const closeRegister = async () => {
     if (!selectedRegister) return;
     
-    setSelectedRegisterId(null);
-    setCashDrawerBalance(0);
-    setRegisterStatus('closed');
-    
-    toast({
-      title: "Register Closed",
-      description: `${selectedRegister.name} has been closed`,
-    });
-    
-    // Redirect to dashboard after closing register
-    setTimeout(() => {
-      setLocation('/');
-    }, 1500); // Give time for toast to show
+    try {
+      // Call the backend API to close the register and trigger automatic backup
+      const response = await fetch(`/api/registers/${selectedRegister.id}/close`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          closingBalance: cashDrawerBalance
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to close register');
+      }
+
+      const result = await response.json();
+      console.log('Register closed:', result);
+      
+      // Update frontend state
+      setSelectedRegisterId(null);
+      setCashDrawerBalance(0);
+      setRegisterStatus('closed');
+      
+      toast({
+        title: "Register Closed",
+        description: `${selectedRegister.name} has been closed. Automatic backup may be in progress.`,
+      });
+      
+      // Redirect to dashboard after closing register
+      setTimeout(() => {
+        setLocation('/');
+      }, 1500); // Give time for toast to show
+      
+    } catch (error) {
+      console.error('Error closing register:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to close register. Please try again.",
+      });
+    }
   };
 
   // Process sale mutation
