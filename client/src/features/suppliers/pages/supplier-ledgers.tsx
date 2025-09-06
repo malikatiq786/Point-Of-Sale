@@ -168,10 +168,16 @@ export default function SupplierLedgers() {
                 border-bottom: 2px solid #e5e7eb;
               }
               .header h1 {
-                margin: 0 0 10px 0;
-                font-size: 24px;
+                margin: 0 0 5px 0;
+                font-size: 28px;
                 font-weight: bold;
-                color: #111827;
+                color: #1f2937;
+              }
+              .header h2 {
+                margin: 0 0 10px 0;
+                font-size: 20px;
+                font-weight: 600;
+                color: #6b7280;
               }
               .supplier-info {
                 background-color: #f8fafc;
@@ -195,33 +201,6 @@ export default function SupplierLedgers() {
                 color: #1f2937;
                 font-weight: 500;
               }
-              .summary {
-                display: flex;
-                gap: 30px;
-                margin-bottom: 30px;
-                flex-wrap: wrap;
-                justify-content: center;
-              }
-              .summary-card {
-                padding: 16px 20px;
-                border: 1px solid #d1d5db;
-                border-radius: 8px;
-                background-color: #f9fafb;
-                min-width: 180px;
-                text-align: center;
-              }
-              .summary-card .label {
-                font-size: 14px;
-                color: #6b7280;
-                margin-bottom: 4px;
-              }
-              .summary-card .value {
-                font-size: 20px;
-                font-weight: bold;
-              }
-              .debit-value { color: #dc2626; }
-              .credit-value { color: #16a34a; }
-              .balance-value { color: ${balance >= 0 ? '#dc2626' : '#16a34a'}; }
               table { 
                 width: 100%; 
                 border-collapse: collapse; 
@@ -255,7 +234,8 @@ export default function SupplierLedgers() {
           </head>
           <body>
             <div class="header">
-              <h1>Supplier Ledger History</h1>
+              <h1>Universal POS System</h1>
+              <h2>Supplier Ledger History</h2>
             </div>
             
             <div class="supplier-info">
@@ -273,23 +253,6 @@ export default function SupplierLedgers() {
               </div>
             </div>
             
-            <div class="summary">
-              <div class="summary-card">
-                <div class="label">Total Debit (We Owe)</div>
-                <div class="value debit-value">${formatCurrencyValue(totalDebit)}</div>
-              </div>
-              <div class="summary-card">
-                <div class="label">Total Credit (We Paid)</div>
-                <div class="value credit-value">${formatCurrencyValue(totalCredit)}</div>
-              </div>
-              <div class="summary-card">
-                <div class="label">Outstanding Balance</div>
-                <div class="value balance-value">
-                  ${formatCurrencyValue(Math.abs(balance))} ${balance >= 0 ? '(Payable)' : '(Overpaid)'}
-                </div>
-              </div>
-            </div>
-
             <table>
               <thead>
                 <tr>
