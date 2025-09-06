@@ -5,6 +5,7 @@ import UserNav from "../components/user-nav";
 import AddUserDialog from "../components/add-user-dialog";
 import UserPermissionsDialog from "../components/user-permissions-dialog";
 import EditUserDialog from "../components/edit-user-dialog";
+import ResetPasswordDialog from "../components/reset-password-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Trash2, Users, Shield, UserPlus, Settings } from "lucide-react";
 
 export default function UsersPage() {
-  const { user } = useAuth();
+  const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
@@ -138,6 +139,11 @@ export default function UsersPage() {
                       <EditUserDialog user={user} />
                       
                       <UserPermissionsDialog user={user} />
+                      
+                      {/* Show Reset Password button if current user is Super Admin */}
+                      {currentUser?.role?.name === "Super Admin" && (
+                        <ResetPasswordDialog user={user} />
+                      )}
                       
                       {user.role?.name !== "Super Admin" && (
                         <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">

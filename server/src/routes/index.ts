@@ -677,6 +677,63 @@ router.post('/auth/change-password', isAuthenticated, async (req: any, res: any)
   }
 });
 
+// Admin password reset route (for superadmin to reset any user's password)
+router.post('/users/:id/reset-password', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const { newPassword } = req.body;
+    const targetUserId = req.params.id;
+    const adminUserId = req.user?.id;
+
+    // Check if the requesting user is a Super Admin
+    const [adminUser] = await db.select({
+      id: schema.users.id,
+      roleName: schema.roles.name
+    })
+      .from(schema.users)
+      .leftJoin(schema.roles, eq(schema.users.roleId, schema.roles.id))
+      .where(eq(schema.users.id, adminUserId))
+      .limit(1);
+
+    if (!adminUser || adminUser.roleName !== 'Super Admin') {
+      return res.status(403).json({ message: 'Only Super Admin can reset passwords' });
+    }
+
+    if (!newPassword) {
+      return res.status(400).json({ message: 'New password is required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+    }
+
+    // Check if target user exists
+    const [targetUser] = await db.select()
+      .from(schema.users)
+      .where(eq(schema.users.id, targetUserId))
+      .limit(1);
+
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Import bcrypt here to avoid import issues
+    const bcrypt = await import('bcryptjs');
+    
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password in database
+    await db.update(schema.users)
+      .set({ password: hashedNewPassword })
+      .where(eq(schema.users.id, targetUserId));
+
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Admin password reset error:', error);
+    res.status(500).json({ message: 'Failed to reset password' });
+  }
+});
+
 // Database backup route
 router.get('/backup/download', isAuthenticated, async (req: any, res: any) => {
   try {
