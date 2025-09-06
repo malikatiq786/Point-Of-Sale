@@ -10,12 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, User, Calendar, DollarSign, Plus, TrendingUp, TrendingDown, FileText, Eye } from "lucide-react";
+import { Search, User, Calendar, DollarSign, Plus, TrendingUp, TrendingDown, FileText, Eye, Printer } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 
 export default function CustomerLedgers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [customerFilter, setCustomerFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -87,7 +89,9 @@ export default function CustomerLedgers() {
     const matchesSearch = ledger.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          ledger.reference?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          ledger.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDate = !dateFilter || ledger.date?.startsWith(dateFilter);
+    const matchesDate = (!dateFilter || ledger.date?.startsWith(dateFilter)) &&
+                        (!fromDate || new Date(ledger.date) >= new Date(fromDate)) &&
+                        (!toDate || new Date(ledger.date) <= new Date(toDate));
     const matchesCustomer = !customerFilter || customerFilter === 'all' || ledger.customerId === parseInt(customerFilter);
     const matchesType = !typeFilter || typeFilter === 'all' || ledger.type === typeFilter;
     
@@ -121,6 +125,49 @@ export default function CustomerLedgers() {
     }
 
     createLedgerMutation.mutate(ledgerData);
+  };
+
+  const handlePrint = () => {
+    const printContent = document.getElementById('ledger-table')?.innerHTML;
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Customer Ledger History</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; font-weight: bold; }
+              .text-right { text-align: right; }
+              .text-red-600 { color: #dc2626; }
+              .text-green-600 { color: #16a34a; }
+              .summary { margin-bottom: 30px; }
+              .summary-item { display: inline-block; margin-right: 30px; padding: 10px; border: 1px solid #ddd; }
+              @media print { .no-print { display: none; } }
+            </style>
+          </head>
+          <body>
+            <h1>Customer Ledger History</h1>
+            <div class="summary">
+              <div class="summary-item">
+                <strong>Total Debit:</strong> ${formatCurrencyValue(totalDebit)}
+              </div>
+              <div class="summary-item">
+                <strong>Total Credit:</strong> ${formatCurrencyValue(totalCredit)}
+              </div>
+              <div class="summary-item">
+                <strong>Net Balance:</strong> ${formatCurrencyValue(Math.abs(balance))} ${balance > 0 ? '(DR)' : balance < 0 ? '(CR)' : ''}
+              </div>
+            </div>
+            ${printContent}
+            <script>window.print(); window.onafterprint = function(){ window.close(); }</script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
   };
 
   // Calculate running balances for each ledger entry
@@ -219,9 +266,18 @@ export default function CustomerLedgers() {
         
         <Input
           type="date"
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="w-full sm:w-48"
+          placeholder="From Date"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+          className="w-full sm:w-40"
+        />
+
+        <Input
+          type="date"
+          placeholder="To Date"
+          value={toDate}
+          onChange={(e) => setToDate(e.target.value)}
+          className="w-full sm:w-40"
         />
 
         <Select value={customerFilter} onValueChange={setCustomerFilter}>
@@ -248,6 +304,11 @@ export default function CustomerLedgers() {
             <SelectItem value="credit">Credit</SelectItem>
           </SelectContent>
         </Select>
+
+        <Button onClick={handlePrint} variant="outline">
+          <Printer className="w-4 h-4 mr-2" />
+          Print
+        </Button>
 
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -289,7 +350,7 @@ export default function CustomerLedgers() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table id="ledger-table" className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Date</th>
@@ -322,7 +383,7 @@ export default function CustomerLedgers() {
                       <td className="px-4 py-3 text-sm text-right">
                         {ledger.type === 'debit' ? (
                           <span className="font-medium text-red-600">
-                            ${parseFloat(ledger.amount || '0').toFixed(2)}
+                            Rs{parseFloat(ledger.amount || '0').toFixed(2)}
                           </span>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -331,7 +392,7 @@ export default function CustomerLedgers() {
                       <td className="px-4 py-3 text-sm text-right">
                         {ledger.type === 'credit' ? (
                           <span className="font-medium text-green-600">
-                            ${parseFloat(ledger.amount || '0').toFixed(2)}
+                            Rs{parseFloat(ledger.amount || '0').toFixed(2)}
                           </span>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -340,7 +401,7 @@ export default function CustomerLedgers() {
                       <td className="px-4 py-3 text-sm text-right">
                         <div className="flex items-center justify-end">
                           <span className={`font-medium ${ledger.runningBalance > 0 ? 'text-red-600' : ledger.runningBalance < 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                            ${Math.abs(ledger.runningBalance).toFixed(2)}
+                            Rs{Math.abs(ledger.runningBalance).toFixed(2)}
                           </span>
                           {ledger.runningBalance > 0 && (
                             <Badge variant="outline" className="ml-2 text-xs bg-red-50 text-red-600 border-red-200">DR</Badge>
@@ -387,7 +448,7 @@ export default function CustomerLedgers() {
               </div>
               
               <div className="space-y-2">
-                <Label>Amount ($)</Label>
+                <Label>Amount (Rs)</Label>
                 <Input
                   type="number"
                   step="0.01"
