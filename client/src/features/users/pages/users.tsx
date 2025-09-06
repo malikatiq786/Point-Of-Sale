@@ -21,6 +21,7 @@ export default function UsersPage() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
 
+
   // Fetch users with roles
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["/api/users"],
@@ -141,7 +142,7 @@ export default function UsersPage() {
                       <UserPermissionsDialog user={user} />
                       
                       {/* Show Reset Password button if current user is Super Admin */}
-                      {currentUser?.role?.name === "Super Admin" && (
+                      {(currentUser?.role === "Super Admin" || currentUser?.roleName === "Super Admin") && (
                         <ResetPasswordDialog user={user} />
                       )}
                       
