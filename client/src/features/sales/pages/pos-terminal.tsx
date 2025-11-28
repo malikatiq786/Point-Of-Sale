@@ -2889,7 +2889,7 @@ export default function POSTerminal() {
                             </td>
                             <td className="py-3 px-2 text-center">
                               <div className="flex items-center justify-center">
-                                {editingItem === item.id ? (
+                                {editingQuantityItem === item.id ? (
                                   <Input
                                     type="text"
                                     ref={(el) => quantityInputRefs.current[item.id] = el}
