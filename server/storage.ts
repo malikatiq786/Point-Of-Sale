@@ -258,7 +258,9 @@ export class DatabaseStorage implements IStorage {
       OFFSET ${offset}
     `);
     
-    return result.map((row: any) => ({
+    const rows = Array.isArray(result) ? result : (result.rows || []);
+    
+    return rows.map((row: any) => ({
       id: row.id,
       name: row.name,
       description: row.description,
