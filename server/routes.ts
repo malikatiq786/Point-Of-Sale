@@ -2581,22 +2581,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stock Management routes
   app.get("/api/stock", isAuthenticated, async (req, res) => {
     try {
-      // For simplified stock management, return products with their stock levels
-      const products = await storage.getProducts(1000, 0); // Get all products
-      const stockData = products.map(product => ({
-        id: product.id,
-        productName: product.name,
-        quantity: product.stock || 0,
-        warehouseId: 1, // Default warehouse
-        warehouseName: "Main Warehouse",
-        categoryName: product.category?.name || null,
-        brandName: product.brand?.name || null,
-        unitName: product.unit?.name || null,
-        unitShortName: product.unit?.shortName || null,
-        variantName: product.name, // Using product name as variant name for simplicity
-        productVariantId: product.id
-      }));
+      // Query stock data directly from database with accurate calculations
+      const stockResult = await db.execute(sql`
+        SELECT 
+          p.id,
+          p.name as product_name,
+          p.category_id,
+          p.brand_id,
+          p.unit_id,
+          c.name as category_name,
+          b.name as brand_name,
+          u.name as unit_name,
+          u.short_name as unit_short_name,
+          pv.id as variant_id,
+          pv.variant_name,
+          COALESCE(SUM(CAST(s.quantity AS INTEGER)), 0) as total_quantity,
+          1 as warehouse_id
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        LEFT JOIN brands b ON p.brand_id = b.id
+        LEFT JOIN units u ON p.unit_id = u.id
+        LEFT JOIN product_variants pv ON p.id = pv.product_id
+        LEFT JOIN stock s ON pv.id = s.product_variant_id AND s.warehouse_id = 1
+        GROUP BY p.id, p.name, p.category_id, p.brand_id, p.unit_id, c.name, b.name, u.name, u.short_name, pv.id, pv.variant_name
+        ORDER BY p.id, pv.id
+      `);
       
+      // Transform raw query results into the expected format
+      const stockDataMap = new Map();
+      for (const row of stockResult) {
+        const key = row.id;
+        if (!stockDataMap.has(key)) {
+          stockDataMap.set(key, {
+            id: row.id,
+            productName: row.product_name,
+            quantity: 0, // Will be calculated as sum of variants
+            warehouseId: row.warehouse_id,
+            warehouseName: "Main Warehouse",
+            categoryName: row.category_name,
+            brandName: row.brand_name,
+            unitName: row.unit_name,
+            unitShortName: row.unit_short_name,
+            variants: []
+          });
+        }
+        
+        const product = stockDataMap.get(key);
+        if (row.variant_id) {
+          product.variants.push({
+            variantId: row.variant_id,
+            variantName: row.variant_name,
+            quantity: row.total_quantity
+          });
+          product.quantity += row.total_quantity;
+        }
+      }
+      
+      const stockData = Array.from(stockDataMap.values());
       console.log(`Fetching stock data, total items: ${stockData.length}`);
       res.json(stockData);
     } catch (error) {
