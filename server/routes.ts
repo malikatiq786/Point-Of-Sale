@@ -1584,6 +1584,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Product Variants with Barcodes endpoint
+  app.get("/api/product-variants/barcodes", isAuthenticated, async (req, res) => {
+    try {
+      const variantsWithBarcodes = await db.execute(sql`
+        SELECT 
+          p.id as product_id,
+          pv.id as variant_id,
+          p.name as product_name,
+          pv.variant_name,
+          pv.barcode,
+          pv.sale_price,
+          pv.retail_price,
+          c.id as category_id,
+          c.name as category_name,
+          b.id as brand_id,
+          b.name as brand_name,
+          u.id as unit_id,
+          u.name as unit_name,
+          u.short_name as unit_short_name
+        FROM product_variants pv
+        INNER JOIN products p ON pv.product_id = p.id
+        LEFT JOIN categories c ON p.category_id = c.id
+        LEFT JOIN brands b ON p.brand_id = b.id
+        LEFT JOIN units u ON p.unit_id = u.id
+        ORDER BY p.id DESC, pv.id DESC
+      `);
+      
+      const formatted = variantsWithBarcodes.map((row: any) => ({
+        productId: row.product_id,
+        id: row.variant_id,
+        variantId: row.variant_id,
+        productVariantId: row.variant_id,
+        productName: row.product_name,
+        variantName: row.variant_name,
+        barcode: row.barcode,
+        salePrice: row.sale_price,
+        retailPrice: row.retail_price,
+        categoryId: row.category_id,
+        categoryName: row.category_name,
+        brandId: row.brand_id,
+        brandName: row.brand_name,
+        unitId: row.unit_id,
+        unitName: row.unit_name,
+        unitShortName: row.unit_short_name
+      }));
+      
+      console.log(`Fetching product variants with barcodes, total: ${formatted.length}`);
+      res.json(formatted);
+    } catch (error) {
+      console.error("Error fetching product variants with barcodes:", error);
+      res.status(500).json({ message: "Failed to fetch product variants" });
+    }
+  });
+
   // Product DELETE endpoint (single product)
   app.delete("/api/products/:id", isAuthenticated, async (req, res) => {
     console.log("=== DELETE PRODUCT ENDPOINT CALLED ===");
