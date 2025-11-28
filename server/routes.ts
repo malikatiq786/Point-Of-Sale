@@ -1593,7 +1593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pv.id as variant_id,
           p.name as product_name,
           pv.variant_name,
-          pv.barcode,
+          p.barcode,
           pv.sale_price,
           pv.retail_price,
           c.id as category_id,
@@ -1635,6 +1635,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching product variants with barcodes:", error);
       res.status(500).json({ message: "Failed to fetch product variants" });
+    }
+  });
+
+  // Update product barcode endpoint
+  app.put("/api/products/:id/barcode", isAuthenticated, async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const { barcode } = req.body;
+      
+      if (isNaN(productId)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      if (!barcode) {
+        return res.status(400).json({ message: "Barcode is required" });
+      }
+      
+      const [updated] = await db
+        .update(products)
+        .set({ barcode })
+        .where(eq(products.id, productId))
+        .returning();
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating product barcode:", error);
+      res.status(500).json({ message: "Failed to update barcode" });
     }
   });
 
