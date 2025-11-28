@@ -1587,47 +1587,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product Variants with Barcodes endpoint
   app.get("/api/product-variants/barcodes", isAuthenticated, async (req, res) => {
     try {
-      const variantsWithBarcodes = await db.execute(sql`
-        SELECT 
-          p.id as product_id,
-          pv.id as variant_id,
-          p.name as product_name,
-          pv.variant_name,
-          p.barcode,
-          pv.sale_price,
-          pv.retail_price,
-          c.id as category_id,
-          c.name as category_name,
-          b.id as brand_id,
-          b.name as brand_name,
-          u.id as unit_id,
-          u.name as unit_name,
-          u.short_name as unit_short_name
-        FROM product_variants pv
-        INNER JOIN products p ON pv.product_id = p.id
-        LEFT JOIN categories c ON p.category_id = c.id
-        LEFT JOIN brands b ON p.brand_id = b.id
-        LEFT JOIN units u ON p.unit_id = u.id
-        ORDER BY p.id DESC, pv.id DESC
-      `);
+      const variantsWithBarcodes = await db
+        .select({
+          productId: products.id,
+          variantId: productVariants.id,
+          productName: products.name,
+          variantName: productVariants.variantName,
+          barcode: products.barcode,
+          salePrice: productVariants.salePrice,
+          retailPrice: productVariants.retailPrice,
+          categoryId: categories.id,
+          categoryName: categories.name,
+          brandId: brands.id,
+          brandName: brands.name,
+          unitId: units.id,
+          unitName: units.name,
+          unitShortName: units.shortName
+        })
+        .from(productVariants)
+        .innerJoin(products, eq(productVariants.productId, products.id))
+        .leftJoin(categories, eq(products.categoryId, categories.id))
+        .leftJoin(brands, eq(products.brandId, brands.id))
+        .leftJoin(units, eq(products.unitId, units.id))
+        .orderBy(desc(products.id), desc(productVariants.id));
       
       const formatted = variantsWithBarcodes.map((row: any) => ({
-        productId: row.product_id,
-        id: row.variant_id,
-        variantId: row.variant_id,
-        productVariantId: row.variant_id,
-        productName: row.product_name,
-        variantName: row.variant_name,
+        productId: row.productId,
+        id: row.variantId,
+        variantId: row.variantId,
+        productVariantId: row.variantId,
+        productName: row.productName,
+        variantName: row.variantName,
         barcode: row.barcode,
-        salePrice: row.sale_price,
-        retailPrice: row.retail_price,
-        categoryId: row.category_id,
-        categoryName: row.category_name,
-        brandId: row.brand_id,
-        brandName: row.brand_name,
-        unitId: row.unit_id,
-        unitName: row.unit_name,
-        unitShortName: row.unit_short_name
+        salePrice: row.salePrice,
+        retailPrice: row.retailPrice,
+        categoryId: row.categoryId,
+        categoryName: row.categoryName,
+        brandId: row.brandId,
+        brandName: row.brandName,
+        unitId: row.unitId,
+        unitName: row.unitName,
+        unitShortName: row.unitShortName
       }));
       
       console.log(`Fetching product variants with barcodes, total: ${formatted.length}`);
