@@ -258,19 +258,19 @@ export class InventoryController {
         .select({
           id: productVariants.id,
           productId: productVariants.productId,
+          variantId: productVariants.id,
+          productVariantId: productVariants.id,
           variantName: productVariants.variantName,
-          barcode: productVariants.barcode,
-          purchasePrice: productVariants.purchasePrice,
+          barcode: products.barcode,
           salePrice: productVariants.salePrice,
-          wholesalePrice: productVariants.wholesalePrice,
           retailPrice: productVariants.retailPrice,
           productName: products.name,
           productDescription: products.description,
           categoryId: products.categoryId,
-          brandId: products.brandId,
-          unitId: products.unitId,
           categoryName: categories.name,
+          brandId: products.brandId,
           brandName: brands.name,
+          unitId: products.unitId,
           unitName: units.name,
         })
         .from(productVariants)
@@ -278,7 +278,6 @@ export class InventoryController {
         .leftJoin(categories, eq(products.categoryId, categories.id))
         .leftJoin(brands, eq(products.brandId, brands.id))
         .leftJoin(units, eq(products.unitId, units.id))
-        .where(eq(productVariants.barcode, productVariants.barcode)) // This ensures we only get variants with barcodes
         .orderBy(productVariants.id);
 
       // Filter out variants without barcodes
