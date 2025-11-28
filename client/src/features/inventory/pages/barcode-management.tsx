@@ -28,6 +28,8 @@ export default function BarcodeManagement() {
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
+  const [variantPage, setVariantPage] = useState(1);
+  const [variantPageSize] = useState(10);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const [refreshing, setRefreshing] = useState(false);
   const { formatCurrencyValue } = useCurrency();
@@ -97,12 +99,12 @@ export default function BarcodeManagement() {
 
   const products = productsResponse?.products || [];
 
-  // Fetch product variants with barcodes data
-  const { data: variantsData = [] } = useQuery({
-    queryKey: [`product-variants-barcodes`, new Date().toISOString().split('T')[0]], // Add date to ensure fresh data
+  // Fetch product variants with barcodes data (paginated)
+  const { data: variantsResponse, isLoading: variantsLoading } = useQuery({
+    queryKey: [`product-variants-barcodes-${variantPage}-${variantPageSize}`],
     queryFn: async () => {
       const timestamp = new Date().getTime();
-      const response = await fetch(`/api/product-variants/barcodes?_t=${timestamp}`, {
+      const response = await fetch(`/api/product-variants/barcodes?page=${variantPage}&limit=${variantPageSize}&_t=${timestamp}`, {
         credentials: 'include',
         cache: 'no-cache',
         headers: {
@@ -124,6 +126,9 @@ export default function BarcodeManagement() {
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   });
+
+  const variantsData = variantsResponse?.variants || [];
+  const variantsPagination = variantsResponse?.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 };
 
   // Transform variants data - now we get variant barcodes directly
   const productVariants = variantsData.map((variant: any) => {
@@ -1090,6 +1095,36 @@ export default function BarcodeManagement() {
                   ))}
                 </TableBody>
               </Table>
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <div className="text-sm text-gray-600">
+                  Showing {variantsData.length === 0 ? 0 : (variantPage - 1) * variantPageSize + 1} - {Math.min(variantPage * variantPageSize, variantsPagination.total)} of {variantsPagination.total} variants
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setVariantPage(prev => Math.max(1, prev - 1))}
+                    disabled={variantPage === 1 || variantsLoading}
+                    variant="outline"
+                    size="sm"
+                    data-testid="button-prev-page"
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-2 px-3">
+                    <span className="text-sm font-medium">
+                      Page {variantPage} of {variantsPagination.totalPages || 1}
+                    </span>
+                  </div>
+                  <Button
+                    onClick={() => setVariantPage(prev => prev + 1)}
+                    disabled={variantPage >= variantsPagination.totalPages || variantsLoading}
+                    variant="outline"
+                    size="sm"
+                    data-testid="button-next-page"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="text-center py-12">

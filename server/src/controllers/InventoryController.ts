@@ -254,6 +254,20 @@ export class InventoryController {
     try {
       console.log('InventoryController: Getting product variants with barcodes...');
       
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+      
+      // Get total count first
+      const countResult = await db.execute(
+        `SELECT COUNT(*) as total FROM product_variants pv 
+         LEFT JOIN products p ON pv.product_id = p.id 
+         WHERE p.barcode IS NOT NULL AND p.barcode != ''`
+      );
+      
+      const total = (countResult.rows[0] as any)?.total || 0;
+      
+      // Get paginated variants
       const variants = await db
         .select({
           id: productVariants.id,
@@ -278,14 +292,24 @@ export class InventoryController {
         .leftJoin(categories, eq(products.categoryId, categories.id))
         .leftJoin(brands, eq(products.brandId, brands.id))
         .leftJoin(units, eq(products.unitId, units.id))
-        .orderBy(productVariants.id);
+        .orderBy(productVariants.id)
+        .limit(limit)
+        .offset(offset);
 
       // Filter out variants without barcodes
       const validVariants = variants.filter(variant => variant.barcode && variant.barcode.trim() !== '');
 
-      console.log('InventoryController: Found', validVariants.length, 'variants with barcodes');
+      console.log('InventoryController: Found', validVariants.length, 'variants with barcodes on page', page);
       
-      res.status(HTTP_STATUS.OK).json(validVariants);
+      res.status(HTTP_STATUS.OK).json({
+        variants: validVariants,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      });
     } catch (error) {
       console.error('InventoryController: Error getting product variants with barcodes:', error);
       res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
