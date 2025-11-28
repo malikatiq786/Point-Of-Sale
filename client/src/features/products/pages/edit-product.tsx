@@ -51,6 +51,7 @@ export default function EditProduct() {
 
   const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
   const [variantErrors, setVariantErrors] = useState<{ [key: number]: string }>({});
+  const [disabledBarcodes, setDisabledBarcodes] = useState<Set<number>>(new Set(Array.from({length: 10}, (_, i) => i)));
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -495,8 +496,16 @@ export default function EditProduct() {
                             type="text"
                             value={variant.barcode || ''}
                             onChange={(e) => updateVariant(index, 'barcode', e.target.value)}
-                            placeholder="Enter barcode or auto-generate"
-                            className="font-mono"
+                            onClick={() => {
+                              setDisabledBarcodes(prev => {
+                                const newSet = new Set(prev);
+                                newSet.delete(index);
+                                return newSet;
+                              });
+                            }}
+                            disabled={disabledBarcodes.has(index)}
+                            placeholder="Click to edit barcode"
+                            className="font-mono cursor-pointer"
                           />
                           <Button
                             type="button"
