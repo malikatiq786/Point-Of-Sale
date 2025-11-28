@@ -338,7 +338,6 @@ router.get('/products/:id/variants', isAuthenticated, async (req: any, res: any)
       .select({
         id: schema.productVariants.id,
         variantName: schema.productVariants.variantName,
-        barcode: schema.productVariants.barcode,
         purchasePrice: schema.productVariants.purchasePrice,
         salePrice: schema.productVariants.salePrice,
         wholesalePrice: schema.productVariants.wholesalePrice,
@@ -351,7 +350,6 @@ router.get('/products/:id/variants', isAuthenticated, async (req: any, res: any)
       .groupBy(
         schema.productVariants.id,
         schema.productVariants.variantName,
-        schema.productVariants.barcode,
         schema.productVariants.image,
         schema.productVariants.purchasePrice,
         schema.productVariants.salePrice,
@@ -363,8 +361,6 @@ router.get('/products/:id/variants', isAuthenticated, async (req: any, res: any)
     const variants = variantsWithStock.map(variant => ({
       id: variant.id,
       variantName: variant.variantName || 'Default',
-      barcode: variant.barcode || '',
-      image: variant.image || '',
       stock: variant.totalStock || 0,
       purchasePrice: variant.purchasePrice || '0',
       salePrice: variant.salePrice || '0',

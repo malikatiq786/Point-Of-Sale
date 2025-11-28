@@ -124,8 +124,6 @@ export const productVariants = pgTable("product_variants", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").references(() => products.id),
   variantName: varchar("variant_name", { length: 100 }),
-  barcode: varchar("barcode", { length: 100 }),
-  image: text("image"),
   purchasePrice: numeric("purchase_price", { precision: 10, scale: 2 }).default('0'),
   salePrice: numeric("sale_price", { precision: 10, scale: 2 }).default('0'),
   wholesalePrice: numeric("wholesale_price", { precision: 10, scale: 2 }).default('0'),
