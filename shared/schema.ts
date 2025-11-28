@@ -85,13 +85,11 @@ export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }),
   parentId: integer("parent_id"),
-  image: text("image"),
 });
 
 export const brands = pgTable("brands", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }),
-  image: text("image"),
 });
 
 export const units = pgTable("units", {
