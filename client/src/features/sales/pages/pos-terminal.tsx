@@ -2390,7 +2390,6 @@ export default function POSTerminal() {
                                 }}
                                 className="w-16 h-5 text-xs text-center rounded"
                                 data-testid={`price-input-${item.id}`}
-                                autoFocus
                               />
                             ) : (
                               <span
@@ -2618,7 +2617,6 @@ export default function POSTerminal() {
                             }}
                             className="w-16 h-5 text-xs text-center bg-white text-black rounded"
                             placeholder="0% or 0.00"
-                            autoFocus
                           />
                         ) : (
                           <span 
@@ -2658,7 +2656,6 @@ export default function POSTerminal() {
                               }
                             }}
                             className="w-8 h-4 text-xs text-center bg-white text-black rounded ml-1"
-                            autoFocus
                           />
                         ) : (
                           <span 
@@ -2898,7 +2895,8 @@ export default function POSTerminal() {
                                     onBlur={() => {
                                       const newQty = parseInt(editQuantity) || 1;
                                       setAbsoluteQuantity(item.id, newQty);
-                                      setEditingPriceItem(null);
+                                      setEditingQuantityItem(null);
+                                      setEditQuantity('');
                                     }}
                                     onKeyDown={(e) => {
                                       if (e.key === '+') {
@@ -2926,7 +2924,6 @@ export default function POSTerminal() {
                                       }
                                     }}
                                     className="w-16 h-6 text-center text-sm rounded-lg"
-                                    autoFocus
                                     data-testid={`quantity-input-${item.id}`}
                                   />
                                 ) : (
@@ -2996,7 +2993,6 @@ export default function POSTerminal() {
                                     }
                                   }}
                                   className="w-20 h-6 text-xs text-right rounded"
-                                  autoFocus
                                   data-testid={`price-input-${item.id}`}
                                 />
                               ) : (
@@ -3037,7 +3033,6 @@ export default function POSTerminal() {
                                     }}
                                     className="w-20 h-6 text-xs text-center rounded"
                                     placeholder="0% or 0.00"
-                                    autoFocus
                                   />
                                 </div>
                               ) : (
