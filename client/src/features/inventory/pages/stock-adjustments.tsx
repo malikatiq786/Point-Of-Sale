@@ -5,10 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Settings, User, Calendar, FileText, Warehouse } from "lucide-react";
+import { Search, Settings, User, Calendar, FileText, Warehouse, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function StockAdjustments() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAdjustment, setSelectedAdjustment] = useState<any>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   // Fetch stock adjustments
   const { data: adjustments = [], isLoading } = useQuery({
@@ -199,7 +203,15 @@ export default function StockAdjustments() {
                     </div>
                     
                     <div className="flex items-center space-x-3">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedAdjustment(adjustment);
+                          setIsDetailDialogOpen(true);
+                        }}
+                        data-testid={`button-view-adjustment-${adjustment.id}`}
+                      >
                         View Details
                       </Button>
                     </div>
@@ -210,6 +222,93 @@ export default function StockAdjustments() {
           )}
         </CardContent>
       </Card>
+
+      {/* Adjustment Details Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Adjustment Details - #{selectedAdjustment?.id}</DialogTitle>
+          </DialogHeader>
+
+          {selectedAdjustment && (
+            <div className="space-y-6">
+              {/* Summary Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="border rounded-lg p-4">
+                  <p className="text-sm text-gray-600 font-medium mb-1">Adjustment Type</p>
+                  <Badge className={getAdjustmentTypeFromReason(selectedAdjustment.reason).color}>
+                    {getAdjustmentTypeFromReason(selectedAdjustment.reason).type}
+                  </Badge>
+                </div>
+                <div className="border rounded-lg p-4">
+                  <p className="text-sm text-gray-600 font-medium mb-1">Warehouse</p>
+                  <p className="text-lg font-semibold text-gray-900">{selectedAdjustment.warehouseName || 'N/A'}</p>
+                </div>
+                <div className="border rounded-lg p-4">
+                  <p className="text-sm text-gray-600 font-medium mb-1">User</p>
+                  <p className="text-lg font-semibold text-gray-900">{selectedAdjustment.userName || 'System'}</p>
+                </div>
+                <div className="border rounded-lg p-4">
+                  <p className="text-sm text-gray-600 font-medium mb-1">Date & Time</p>
+                  <p className="text-lg font-semibold text-gray-900">{new Date(selectedAdjustment.createdAt).toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Reason */}
+              <div className="border rounded-lg p-4">
+                <p className="text-sm text-gray-600 font-medium mb-2">Reason</p>
+                <p className="text-gray-900">{selectedAdjustment.reason || 'No reason provided'}</p>
+              </div>
+
+              {/* Adjustment Items */}
+              <div className="border rounded-lg overflow-hidden">
+                <div className="p-4 bg-gray-50 border-b">
+                  <p className="text-sm font-medium text-gray-900">Adjusted Items</p>
+                </div>
+                {selectedAdjustment.items && selectedAdjustment.items.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Variant</TableHead>
+                        <TableHead className="text-right">Quantity</TableHead>
+                        <TableHead className="text-right">Type</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedAdjustment.items.map((item: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell className="text-sm">{item.productName || 'N/A'}</TableCell>
+                          <TableCell className="text-sm">{item.variantName || 'N/A'}</TableCell>
+                          <TableCell className="text-right text-sm font-medium">
+                            <span className={item.type === 'increase' ? 'text-green-600' : 'text-red-600'}>
+                              {item.type === 'increase' ? '+' : '-'}{item.quantity}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
+                            <Badge variant="outline">{item.type === 'increase' ? 'Increase' : 'Decrease'}</Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="p-4 text-center text-gray-500">
+                    No items in this adjustment
+                  </div>
+                )}
+              </div>
+
+              {/* Additional Details */}
+              <div className="border rounded-lg p-4 bg-blue-50">
+                <p className="text-sm text-blue-900">
+                  <strong>Adjustment ID:</strong> {selectedAdjustment.id}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
