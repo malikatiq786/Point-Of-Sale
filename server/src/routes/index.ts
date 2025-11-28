@@ -350,7 +350,6 @@ router.get('/products/:id/variants', isAuthenticated, async (req: any, res: any)
       .groupBy(
         schema.productVariants.id,
         schema.productVariants.variantName,
-        schema.productVariants.image,
         schema.productVariants.purchasePrice,
         schema.productVariants.salePrice,
         schema.productVariants.wholesalePrice,
