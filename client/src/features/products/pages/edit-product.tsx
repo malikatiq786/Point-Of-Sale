@@ -129,9 +129,21 @@ export default function EditProduct() {
         title: "Success",
         description: "Product updated successfully",
       });
+      // Invalidate all product-related queries
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${productId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${productId}/variants`] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock'] });
+      
+      // Invalidate all paginated and search product queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0]?.toString() || '';
+          return key.startsWith('products-') || key.includes('products/') || key.includes('/api/products');
+        }
+      });
+      
       setLocation('/products');
     },
     onError: (error: any) => {
