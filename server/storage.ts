@@ -226,39 +226,63 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProducts(limit = 50, offset = 0): Promise<any[]> {
-    return await db
-      .select({
-        id: products.id,
-        name: products.name,
-        description: products.description,
-        barcode: products.barcode,
-        price: products.price,
-        stock: products.stock,
-        lowStockAlert: products.lowStockAlert,
-        image: products.image,
-        createdAt: products.createdAt,
-        updatedAt: products.updatedAt,
-        category: {
-          id: categories.id,
-          name: categories.name,
-        },
-        brand: {
-          id: brands.id,
-          name: brands.name,
-        },
-        unit: {
-          id: units.id,
-          name: units.name,
-          shortName: units.shortName,
-        },
-      })
-      .from(products)
-      .leftJoin(categories, eq(products.categoryId, categories.id))
-      .leftJoin(brands, eq(products.brandId, brands.id))
-      .leftJoin(units, eq(products.unitId, units.id))
-      .orderBy(desc(products.id))
-      .limit(limit)
-      .offset(offset);
+    // Query with stock calculated from stock table
+    const result = await db.execute(sql`
+      SELECT 
+        p.id,
+        p.name,
+        p.description,
+        p.barcode,
+        p.price,
+        p.low_stock_alert as "lowStockAlert",
+        p.image,
+        p.created_at as "createdAt",
+        p.updated_at as "updatedAt",
+        c.id as "category_id",
+        c.name as "category_name",
+        b.id as "brand_id",
+        b.name as "brand_name",
+        u.id as "unit_id",
+        u.name as "unit_name",
+        u.short_name as "unit_short_name",
+        COALESCE(SUM(CAST(s.quantity AS INTEGER)), 0) as total_stock
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN brands b ON p.brand_id = b.id
+      LEFT JOIN units u ON p.unit_id = u.id
+      LEFT JOIN product_variants pv ON p.id = pv.product_id
+      LEFT JOIN stock s ON pv.id = s.product_variant_id AND s.warehouse_id = 1
+      GROUP BY p.id, p.name, p.description, p.barcode, p.price, p.low_stock_alert, p.image, p.created_at, p.updated_at, c.id, c.name, b.id, b.name, u.id, u.name, u.short_name
+      ORDER BY p.id DESC
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `);
+    
+    return result.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      barcode: row.barcode,
+      price: row.price,
+      stock: row.total_stock,
+      lowStockAlert: row.lowStockAlert,
+      image: row.image,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      category: row.category_id ? {
+        id: row.category_id,
+        name: row.category_name,
+      } : null,
+      brand: row.brand_id ? {
+        id: row.brand_id,
+        name: row.brand_name,
+      } : null,
+      unit: row.unit_id ? {
+        id: row.unit_id,
+        name: row.unit_name,
+        shortName: row.unit_short_name,
+      } : null,
+    }));
   }
 
   async searchProducts(query: string): Promise<Product[]> {
