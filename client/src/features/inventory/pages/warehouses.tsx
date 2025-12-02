@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Warehouse, Plus, Edit, MapPin, Package } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -184,6 +184,9 @@ export default function Warehouses() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Warehouse</DialogTitle>
+              <DialogDescription>
+                Enter the warehouse details including name and location
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateWarehouse} className="space-y-4">
               <div className="space-y-2">
@@ -222,6 +225,9 @@ export default function Warehouses() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Warehouse</DialogTitle>
+              <DialogDescription>
+                Update the warehouse details
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleUpdateWarehouse} className="space-y-4">
               <div className="space-y-2">
