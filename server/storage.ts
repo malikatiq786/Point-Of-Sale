@@ -923,6 +923,33 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(warehouses).orderBy(warehouses.id);
   }
 
+  async createWarehouse(warehouseData: any): Promise<any> {
+    const [warehouse] = await db
+      .insert(warehouses)
+      .values({
+        name: warehouseData.name,
+        location: warehouseData.location || '',
+      })
+      .returning();
+    return warehouse;
+  }
+
+  async updateWarehouse(id: number, warehouseData: any): Promise<any> {
+    const [warehouse] = await db
+      .update(warehouses)
+      .set({
+        name: warehouseData.name,
+        location: warehouseData.location || '',
+      })
+      .where(eq(warehouses.id, id))
+      .returning();
+    return warehouse;
+  }
+
+  async deleteWarehouse(id: number): Promise<void> {
+    await db.delete(warehouses).where(eq(warehouses.id, id));
+  }
+
   async createStockAdjustment(adjustmentData: any): Promise<any> {
     // Create the adjustment record
     const [adjustment] = await db
