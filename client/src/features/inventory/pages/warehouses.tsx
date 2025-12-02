@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AppLayout } from "@/layouts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,18 +29,17 @@ export default function Warehouses() {
   });
 
   // Fetch stock summary for each warehouse
-  const { data: stockSummary = [], refetch: refetchStock } = useQuery({
+  const { data: stockSummary = [] } = useQuery({
     queryKey: ["/api/stock"],
     retry: false,
-    staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache stock data
-    refetchOnMount: true,
   });
 
-
-
   const createWarehouseMutation = useMutation({
-    mutationFn: (warehouseData: any) => apiRequest("POST", "/api/warehouses", warehouseData),
+    mutationFn: (warehouseData: any) =>
+      apiRequest("/api/warehouses", {
+        method: "POST",
+        body: JSON.stringify(warehouseData),
+      }).then(res => res.json()),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -60,7 +59,11 @@ export default function Warehouses() {
   });
 
   const updateWarehouseMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number, data: any }) => apiRequest("PUT", `/api/warehouses/${id}`, data),
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      apiRequest(`/api/warehouses/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }).then(res => res.json()),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -80,7 +83,10 @@ export default function Warehouses() {
   });
 
   const deleteWarehouseMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/warehouses/${id}`),
+    mutationFn: (id: number) =>
+      apiRequest(`/api/warehouses/${id}`, {
+        method: "DELETE",
+      }).then(res => res.json()),
     onSuccess: () => {
       toast({
         title: "Success",
