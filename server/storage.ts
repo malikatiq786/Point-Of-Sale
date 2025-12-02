@@ -251,7 +251,7 @@ export class DatabaseStorage implements IStorage {
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN units u ON p.unit_id = u.id
       LEFT JOIN product_variants pv ON p.id = pv.product_id
-      LEFT JOIN stock s ON pv.id = s.product_variant_id AND s.warehouse_id = 1
+      LEFT JOIN stock s ON pv.id = s.product_variant_id
       GROUP BY p.id, p.name, p.description, p.barcode, p.price, p.low_stock_alert, p.image, p.created_at, p.updated_at, c.id, c.name, b.id, b.name, u.id, u.name, u.short_name
       ORDER BY p.id DESC
       LIMIT ${limit}
