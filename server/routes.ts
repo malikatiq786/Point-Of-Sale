@@ -3948,6 +3948,97 @@ async function initializeSampleData(userId: string) {
     }
   });
 
+  // ===== WAREHOUSES API =====
+  
+  // GET all warehouses
+  app.get('/api/warehouses', isAuthenticated, async (req, res) => {
+    try {
+      const warehouses = await storage.getWarehouses();
+      res.json(warehouses);
+    } catch (error) {
+      console.error('Get warehouses error:', error);
+      res.status(500).json({ message: 'Failed to fetch warehouses' });
+    }
+  });
+
+  // POST - Create new warehouse
+  app.post('/api/warehouses', isAuthenticated, async (req: any, res) => {
+    try {
+      const { name, location } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: 'Warehouse name is required' });
+      }
+      
+      const warehouseData = {
+        name,
+        location: location || '',
+      };
+      
+      const warehouse = await storage.createWarehouse(warehouseData);
+      
+      await storage.logActivity(
+        req.user?.claims?.sub || req.user?.id || 'system',
+        `Created warehouse: ${name}`,
+        req.ip
+      );
+      
+      res.status(201).json(warehouse);
+    } catch (error: any) {
+      console.error('Create warehouse error:', error);
+      res.status(500).json({ message: 'Failed to create warehouse', error: error.message });
+    }
+  });
+
+  // PUT - Update warehouse
+  app.put('/api/warehouses/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const warehouseId = parseInt(req.params.id);
+      const { name, location } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: 'Warehouse name is required' });
+      }
+      
+      const warehouseData = {
+        name,
+        location: location || '',
+      };
+      
+      const warehouse = await storage.updateWarehouse(warehouseId, warehouseData);
+      
+      await storage.logActivity(
+        req.user?.claims?.sub || req.user?.id || 'system',
+        `Updated warehouse: ${name}`,
+        req.ip
+      );
+      
+      res.json(warehouse);
+    } catch (error: any) {
+      console.error('Update warehouse error:', error);
+      res.status(500).json({ message: 'Failed to update warehouse', error: error.message });
+    }
+  });
+
+  // DELETE warehouse
+  app.delete('/api/warehouses/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const warehouseId = parseInt(req.params.id);
+      
+      await storage.deleteWarehouse(warehouseId);
+      
+      await storage.logActivity(
+        req.user?.claims?.sub || req.user?.id || 'system',
+        `Deleted warehouse: ${warehouseId}`,
+        req.ip
+      );
+      
+      res.json({ message: 'Warehouse deleted successfully' });
+    } catch (error: any) {
+      console.error('Delete warehouse error:', error);
+      res.status(500).json({ message: 'Failed to delete warehouse', error: error.message });
+    }
+  });
 
   // Log the initialization
   await storage.logActivity(
