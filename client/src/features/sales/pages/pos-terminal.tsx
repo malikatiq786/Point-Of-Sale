@@ -1004,7 +1004,7 @@ export default function POSTerminal() {
   // Create customer ledger entry mutation
   const createLedgerMutation = useMutation({
     mutationFn: async (ledgerData: any) => {
-      await apiRequest("POST", "/api/customer-ledgers", ledgerData);
+      await apiRequest("/api/customer-ledgers", { method: "POST", body: JSON.stringify(ledgerData) });
     },
     onSuccess: () => {
       toast({
@@ -4702,7 +4702,7 @@ function PaymentOnAccountContent({
         date: new Date().toISOString().split('T')[0]
       };
 
-      await apiRequest('POST', '/api/customer-ledgers', ledgerEntry);
+      await apiRequest('/api/customer-ledgers', { method: 'POST', body: JSON.stringify(ledgerEntry) });
       
       toast({
         title: "Payment Recorded",
