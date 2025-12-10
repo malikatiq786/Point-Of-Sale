@@ -1587,6 +1587,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product Variants with Barcodes endpoint
   app.get("/api/product-variants/barcodes", isAuthenticated, async (req, res) => {
     try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = (page - 1) * limit;
+      
+      // Get total count
+      const countResult = await db.execute(sql`
+        SELECT COUNT(*) as total FROM product_variants pv
+        INNER JOIN products p ON pv.product_id = p.id
+      `);
+      const countRows = Array.isArray(countResult) ? countResult : (countResult.rows || []);
+      const total = parseInt(countRows[0]?.total || '0');
+      
+      // Get paginated data
       const result = await db.execute(sql`
         SELECT 
           p.id as product_id,
@@ -1609,6 +1622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LEFT JOIN brands b ON p.brand_id = b.id
         LEFT JOIN units u ON p.unit_id = u.id
         ORDER BY p.id DESC, pv.id DESC
+        LIMIT ${limit} OFFSET ${offset}
       `);
       
       const rows = Array.isArray(result) ? result : (result.rows || []);
@@ -1632,8 +1646,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         unitShortName: row.unit_short_name
       }));
       
-      console.log(`Fetching product variants with barcodes, total: ${formatted.length}`);
-      res.json(formatted);
+      console.log(`Fetching product variants with barcodes, page: ${page}, limit: ${limit}, total: ${total}, returned: ${formatted.length}`);
+      res.json({
+        variants: formatted,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      });
     } catch (error) {
       console.error("Error fetching product variants with barcodes:", error);
       res.status(500).json({ message: "Failed to fetch product variants" });
