@@ -21,6 +21,30 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
+// Product image component with state-based fallback
+function ProductImage({ src, alt }: { src?: string | null; alt: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (!src || hasError) {
+    return (
+      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+        <Package className="w-5 h-5 text-gray-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+      <img 
+        src={src} 
+        alt={alt}
+        className="w-full h-full object-cover"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+}
+
 export default function Products() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -920,9 +944,7 @@ export default function Products() {
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Package className="w-5 h-5 text-gray-400" />
-                        </div>
+                        <ProductImage src={product.image} alt={product.name} />
                         <div>
                           <div className="font-semibold text-gray-900">{product.name}</div>
                           {product.description && (

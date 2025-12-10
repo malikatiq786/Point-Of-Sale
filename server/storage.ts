@@ -226,7 +226,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProducts(limit = 50, offset = 0): Promise<any[]> {
-    // Query with stock calculated from stock table
+    // Query with stock calculated from stock table and first variant image as fallback
     const result = await db.execute(sql`
       SELECT 
         p.id,
@@ -235,7 +235,12 @@ export class DatabaseStorage implements IStorage {
         p.barcode,
         p.price,
         p.low_stock_alert as "lowStockAlert",
-        p.image,
+        COALESCE(p.image, (
+          SELECT pv2.image FROM product_variants pv2 
+          WHERE pv2.product_id = p.id AND pv2.image IS NOT NULL 
+          ORDER BY pv2.id ASC
+          LIMIT 1
+        )) as image,
         p.created_at as "createdAt",
         p.updated_at as "updatedAt",
         c.id as "category_id",
