@@ -105,9 +105,10 @@ export default function EditProduct() {
         image: existingProduct.image || ""
       });
 
-      // Set variants from existing data
+      // Set variants from existing data, including IDs for updates
       if (existingVariants.length > 0) {
         setVariants(existingVariants.map(variant => ({
+          id: variant.id, // Preserve variant ID for updates
           variantName: variant.variantName || "Default",
           barcode: variant.barcode || "",
           image: variant.image || "",
@@ -323,6 +324,7 @@ export default function EditProduct() {
       stock: formData.stock ? parseInt(formData.stock) : 0,
       lowStockAlert: formData.lowStockAlert ? parseInt(formData.lowStockAlert) : 0,
       variants: variants.map(variant => ({
+        id: variant.id, // Include variant ID for updates
         variantName: variant.variantName || "Default",
         barcode: variant.barcode || "", // Include barcode in submission
         image: variant.image || "", // Include image in submission

@@ -1,5 +1,7 @@
 import { ProductRepository } from '../repositories/ProductRepository';
 import { CategoryRepository } from '../repositories/CategoryRepository';
+import { db } from '../../db';
+import { sql } from 'drizzle-orm';
 
 export class ProductService {
   private productRepository: ProductRepository;
@@ -40,16 +42,27 @@ export class ProductService {
         };
       }
 
-      // Fetch related data
-      const [category, brand, unit] = await Promise.all([
+      // Fetch related data and calculated stock from stock table
+      const [category, brand, unit, stockResult] = await Promise.all([
         product.categoryId ? this.productRepository.getCategoryById(product.categoryId) : null,
         product.brandId ? this.productRepository.getBrandById(product.brandId) : null,
-        product.unitId ? this.productRepository.getUnitById(product.unitId) : null
+        product.unitId ? this.productRepository.getUnitById(product.unitId) : null,
+        db.execute(sql`
+          SELECT COALESCE(SUM(CAST(s.quantity AS INTEGER)), 0) as total_stock
+          FROM product_variants pv
+          LEFT JOIN stock s ON pv.id = s.product_variant_id
+          WHERE pv.product_id = ${productId}
+        `)
       ]);
       
-      // Add formatted price and relationships
+      // Extract calculated stock
+      const stockRows = Array.isArray(stockResult) ? stockResult : (stockResult.rows || []);
+      const calculatedStock = stockRows.length > 0 ? parseInt(stockRows[0].total_stock || '0') : 0;
+      
+      // Add formatted price and relationships with calculated stock
       const productWithRelations = {
         ...product,
+        stock: calculatedStock, // Use calculated stock from stock table
         formattedPrice: `$${parseFloat(product.price || '0').toFixed(2)}`,
         category: category || null,
         brand: brand || null,

@@ -1,14 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { purchases, purchaseItems } from '@shared/schema';
+import { purchases, purchaseItems, productVariants, stock, products } from '@shared/schema';
 import { setupAuth, isAuthenticated } from "./customAuth";
 import { z } from "zod";
 import { insertCustomerSchema, insertSaleSchema } from "@shared/schema";
 import { apiRoutes } from "./src/routes/index";
 import { db } from "./db";
 import { units } from "@shared/schema";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -1850,7 +1850,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price, 
         stock, 
         lowStockAlert, 
-        image 
+        image,
+        variants,
+        selectedWarehouses
       } = req.body;
       
       // Validate required fields
@@ -1885,6 +1887,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const product = await storage.updateProduct(productId, updateData);
+      
+      // Handle variants update if provided
+      if (variants && Array.isArray(variants)) {
+        console.log(`Updating ${variants.length} variants for product ${productId}`);
+        
+        // Get existing variants
+        const existingVariants = await db
+          .select()
+          .from(productVariants)
+          .where(eq(productVariants.productId, productId));
+        
+        const existingVariantIds = new Set(existingVariants.map(v => v.id));
+        const processedVariantIds = new Set<number>();
+        
+        for (const variant of variants) {
+          if (variant.id && existingVariantIds.has(variant.id)) {
+            // Update existing variant
+            await db.update(productVariants)
+              .set({
+                variantName: variant.variantName || "Default",
+                purchasePrice: (variant.purchasePrice || 0).toString(),
+                salePrice: (variant.salePrice || 0).toString(),
+                wholesalePrice: (variant.wholesalePrice || 0).toString(),
+                retailPrice: (variant.retailPrice || 0).toString()
+              })
+              .where(eq(productVariants.id, variant.id));
+            
+            processedVariantIds.add(variant.id);
+            console.log(`Updated variant ${variant.id}: ${variant.variantName}`);
+          } else {
+            // Create new variant
+            const [newVariant] = await db.insert(productVariants)
+              .values({
+                productId: productId,
+                variantName: variant.variantName || "Default",
+                purchasePrice: (variant.purchasePrice || 0).toString(),
+                salePrice: (variant.salePrice || 0).toString(),
+                wholesalePrice: (variant.wholesalePrice || 0).toString(),
+                retailPrice: (variant.retailPrice || 0).toString()
+              })
+              .returning();
+            
+            console.log(`Created new variant ${newVariant.id}: ${variant.variantName}`);
+            
+            // Create stock entries for selected warehouses
+            if (selectedWarehouses && selectedWarehouses.length > 0 && variant.initialStock > 0) {
+              const stockPerWarehouse = Math.floor(variant.initialStock / selectedWarehouses.length);
+              for (const warehouseId of selectedWarehouses) {
+                await db.insert(stock).values({
+                  productVariantId: newVariant.id,
+                  warehouseId: parseInt(warehouseId),
+                  quantity: stockPerWarehouse.toString()
+                });
+              }
+            }
+          }
+        }
+        
+        // Note: We don't delete variants that aren't in the update - 
+        // that should be handled explicitly to prevent accidental data loss
+        
+        // Recalculate and update the product's total stock after variant updates
+        await db.execute(sql`
+          UPDATE products 
+          SET stock = (
+            SELECT COALESCE(SUM(CAST(s.quantity AS INTEGER)), 0)
+            FROM product_variants pv
+            LEFT JOIN stock s ON pv.id = s.product_variant_id
+            WHERE pv.product_id = ${productId}
+          ),
+          updated_at = NOW()
+          WHERE id = ${productId}
+        `);
+        console.log(`Recalculated stock for product ${productId}`);
+      }
       
       // Log activity - handle both user formats
       const userId = req.user?.claims?.sub || req.user?.id || "system";
