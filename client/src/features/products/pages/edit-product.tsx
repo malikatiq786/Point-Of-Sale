@@ -123,7 +123,13 @@ export default function EditProduct() {
 
   // Update product mutation
   const updateProductMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('PUT', `/api/products/${productId}`, data),
+    mutationFn: async (data: any) => {
+      const response = await apiRequest(`/api/products/${productId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+      return response.json();
+    },
     onSuccess: () => {
       toast({
         title: "Success",
