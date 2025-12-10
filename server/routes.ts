@@ -1804,7 +1804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product management routes
   app.post("/api/products", isAuthenticated, async (req: any, res) => {
     try {
-      const { name, brandId } = req.body;
+      const { name, brandId, variants, selectedWarehouses } = req.body;
       
       // Validate required fields
       if (!name) {
@@ -1824,6 +1824,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const product = await storage.createProduct(req.body);
+      
+      // Handle variants creation if provided
+      if (variants && Array.isArray(variants)) {
+        console.log(`Creating ${variants.length} variants for new product ${product.id}`);
+        
+        for (const variant of variants) {
+          // Create new variant with image support
+          const [newVariant] = await db.insert(productVariants)
+            .values({
+              productId: product.id,
+              variantName: variant.variantName || "Default",
+              purchasePrice: (variant.purchasePrice || 0).toString(),
+              salePrice: (variant.salePrice || 0).toString(),
+              wholesalePrice: (variant.wholesalePrice || 0).toString(),
+              retailPrice: (variant.retailPrice || 0).toString(),
+              image: variant.image || null
+            })
+            .returning();
+          
+          console.log(`Created variant ${newVariant.id}: ${variant.variantName}, image: ${variant.image ? 'yes' : 'no'}`);
+          
+          // Create stock entries for selected warehouses
+          if (selectedWarehouses && selectedWarehouses.length > 0 && variant.initialStock > 0) {
+            const stockPerWarehouse = Math.floor(variant.initialStock / selectedWarehouses.length);
+            for (const warehouseId of selectedWarehouses) {
+              await db.insert(stock).values({
+                productVariantId: newVariant.id,
+                warehouseId: parseInt(warehouseId),
+                quantity: stockPerWarehouse.toString()
+              });
+              console.log(`Created stock entry for variant ${newVariant.id} in warehouse ${warehouseId}: ${stockPerWarehouse}`);
+            }
+          }
+        }
+        
+        // Recalculate and update the product's total stock after variant creation
+        await db.execute(sql`
+          UPDATE products 
+          SET stock = (
+            SELECT COALESCE(SUM(CAST(s.quantity AS INTEGER)), 0)
+            FROM product_variants pv
+            LEFT JOIN stock s ON pv.id = s.product_variant_id
+            WHERE pv.product_id = ${product.id}
+          ),
+          updated_at = NOW()
+          WHERE id = ${product.id}
+        `);
+        console.log(`Recalculated stock for product ${product.id}`);
+      }
       
       // Log activity - handle both user formats
       const userId = req.user?.claims?.sub || req.user?.id || "system";
@@ -1932,7 +1981,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 purchasePrice: (variant.purchasePrice || 0).toString(),
                 salePrice: (variant.salePrice || 0).toString(),
                 wholesalePrice: (variant.wholesalePrice || 0).toString(),
-                retailPrice: (variant.retailPrice || 0).toString()
+                retailPrice: (variant.retailPrice || 0).toString(),
+                image: variant.image || null
               })
               .where(eq(productVariants.id, variant.id));
             
@@ -1981,7 +2031,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 purchasePrice: (variant.purchasePrice || 0).toString(),
                 salePrice: (variant.salePrice || 0).toString(),
                 wholesalePrice: (variant.wholesalePrice || 0).toString(),
-                retailPrice: (variant.retailPrice || 0).toString()
+                retailPrice: (variant.retailPrice || 0).toString(),
+                image: variant.image || null
               })
               .returning();
             
