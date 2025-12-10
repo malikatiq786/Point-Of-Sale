@@ -1962,6 +1962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle variants update if provided
       if (variants && Array.isArray(variants)) {
         console.log(`Updating ${variants.length} variants for product ${productId}`);
+        console.log(`Variant data received:`, JSON.stringify(variants, null, 2));
         
         // Get existing variants
         const existingVariants = await db
