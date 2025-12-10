@@ -128,6 +128,7 @@ export const productVariants = pgTable("product_variants", {
   salePrice: numeric("sale_price", { precision: 10, scale: 2 }).default('0'),
   wholesalePrice: numeric("wholesale_price", { precision: 10, scale: 2 }).default('0'),
   retailPrice: numeric("retail_price", { precision: 10, scale: 2 }).default('0'),
+  image: text("image"),
 });
 
 export const productAttributes = pgTable("product_attributes", {
