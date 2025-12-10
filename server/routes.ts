@@ -1930,17 +1930,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .returning();
             
             console.log(`Created new variant ${newVariant.id}: ${variant.variantName}`);
+            console.log(`New variant stock details: initialStock=${variant.initialStock}, selectedWarehouses=${JSON.stringify(selectedWarehouses)}`);
             
             // Create stock entries for selected warehouses
             if (selectedWarehouses && selectedWarehouses.length > 0 && variant.initialStock > 0) {
               const stockPerWarehouse = Math.floor(variant.initialStock / selectedWarehouses.length);
+              console.log(`Creating stock entries: ${stockPerWarehouse} per warehouse for ${selectedWarehouses.length} warehouses`);
               for (const warehouseId of selectedWarehouses) {
                 await db.insert(stock).values({
                   productVariantId: newVariant.id,
                   warehouseId: parseInt(warehouseId),
                   quantity: stockPerWarehouse.toString()
                 });
+                console.log(`Created stock entry for variant ${newVariant.id} in warehouse ${warehouseId}: ${stockPerWarehouse}`);
               }
+            } else {
+              console.log(`Skipping stock creation: selectedWarehouses.length=${selectedWarehouses?.length || 0}, initialStock=${variant.initialStock}`);
             }
           }
         }

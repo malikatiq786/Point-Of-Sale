@@ -122,6 +122,13 @@ export default function EditProduct() {
     }
   }, [existingProduct, existingVariants]);
 
+  // Auto-select all warehouses when warehouses are loaded (for new variant stock creation)
+  useEffect(() => {
+    if (warehouses && warehouses.length > 0 && selectedWarehouses.length === 0) {
+      setSelectedWarehouses(warehouses.map((w: any) => w.id.toString()));
+    }
+  }, [warehouses]);
+
   // Update product mutation
   const updateProductMutation = useMutation({
     mutationFn: async (data: any) => {
