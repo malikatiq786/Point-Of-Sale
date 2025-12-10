@@ -34,6 +34,7 @@ The application employs a modern full-stack architecture with distinct frontend,
     - **Stock Management**: Capabilities for Stock Transfers and Stock Adjustments.
     - **Units Management**: Complete CRUD operations for product units with full field support (name, shortName, type, description) and database persistence.
     - **Barcode Management**: QR code-free barcode system with variant-based barcode generation, quantity-based label printing with individual action buttons, default zero quantities, and real-time data synchronization between products and barcode management pages.
+    - **Product Variant Images**: Variant-level image upload support with automatic fallback to first variant image when product has no main image. Uses state-based fallback rendering in ProductImage component.
 
 ### System Design Choices
 - **Data Flow**: Authentication flows are handled via Replit OIDC, leading to session creation in PostgreSQL. Sales transactions involve product selection, cart management, payment processing, and automatic inventory updates. Data synchronization uses React Query for real-time updates and optimistic UI.
