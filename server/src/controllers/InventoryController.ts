@@ -252,22 +252,21 @@ export class InventoryController {
   // Get product variants with barcodes for barcode management
   getProductVariantsWithBarcodes = async (req: Request, res: Response) => {
     try {
-      console.log('InventoryController: Getting product variants with barcodes...');
+      console.log('InventoryController: Getting product variants for barcode management...');
       
       const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 50;
       const offset = (page - 1) * limit;
       
-      // Get total count first
+      // Get total count of ALL variants (not filtered by barcode)
       const countResult = await db.execute(
         `SELECT COUNT(*) as total FROM product_variants pv 
-         LEFT JOIN products p ON pv.product_id = p.id 
-         WHERE p.barcode IS NOT NULL AND p.barcode != ''`
+         INNER JOIN products p ON pv.product_id = p.id`
       );
       
-      const total = (countResult.rows[0] as any)?.total || 0;
+      const total = parseInt((countResult.rows[0] as any)?.total || '0');
       
-      // Get paginated variants
+      // Get paginated variants - ALL variants regardless of barcode
       const variants = await db
         .select({
           id: productVariants.id,
@@ -288,7 +287,7 @@ export class InventoryController {
           unitName: units.name,
         })
         .from(productVariants)
-        .leftJoin(products, eq(productVariants.productId, products.id))
+        .innerJoin(products, eq(productVariants.productId, products.id))
         .leftJoin(categories, eq(products.categoryId, categories.id))
         .leftJoin(brands, eq(products.brandId, brands.id))
         .leftJoin(units, eq(products.unitId, units.id))
@@ -296,13 +295,16 @@ export class InventoryController {
         .limit(limit)
         .offset(offset);
 
-      // Filter out variants without barcodes
-      const validVariants = variants.filter(variant => variant.barcode && variant.barcode.trim() !== '');
+      // Generate barcode for each variant if not present (using variant ID)
+      const variantsWithBarcodes = variants.map(variant => ({
+        ...variant,
+        barcode: variant.barcode || `VAR${String(variant.id).padStart(10, '0')}`
+      }));
 
-      console.log('InventoryController: Found', validVariants.length, 'variants with barcodes on page', page);
+      console.log('InventoryController: Found', variantsWithBarcodes.length, 'variants on page', page, 'total:', total);
       
       res.status(HTTP_STATUS.OK).json({
-        variants: validVariants,
+        variants: variantsWithBarcodes,
         pagination: {
           page,
           limit,
@@ -311,7 +313,7 @@ export class InventoryController {
         }
       });
     } catch (error) {
-      console.error('InventoryController: Error getting product variants with barcodes:', error);
+      console.error('InventoryController: Error getting product variants:', error);
       res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
         message: ERROR_MESSAGES.INTERNAL_ERROR
       });
