@@ -129,7 +129,7 @@ export default function EditProduct() {
         title: "Success",
         description: "Product updated successfully",
       });
-      // Invalidate all product-related queries
+      // Invalidate all product-related queries - this ensures updated data is refetched
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       queryClient.invalidateQueries({ queryKey: [`/api/products/${productId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/products/${productId}/variants`] });

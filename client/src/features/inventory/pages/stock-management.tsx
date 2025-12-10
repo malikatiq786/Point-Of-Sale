@@ -51,11 +51,13 @@ export default function StockManagement() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          warehouseId: adjustmentData.warehouseId,
+          warehouseId: adjustmentData.warehouseId || 9,
           reason: adjustmentData.reason,
           items: [{
-            productId: selectedStock?.productVariantId || selectedStock?.id,
+            productVariantId: selectedStock?.id,
+            productId: selectedStock?.productId,
             productName: selectedStock?.productName,
+            variantName: selectedStock?.variantName,
             quantity: adjustmentData.quantityChange,
             previousQuantity: Math.round(parseFloat(selectedStock?.quantity || '0')),
             newQuantity: Math.round(parseFloat(selectedStock?.quantity || '0')) + adjustmentData.quantityChange

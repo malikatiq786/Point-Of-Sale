@@ -2730,46 +2730,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  app.post("/api/stock/adjustments", isAuthenticated, async (req, res) => {
-    try {
-      const { warehouseId, reason, items } = req.body;
-      const userId = req.user?.claims?.sub;
-
-      if (!items || items.length === 0) {
-        return res.status(400).json({ message: "No items to adjust" });
-      }
-
-      console.log('Creating stock adjustment:', {
-        warehouseId,
-        reason,
-        items,
-        userId
-      });
-
-      const adjustment = await storage.createStockAdjustment({
-        warehouseId: warehouseId || 1,
-        userId,
-        reason,
-        items
-      });
-
-      res.json(adjustment);
-    } catch (error) {
-      console.error("Error creating stock adjustment:", error);
-      res.status(500).json({ message: "Failed to create stock adjustment" });
-    }
-  });
-
-  app.get("/api/stock/adjustments", isAuthenticated, async (req, res) => {
-    try {
-      const adjustments = await storage.getStockAdjustments();
-      console.log(`Fetching stock adjustments, total: ${adjustments.length}`);
-      res.json(adjustments);
-    } catch (error) {
-      console.error("Error fetching stock adjustments:", error);
-      res.status(500).json({ message: "Failed to fetch stock adjustments" });
-    }
-  });
 
   app.get("/api/suppliers", isAuthenticated, async (req, res) => {
     try {
