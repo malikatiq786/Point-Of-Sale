@@ -1916,6 +1916,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             processedVariantIds.add(variant.id);
             console.log(`Updated variant ${variant.id}: ${variant.variantName}`);
+            
+            // Update stock for existing variant if initialStock is provided
+            if (variant.initialStock !== undefined && variant.initialStock !== null) {
+              const newStock = parseInt(variant.initialStock) || 0;
+              console.log(`Updating stock for variant ${variant.id} to ${newStock}`);
+              
+              // Get existing stock entries for this variant
+              const existingStock = await db
+                .select()
+                .from(stock)
+                .where(eq(stock.productVariantId, variant.id));
+              
+              if (existingStock.length > 0) {
+                // Update existing stock entries - distribute stock evenly across warehouses
+                const stockPerWarehouse = Math.floor(newStock / existingStock.length);
+                for (const stockEntry of existingStock) {
+                  await db.update(stock)
+                    .set({ quantity: stockPerWarehouse.toString() })
+                    .where(eq(stock.id, stockEntry.id));
+                }
+                console.log(`Updated ${existingStock.length} stock entries for variant ${variant.id}, ${stockPerWarehouse} each`);
+              } else if (newStock > 0 && selectedWarehouses && selectedWarehouses.length > 0) {
+                // No stock entries exist, create new ones if stock > 0 and warehouses selected
+                const stockPerWarehouse = Math.floor(newStock / selectedWarehouses.length);
+                for (const warehouseId of selectedWarehouses) {
+                  await db.insert(stock).values({
+                    productVariantId: variant.id,
+                    warehouseId: parseInt(warehouseId),
+                    quantity: stockPerWarehouse.toString()
+                  });
+                }
+                console.log(`Created ${selectedWarehouses.length} new stock entries for variant ${variant.id}, ${stockPerWarehouse} each`);
+              }
+            }
           } else {
             // Create new variant
             const [newVariant] = await db.insert(productVariants)
