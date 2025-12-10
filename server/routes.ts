@@ -1848,7 +1848,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         brandId, 
         unitId, 
         price, 
-        stock, 
+        stock: stockValue, 
         lowStockAlert, 
         image,
         variants,
@@ -1881,7 +1881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         brandId: brandId,
         unitId: unitId || null,
         price: price ? parseFloat(price) : 0,
-        stock: stock ? parseInt(stock) : 0,
+        stock: stockValue ? parseInt(stockValue) : 0,
         lowStockAlert: lowStockAlert ? parseInt(lowStockAlert) : 0,
         image: image || null
       };
