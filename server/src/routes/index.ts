@@ -342,6 +342,7 @@ router.get('/products/:id/variants', isAuthenticated, async (req: any, res: any)
         salePrice: schema.productVariants.salePrice,
         wholesalePrice: schema.productVariants.wholesalePrice,
         retailPrice: schema.productVariants.retailPrice,
+        image: schema.productVariants.image,
         totalStock: sql<number>`COALESCE(SUM(CAST(${schema.stock.quantity} AS INTEGER)), 0)`
       })
       .from(schema.productVariants)
@@ -353,7 +354,8 @@ router.get('/products/:id/variants', isAuthenticated, async (req: any, res: any)
         schema.productVariants.purchasePrice,
         schema.productVariants.salePrice,
         schema.productVariants.wholesalePrice,
-        schema.productVariants.retailPrice
+        schema.productVariants.retailPrice,
+        schema.productVariants.image
       );
 
     // Map to frontend format
@@ -364,7 +366,8 @@ router.get('/products/:id/variants', isAuthenticated, async (req: any, res: any)
       purchasePrice: variant.purchasePrice || '0',
       salePrice: variant.salePrice || '0',
       wholesalePrice: variant.wholesalePrice || '0',
-      retailPrice: variant.retailPrice || '0'
+      retailPrice: variant.retailPrice || '0',
+      image: variant.image || null
     }));
 
     console.log(`Found ${variants.length} variants for product ${productId}:`, variants);
