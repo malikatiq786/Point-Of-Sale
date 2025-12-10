@@ -9,6 +9,30 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Package, Edit, Trash2, ShoppingCart, AlertTriangle, List, ChevronDown, ChevronUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
+// Variant image component with state-based fallback
+function VariantImage({ src, alt }: { src?: string | null; alt: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (!src || hasError) {
+    return (
+      <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+        <Package className="w-6 h-6 text-gray-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+      <img 
+        src={src} 
+        alt={alt}
+        className="w-full h-full object-cover"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+}
+
 export default function ViewProduct() {
   const { user } = useAuth();
   const { formatCurrencyValue } = useCurrency();
@@ -271,13 +295,19 @@ export default function ViewProduct() {
             <div className="space-y-4">
               {variants.map((variant: any, index: number) => (
                 <div key={variant.id} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-gray-900">
-                      {variant.variantName || `Variant ${index + 1}`}
-                    </h4>
-                    <Badge variant="outline">
-                      Stock: {variant.stock || 0} {product.unit?.shortName || 'units'}
-                    </Badge>
+                  <div className="flex items-center gap-4 mb-3">
+                    <VariantImage 
+                      src={variant.image} 
+                      alt={variant.variantName || `Variant ${index + 1}`} 
+                    />
+                    <div className="flex-1 flex items-center justify-between">
+                      <h4 className="font-semibold text-gray-900">
+                        {variant.variantName || `Variant ${index + 1}`}
+                      </h4>
+                      <Badge variant="outline">
+                        Stock: {variant.stock || 0} {product.unit?.shortName || 'units'}
+                      </Badge>
+                    </div>
                   </div>
                   
                   {expandedVariants && (
