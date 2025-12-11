@@ -2855,10 +2855,10 @@ export default function POSTerminal() {
             </div>
           </div>
         ) : (
-          // Grid Layout with Sidebar - Restaurant POS Style
-          <div className={`flex gap-4 ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-140px)]'}`}>
-            {/* Left Side - Categories & Products */}
-            <div className="flex-1 flex flex-col min-w-0">
+          // Grid Layout with Sidebar - Restaurant POS Style (8:4 ratio)
+          <div className={`grid grid-cols-12 gap-4 ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-140px)]'}`}>
+            {/* Left Side - Categories & Products (8 columns) */}
+            <div className="col-span-8 flex flex-col min-w-0 overflow-hidden">
               {/* Search Bar for Grid View - Filters products directly */}
               <div className="mb-4">
                 <div className="relative">
@@ -2962,8 +2962,8 @@ export default function POSTerminal() {
               </div>
             </div>
 
-            {/* Right Side - Order Panel */}
-            <div className="w-[340px] flex-shrink-0 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden">
+            {/* Right Side - Order Panel (4 columns) */}
+            <div className="col-span-4 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
                 <div className="flex items-center gap-2">
