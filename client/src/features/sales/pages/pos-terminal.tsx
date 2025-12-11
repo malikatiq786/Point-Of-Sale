@@ -3009,15 +3009,27 @@ export default function POSTerminal() {
                       <Users className="w-3.5 h-3.5" />
                     </Button>
                     {selectedCustomerId && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => setSelectedCustomerId(null)}
-                        className="h-7 w-7"
-                        title="Clear Customer (Walk-in)"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </Button>
+                      <>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => setShowPaymentOnAccountDialog(true)}
+                          className="h-7 w-7"
+                          title="Payment On Account"
+                          data-testid="button-payment-on-account-grid"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => setSelectedCustomerId(null)}
+                          className="h-7 w-7"
+                          title="Clear Customer (Walk-in)"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
