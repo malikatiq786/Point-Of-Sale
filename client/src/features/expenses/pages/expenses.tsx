@@ -46,6 +46,27 @@ interface ExpenseFilters {
   paymentMethod?: string;
 }
 
+interface ExpenseCategory {
+  id: number;
+  name: string;
+}
+
+interface ExpenseVendor {
+  id: number;
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
+interface DashboardStats {
+  summary?: {
+    totalExpenses: number;
+    totalCount: number;
+  };
+  statusBreakdown?: Array<{ status: string; count: number }>;
+  topCategories?: Array<{ name: string; amount: number }>;
+}
+
 export default function ExpensesPage() {
   const [selectedExpenses, setSelectedExpenses] = useState<number[]>([]);
   const [filters, setFilters] = useState<ExpenseFilters>({});
@@ -124,24 +145,24 @@ export default function ExpensesPage() {
   });
 
   // Fetch categories for filters
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<ExpenseCategory[]>({
     queryKey: ['/api/expense-categories'],
   });
 
   // Fetch vendors for filters
-  const { data: vendors = [] } = useQuery({
+  const { data: vendors = [] } = useQuery<ExpenseVendor[]>({
     queryKey: ['/api/expense-vendors'],
   });
 
   // Fetch dashboard stats
-  const { data: dashboardStats } = useQuery({
+  const { data: dashboardStats } = useQuery<DashboardStats>({
     queryKey: ['/api/expense-dashboard/stats'],
   });
 
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: (expenseIds: number[]) =>
-      apiRequest('POST', '/api/expenses/bulk-delete', { expenseIds }),
+      apiRequest('/api/expenses/bulk-delete', { method: 'POST', body: JSON.stringify({ expenseIds }) }),
     onSuccess: () => {
       toast({
         title: 'Success',
@@ -163,7 +184,7 @@ export default function ExpensesPage() {
   // Approve expense mutation
   const approveExpenseMutation = useMutation({
     mutationFn: (expenseId: number) =>
-      apiRequest('POST', `/api/expenses/${expenseId}/approve`, {}),
+      apiRequest(`/api/expenses/${expenseId}/approve`, { method: 'POST' }),
     onSuccess: () => {
       toast({
         title: 'Success',
@@ -184,7 +205,7 @@ export default function ExpensesPage() {
   // Reject expense mutation
   const rejectExpenseMutation = useMutation({
     mutationFn: (expenseId: number) =>
-      apiRequest('POST', `/api/expenses/${expenseId}/reject`, {}),
+      apiRequest(`/api/expenses/${expenseId}/reject`, { method: 'POST' }),
     onSuccess: () => {
       toast({
         title: 'Success',

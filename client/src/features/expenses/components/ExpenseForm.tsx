@@ -67,6 +67,24 @@ interface ExpenseFormProps {
   onCancel?: () => void;
 }
 
+interface ExpenseCategory {
+  id: number;
+  name: string;
+  parentId?: number;
+}
+
+interface ExpenseVendor {
+  id: number;
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
+interface Branch {
+  id: number;
+  name: string;
+}
+
 export function ExpenseForm({ expenseId, onSuccess, onCancel }: ExpenseFormProps) {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isCalculatingTax, setIsCalculatingTax] = useState(false);
@@ -81,15 +99,15 @@ export function ExpenseForm({ expenseId, onSuccess, onCancel }: ExpenseFormProps
   const queryClient = useQueryClient();
 
   // Fetch data for form options
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<ExpenseCategory[]>({
     queryKey: ['/api/expense-categories'],
   });
 
-  const { data: vendors = [] } = useQuery({
+  const { data: vendors = [] } = useQuery<ExpenseVendor[]>({
     queryKey: ['/api/expense-vendors'],
   });
 
-  const { data: branches = [] } = useQuery({
+  const { data: branches = [] } = useQuery<Branch[]>({
     queryKey: ['/api/branches'],
   });
 
@@ -131,10 +149,13 @@ export function ExpenseForm({ expenseId, onSuccess, onCancel }: ExpenseFormProps
 
   // Mutations for creating new categories and vendors
   const createCategoryMutation = useMutation({
-    mutationFn: (name: string) => apiRequest('POST', '/api/expense-categories', { name }),
+    mutationFn: async (name: string) => {
+      const res = await apiRequest('/api/expense-categories', { method: 'POST', body: JSON.stringify({ name }) });
+      return res.json();
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/expense-categories'] });
-      form.setValue('categoryId', data.id);
+      if (data?.id) form.setValue('categoryId', data.id);
       setNewCategoryName('');
       setIsCreateCategoryOpen(false);
       toast({
@@ -152,11 +173,13 @@ export function ExpenseForm({ expenseId, onSuccess, onCancel }: ExpenseFormProps
   });
 
   const createVendorMutation = useMutation({
-    mutationFn: (vendorData: { name: string; email?: string; phone?: string }) => 
-      apiRequest('POST', '/api/expense-vendors', vendorData),
+    mutationFn: async (vendorData: { name: string; email?: string; phone?: string }) => {
+      const res = await apiRequest('/api/expense-vendors', { method: 'POST', body: JSON.stringify(vendorData) });
+      return res.json();
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/expense-vendors'] });
-      form.setValue('vendorId', data.id);
+      if (data?.id) form.setValue('vendorId', data.id);
       setNewVendorName('');
       setNewVendorEmail('');
       setNewVendorPhone('');
@@ -189,9 +212,9 @@ export function ExpenseForm({ expenseId, onSuccess, onCancel }: ExpenseFormProps
       };
 
       if (expenseId) {
-        return apiRequest('PUT', `/api/expenses/${expenseId}`, formData);
+        return apiRequest(`/api/expenses/${expenseId}`, { method: 'PUT', body: JSON.stringify(formData) });
       } else {
-        return apiRequest('POST', '/api/expenses', formData);
+        return apiRequest('/api/expenses', { method: 'POST', body: JSON.stringify(formData) });
       }
     },
     onSuccess: () => {
