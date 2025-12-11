@@ -18,7 +18,7 @@ import {
   Search, ShoppingCart, Minus, Plus, Trash2, CreditCard, DollarSign, 
   Smartphone, Percent, Calculator, Receipt, Printer, QrCode, 
   User, Users, Edit3, Edit, X, Check, Tag, Gift, AlertCircle, CheckCircle, Settings, Package, RotateCcw, Eye, Home,
-  Maximize2, Minimize2
+  Maximize2, Minimize2, Hash
 } from "lucide-react";
 
 interface CartItem {
@@ -2619,9 +2619,31 @@ export default function POSTerminal() {
               <div className="bg-gray-100 border-t border-gray-400 p-2">
                 <div className="flex flex-col space-y-3">
 
-                  {/* Stock and Purchase Price Info Boxes */}
+                  {/* Cart Stats and Stock/Purchase Info Boxes */}
                   {cart.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-4 gap-2">
+                      {/* Total Items Box */}
+                      <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white px-2 py-2 rounded-lg shadow-lg text-center">
+                        <div className="text-xs font-medium opacity-90 mb-1 flex items-center justify-center">
+                          <ShoppingCart className="w-3 h-3 mr-1" />
+                          Total Items
+                        </div>
+                        <div className="text-sm font-bold">
+                          {cart.length}
+                        </div>
+                      </div>
+
+                      {/* Total Quantity Box */}
+                      <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white px-2 py-2 rounded-lg shadow-lg text-center">
+                        <div className="text-xs font-medium opacity-90 mb-1 flex items-center justify-center">
+                          <Hash className="w-3 h-3 mr-1" />
+                          Total Qty
+                        </div>
+                        <div className="text-sm font-bold">
+                          {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                        </div>
+                      </div>
+
                       {/* Stock Levels Box */}
                       <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white px-2 py-2 rounded-lg shadow-lg text-center">
                         <div className="text-xs font-medium opacity-90 mb-1 flex items-center justify-center">
