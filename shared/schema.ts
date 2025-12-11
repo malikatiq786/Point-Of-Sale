@@ -2,6 +2,7 @@
 import { pgTable, serial, varchar, text, timestamp, integer, numeric, boolean, date, jsonb, index } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
 // =========================================
 // 🔐 Authentication & Access Control
@@ -504,12 +505,31 @@ export const expenseApprovals = pgTable("expense_approvals", {
 
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
+  expenseNumber: varchar("expense_number", { length: 50 }),
   categoryId: integer("category_id").references(() => expenseCategories.id),
   vendorId: integer("vendor_id").references(() => expenseVendors.id),
+  branchId: integer("branch_id").references(() => branches.id),
+  description: varchar("description", { length: 255 }),
+  notes: text("notes"),
   amount: numeric("amount", { precision: 12, scale: 2 }),
-  note: text("note"),
+  taxRate: numeric("tax_rate", { precision: 5, scale: 2 }),
+  taxAmount: numeric("tax_amount", { precision: 12, scale: 2 }),
+  totalAmount: numeric("total_amount", { precision: 12, scale: 2 }),
+  currency: varchar("currency", { length: 10 }).default('USD'),
+  exchangeRate: numeric("exchange_rate", { precision: 12, scale: 6 }).default('1'),
+  paymentMethod: varchar("payment_method", { length: 50 }),
+  referenceNumber: varchar("reference_number", { length: 100 }),
   expenseDate: timestamp("expense_date"),
+  status: varchar("status", { length: 50 }).default('pending'),
+  approvalStatus: varchar("approval_status", { length: 50 }).default('pending'),
+  isPettyCash: boolean("is_petty_cash").default(false),
+  isRecurring: boolean("is_recurring").default(false),
+  recurringFrequency: varchar("recurring_frequency", { length: 50 }),
+  isReimbursable: boolean("is_reimbursable").default(false),
+  attachmentUrls: text("attachment_urls").array(),
   createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // =========================================
@@ -662,3 +682,14 @@ export const productsRelations = relations(products, ({ one, many }) => ({
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true });
 export const insertSaleSchema = createInsertSchema(sales).omit({ id: true });
 export const insertBackupFileSchema = createInsertSchema(backupFiles).omit({ id: true });
+export const insertExpenseSchema = createInsertSchema(expenses).omit({ id: true });
+export const insertExpenseCategorySchema = createInsertSchema(expenseCategories).omit({ id: true });
+export const insertExpenseVendorSchema = createInsertSchema(expenseVendors).omit({ id: true });
+
+// Expense types
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+export type SelectExpense = typeof expenses.$inferSelect;
+export type InsertExpenseCategory = z.infer<typeof insertExpenseCategorySchema>;
+export type SelectExpenseCategory = typeof expenseCategories.$inferSelect;
+export type InsertExpenseVendor = z.infer<typeof insertExpenseVendorSchema>;
+export type SelectExpenseVendor = typeof expenseVendors.$inferSelect;

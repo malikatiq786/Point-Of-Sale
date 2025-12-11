@@ -154,8 +154,7 @@ export class ExpenseRepository extends BaseRepository<typeof expenses, InsertExp
             id: users.id,
             name: users.name,
             email: users.email,
-          },
-          approver: null
+          }
         })
         .from(expenses)
         .leftJoin(expenseCategories, eq(expenses.categoryId, expenseCategories.id))
