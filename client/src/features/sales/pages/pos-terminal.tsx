@@ -153,6 +153,9 @@ export default function POSTerminal() {
   // Layout management state
   const [posLayout, setPosLayout] = useState<'grid' | 'search'>('grid');
   
+  // Category filter state for Grid View
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  
   // Kitchen order state
   const [orderType, setOrderType] = useState<'sale' | 'dine-in' | 'takeaway' | 'delivery'>('sale');
   const [tableNumber, setTableNumber] = useState<string>("");
@@ -750,6 +753,11 @@ export default function POSTerminal() {
     queryKey: ['/api/registers'],
   });
 
+  // Fetch categories for Grid View filter
+  const { data: categories = [] } = useQuery<any[]>({
+    queryKey: ['/api/categories'],
+  });
+
   // Fetch customers
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ['/api/customers'],
@@ -784,6 +792,21 @@ export default function POSTerminal() {
       setCustomerSearchQuery("");
     }
   }, [selectedCustomerId, customers]);
+
+  // Set first category as selected by default when categories load
+  React.useEffect(() => {
+    if (categories.length > 0 && selectedCategoryId === null) {
+      setSelectedCategoryId(categories[0].id);
+    }
+  }, [categories, selectedCategoryId]);
+
+  // Filter products by selected category for Grid View
+  const filteredProducts = React.useMemo(() => {
+    if (!selectedCategoryId) return products;
+    return products.filter((product: any) => 
+      product.category?.id === selectedCategoryId
+    );
+  }, [products, selectedCategoryId]);
 
   // Filter customer ledger for selected customer
   const customerLedger = customerLedgerData?.filter(entry => entry.customerId === selectedCustomerId) || [];
@@ -2762,712 +2785,307 @@ export default function POSTerminal() {
             </div>
           </div>
         ) : (
-          // Grid Layout with Sidebar
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Side - Product Selection */}
-            <div className="lg:col-span-2 space-y-6">
-            {/* Search Bar */}
-            <Card className="rounded-2xl shadow-lg border-0">
-              <CardContent className="p-6">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input
-                    ref={searchInputRef}
-                    placeholder="Search products by name, barcode, or category..."
-                    value={searchQuery}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
-                    onKeyPress={handleSearchKeyPress}
-                    className={`pl-10 h-12 text-lg rounded-xl border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isScanning ? 'bg-blue-50 border-blue-300' : ''}`}
-                    autoComplete="off"
-                    autoFocus
-                  />
-                  {isScanning && (
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-blue-600">
-                      <QrCode className="w-6 h-6 animate-pulse" />
+          // Grid Layout with Sidebar - Restaurant POS Style
+          <div className="flex gap-4 h-[calc(100vh-140px)]">
+            {/* Left Side - Categories & Products */}
+            <div className="flex-1 flex flex-col min-w-0">
+              {/* Category Tabs */}
+              <div className="flex items-center gap-2 pb-4 overflow-x-auto scrollbar-hide">
+                {categories.map((category: any) => (
+                  <Button
+                    key={category.id}
+                    variant={selectedCategoryId === category.id ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setSelectedCategoryId(category.id)}
+                    className={`whitespace-nowrap px-4 py-2 rounded-lg transition-all ${
+                      selectedCategoryId === category.id
+                        ? "bg-orange-500 text-white hover:bg-orange-600"
+                        : "bg-transparent hover:bg-gray-100 text-gray-700"
+                    }`}
+                    data-testid={`category-tab-${category.id}`}
+                  >
+                    {category.name}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Products Grid */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {isLoading ? (
+                    Array.from({ length: 8 }).map((_, index) => (
+                      <div key={index} className="bg-gray-100 rounded-xl h-40 animate-pulse" />
+                    ))
+                  ) : filteredProducts.length === 0 ? (
+                    <div className="col-span-full text-center py-12 text-gray-400">
+                      <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No products in this category</p>
+                    </div>
+                  ) : (
+                    filteredProducts.map((product: any) => (
+                      <div
+                        key={product.id}
+                        onClick={() => addToCart(product)}
+                        className="bg-white rounded-xl border border-gray-200 p-3 cursor-pointer hover:border-orange-400 hover:shadow-md transition-all duration-200 flex flex-col items-center"
+                        data-testid={`product-card-${product.id}`}
+                      >
+                        {/* Product Image */}
+                        <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 mb-3 flex items-center justify-center">
+                          {product.baseProduct?.image || product.image ? (
+                            <img 
+                              src={product.baseProduct?.image || product.image} 
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                target.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <Package className={`w-8 h-8 text-gray-400 ${product.baseProduct?.image || product.image ? 'hidden' : ''}`} />
+                        </div>
+                        
+                        {/* Product Name */}
+                        <div className="text-sm font-medium text-center text-gray-800 line-clamp-2 mb-1">
+                          {product.name}
+                        </div>
+                        
+                        {/* Product Price */}
+                        <div className="text-sm font-bold text-orange-600">
+                          {formatCurrencyValue(parseFloat(product.price) || 0)}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - Order Panel */}
+            <div className="w-80 lg:w-96 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden">
+              {/* Customer Selection Header */}
+              <div className="p-4 border-b border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-gray-700">+ Add Customer</span>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => setShowAddCustomerDialog(true)}
+                      className="h-8 w-8"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-8 w-8"
+                    >
+                      <QrCode className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => {
+                        setSelectedCustomerId(null);
+                        setCart([]);
+                      }}
+                      className="h-8 w-8"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Customer Display */}
+                <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded-lg">
+                  {selectedCustomerId ? (
+                    (() => {
+                      const customer = customers.find(c => c.id === selectedCustomerId);
+                      return customer ? (
+                        <div>
+                          <div className="font-medium text-gray-900">{customer.name}</div>
+                          {customer.phone && <div className="text-xs text-gray-500">{customer.phone}</div>}
+                        </div>
+                      ) : null;
+                    })()
+                  ) : (
+                    <div>
+                      <div className="font-medium text-gray-900">Walk-in Customer</div>
+                      <div className="text-xs text-orange-600 flex items-center gap-1 mt-1">
+                        <AlertCircle className="w-3 h-3" />
+                        Full payment required
+                      </div>
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            {/* Grid Layout - Products Grid */}
-            <div>
-              <Card className="rounded-2xl shadow-lg border-0">
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center">
-                    <Tag className="w-5 h-5 mr-2" />
-                    Available Products
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4 max-h-96 overflow-y-auto">
-                    {isLoading ? (
-                      Array.from({ length: 8 }).map((_, index) => (
-                        <div key={index} className="bg-gray-100 rounded-xl h-24 animate-pulse" />
-                      ))
-                    ) : (
-                      products.map((product: any) => (
-                        <Button
-                          key={product.id}
-                          variant="outline"
-                          onClick={() => addToCart(product)}
-                          className="h-auto p-4 rounded-xl border-2 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 flex flex-col items-center space-y-2"
-                        >
-                          <div className="text-sm font-semibold text-center truncate w-full">
-                            {product.name}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {product.category?.name || 'General'}
-                          </div>
-                          <div className="text-sm font-bold text-blue-600">
-                            {formatCurrencyValue(
-                              parseFloat(product.price) || 0
-                            )}
-                          </div>
-                        </Button>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-
-
-
-
-            {/* Shopping Cart Table */}
-            <Card className="rounded-2xl shadow-lg border-0">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center">
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    Cart Items ({cart.length} items)
-                  </span>
-                  <Badge variant="secondary" className="text-xs">
-                    Subtotal: {formatCurrencyValue(getSubtotal())}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
+              {/* Cart Items */}
+              <div className="flex-1 overflow-y-auto p-4">
                 {cart.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
-                    <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>Cart is empty</p>
-                    <p className="text-xs">Add products to get started</p>
+                    <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No items in cart</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-2 px-2 text-sm font-medium text-gray-600">Product</th>
-                          <th className="text-center py-2 px-2 text-sm font-medium text-gray-600">Qty</th>
-                          <th className="text-right py-2 px-2 text-sm font-medium text-gray-600">Price</th>
-                          <th className="text-center py-2 px-2 text-sm font-medium text-gray-600">Discount</th>
-                          <th className="text-right py-2 px-2 text-sm font-medium text-gray-600">Total</th>
-                          <th className="text-center py-2 px-2 text-sm font-medium text-gray-600">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {cart.map((item) => (
-                          <tr key={item.id} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-2">
-                              <div>
-                                <div className="font-medium text-sm text-gray-900">{item.name}</div>
-                                <div className="text-xs text-gray-500">{item.category}</div>
-                                {item.discount && item.discount > 0 && (
-                                  <div className="text-xs text-green-600 mt-1">
-                                    -{item.discountType === 'percentage' ? `${item.discount}%` : formatCurrencyValue(item.discount)} discount
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3 px-2 text-center">
-                              <div className="flex items-center justify-center">
-                                {editingQuantityItem === item.id ? (
-                                  <Input
-                                    type="text"
-                                    ref={(el) => quantityInputRefs.current[item.id] = el}
-                                    value={editQuantity}
-                                    onChange={(e) => setEditQuantity(e.target.value)}
-                                    onBlur={() => {
-                                      const newQty = parseInt(editQuantity) || 1;
-                                      setAbsoluteQuantity(item.id, newQty);
-                                      setEditingQuantityItem(null);
-                                      setEditQuantity('');
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === '+') {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        const newQty = parseInt(editQuantity) || 1;
-                                        setAbsoluteQuantity(item.id, newQty);
-                                        // Move to price editing
-                                        setEditPrice(item.price.toString());
-                                        setTimeout(() => {
-                                          const priceInput = priceInputRefs.current[item.id];
-                                          if (priceInput) {
-                                            priceInput.focus();
-                                            priceInput.select();
-                                          }
-                                        }, 150);
-                                      } else if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        // Save quantity and add product to cart
-                                        const newQty = parseInt(editQuantity) || 1;
-                                        setAbsoluteQuantity(item.id, newQty);
-                                        setEditingPriceItem(null);
-                                        setEditQuantity('');
-                                      }
-                                    }}
-                                    className="w-16 h-6 text-center text-sm rounded-lg"
-                                    data-testid={`quantity-input-${item.id}`}
-                                  />
-                                ) : (
-                                  <span 
-                                    className="w-16 text-center font-medium text-sm cursor-pointer hover:bg-gray-200 rounded px-2 py-1 min-w-[32px]"
-                                    onClick={() => {
-                                      setEditingQuantityItem(item.id);
-                                      setEditQuantity(item.quantity.toString());
-                                    }}
-                                  >
-                                    {item.quantity}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3 px-2 text-right">
-                              {editingPriceItem === item.id ? (
-                                <Input
-                                  ref={(el) => priceInputRefs.current[item.id] = el}
-                                  value={editPrice}
-                                  onChange={(e) => setEditPrice(e.target.value)}
-                                  onFocus={(e) => {
-                                    // Set cursor to beginning after focus
-                                    setTimeout(() => {
-                                      const input = e.target as HTMLInputElement;
-                                      input.setSelectionRange(0, 0);
-                                    }, 10);
-                                  }}
-                                  onBlur={() => {
-                                    const newPrice = parseFloat(editPrice) || item.price;
-                                    updateItemPrice(item.id, newPrice);
-                                    setEditingPriceItem(null);
-                                    setEditPrice('');
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === '+') {
-                                      e.preventDefault();
-                                      const newPrice = parseFloat(editPrice) || item.price;
-                                      updateItemPrice(item.id, newPrice);
-                                      setEditingPriceItem(null);
-                                      setEditPrice('');
-                                      // Focus back to search input for next product
-                                      setTimeout(() => searchInputRef.current?.focus(), 100);
-                                    } else if (e.key === 'Tab') {
-                                      e.preventDefault();
-                                      // Save price and go back to search field
-                                      const newPrice = parseFloat(editPrice) || item.price;
-                                      updateItemPrice(item.id, newPrice);
-                                      setEditingPriceItem(null);
-                                      setEditPrice('');
-                                      // Focus back to search input for next product
-                                      setTimeout(() => {
-                                        if (searchInputRef.current) {
-                                          searchInputRef.current.focus();
-                                          searchInputRef.current.select();
-                                        }
-                                      }, 50);
-                                    } else if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      // Save price and complete sale
-                                      const newPrice = parseFloat(editPrice) || item.price;
-                                      updateItemPrice(item.id, newPrice);
-                                      setEditingPriceItem(null);
-                                      setEditPrice('');
-                                      // Complete sale when Enter is pressed
-                                      setTimeout(() => setShowPaymentDialog(true), 100);
-                                    }
-                                  }}
-                                  className="w-20 h-6 text-xs text-right rounded"
-                                  data-testid={`price-input-${item.id}`}
-                                />
-                              ) : (
-                                <span 
-                                  className="text-sm font-medium cursor-pointer hover:bg-gray-200 rounded px-1"
-                                  onClick={() => {
-                                    setEditingPriceItem(item.id);
-                                    setEditPrice(item.price.toString());
-                                  }}
-                                >
-                                  {formatCurrencyValue(item.price)}
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-2 text-center">
-                              {editingDiscount === item.id ? (
-                                <div className="flex flex-col space-y-1">
-                                  <Input
-                                    value={editDiscountValue}
-                                    onChange={(e) => setEditDiscountValue(e.target.value)}
-                                    onBlur={() => {
-                                      const value = parseFloat(editDiscountValue) || 0;
-                                      if (value > 0) {
-                                        const isPercentage = editDiscountValue.includes('%');
-                                        applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
-                                      }
-                                      setEditingDiscount(null);
-                                    }}
-                                    onKeyPress={(e) => {
-                                      if (e.key === 'Enter') {
-                                        const value = parseFloat(editDiscountValue) || 0;
-                                        if (value > 0) {
-                                          const isPercentage = editDiscountValue.includes('%');
-                                          applyItemDiscount(item.id, value, isPercentage ? 'percentage' : 'fixed');
-                                        }
-                                        setEditingDiscount(null);
-                                      }
-                                    }}
-                                    className="w-20 h-6 text-xs text-center rounded"
-                                    placeholder="0% or 0.00"
-                                  />
-                                </div>
-                              ) : (
-                                <span 
-                                  className="text-xs cursor-pointer hover:bg-gray-200 rounded px-1 py-1 min-w-[60px] inline-block"
-                                  onClick={() => {
-                                    setEditingDiscount(item.id);
-                                    setEditDiscountValue((item.discount && item.discount > 0) ? `${item.discount}${item.discountType === 'percentage' ? '%' : ''}` : '');
-                                  }}
-                                >
-                                  {(item.discount && item.discount > 0)
-                                    ? (item.discountType === 'percentage' ? `${item.discount}%` : formatCurrencyValue(item.discount))
-                                    : 'Click to add'
-                                  }
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-2 text-right">
-                              <span className="font-semibold text-sm text-gray-900">
-                                {formatCurrencyValue(item.total)}
-                              </span>
-                            </td>
-                            <td className="py-3 px-2 text-center">
-                              <div className="flex justify-center space-x-1">
-
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeFromCart(item.id)}
-                                  className="text-red-500 hover:bg-red-50 w-6 h-6 p-0"
-                                  title="Remove Item"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Side - Cart & Checkout */}
-          <div className="space-y-6">
-            {/* Customer Selection */}
-            <Card className="rounded-2xl shadow-lg border-0">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center">
-                  <User className="w-5 h-5 mr-2" />
-                  Customer Selection
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Select Customer</Label>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="rounded-xl"
-                      onClick={() => setShowAddCustomerDialog(true)}
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add New
-                    </Button>
-                  </div>
-                  
-                  {/* Customer Dropdown Selection */}
-                  <Select 
-                    value={selectedCustomerId?.toString() || "walk-in"} 
-                    onValueChange={(value) => setSelectedCustomerId(value === "walk-in" ? null : parseInt(value))}
-                  >
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Select customer or walk-in sale" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="walk-in">Walk-in Sale (No Customer)</SelectItem>
-                      {customers.map((customer: any) => (
-                        <SelectItem key={customer.id} value={customer.id.toString()}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{customer.name}</span>
-                            {customer.phone && (
-                              <span className="text-xs text-gray-500">{customer.phone}</span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  {/* Display selected customer info */}
-                  <div className="text-sm text-gray-600 mt-2 p-3 bg-gray-50 rounded-lg">
-                    {selectedCustomerId ? (
-                      (() => {
-                        const customer = customers.find(c => c.id === selectedCustomerId);
-                        return customer ? (
-                          <div>
-                            <div className="font-medium text-gray-900">{customer.name}</div>
-                            {customer.phone && <div className="text-gray-600">{customer.phone}</div>}
-                            {customer.email && <div className="text-gray-600">{customer.email}</div>}
-                            <div className="text-xs text-blue-600 mt-1">✓ Partial payments allowed</div>
-                            
-                            {/* Customer Action Buttons for Grid Layout */}
-                            <div className="flex space-x-2 mt-3">
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-xs px-2 py-1 h-7"
-                                onClick={() => setShowCustomerHistoryDialog(true)}
-                              >
-                                <User className="w-3 h-3 mr-1" />
-                                History
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-xs px-2 py-1 h-7"
-                                onClick={() => setShowPaymentOnAccountDialog(true)}
-                              >
-                                <CreditCard className="w-3 h-3 mr-1" />
-                                Payment
-                              </Button>
-                            </div>
-                          </div>
-                        ) : null;
-                      })()
-                    ) : (
-                      <div>
-                        <div className="font-medium text-gray-900">Walk-in Customer</div>
-                        <div className="text-xs text-orange-600 mt-1">⚠ Full payment required</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-
-
-            {/* Discount & Tax Controls */}
-            <Card className="rounded-2xl shadow-lg border-0">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center">
-                  <Calculator className="w-5 h-5 mr-2" />
-                  Calculations
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-3">
-                {/* Global Discount - Inline Editing */}
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center text-sm">
-                    <Gift className="w-4 h-4 mr-2" />
-                    Total Discount
-                  </span>
-                  {editingGlobalDiscount ? (
-                    <Input
-                      value={editGlobalDiscountValue}
-                      onChange={(e) => setEditGlobalDiscountValue(e.target.value)}
-                      onBlur={() => {
-                        const value = parseFloat(editGlobalDiscountValue) || 0;
-                        if (value >= 0) {
-                          const isPercentage = editGlobalDiscountValue.includes('%');
-                          applyGlobalDiscount(value, isPercentage ? 'percentage' : 'fixed');
-                        }
-                        setEditingGlobalDiscount(false);
-                      }}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          const value = parseFloat(editGlobalDiscountValue) || 0;
-                          if (value >= 0) {
-                            const isPercentage = editGlobalDiscountValue.includes('%');
-                            applyGlobalDiscount(value, isPercentage ? 'percentage' : 'fixed');
-                          }
-                          setEditingGlobalDiscount(false);
-                        }
-                      }}
-                      className="w-24 h-8 text-sm text-center rounded-lg"
-                      placeholder="0% or 0.00"
-                      autoFocus
-                    />
-                  ) : (
-                    <span 
-                      className="text-blue-600 cursor-pointer hover:bg-gray-100 rounded px-2 py-1"
-                      onClick={() => {
-                        setEditingGlobalDiscount(true);
-                        setEditGlobalDiscountValue(discount.value > 0 ? `${discount.value}${discount.type === 'percentage' ? '%' : ''}` : '');
-                      }}
-                    >
-                      {discount.value > 0 ? 
-                        (discount.type === 'percentage' ? `${discount.value}%` : formatCurrencyValue(discount.value)) 
-                        : 'Click to add'
-                      }
-                    </span>
-                  )}
-                </div>
-
-                {/* Tax Rate - Inline Editing */}
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Tax Rate (%)</Label>
-                  {editingTaxRate ? (
-                    <Input
-                      value={editTaxRateValue}
-                      onChange={(e) => setEditTaxRateValue(e.target.value)}
-                      onBlur={() => {
-                        const value = parseFloat(editTaxRateValue) || 10;
-                        updateTaxRate(value);
-                        setEditingTaxRate(false);
-                      }}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          const value = parseFloat(editTaxRateValue) || 10;
-                          updateTaxRate(value);
-                          setEditingTaxRate(false);
-                        }
-                      }}
-                      className="w-20 h-8 text-sm text-center rounded-lg"
-                      autoFocus
-                    />
-                  ) : (
-                    <span 
-                      className="w-20 h-8 text-sm text-center rounded-lg bg-gray-50 border flex items-center justify-center cursor-pointer hover:bg-gray-100"
-                      onClick={() => {
-                        setEditingTaxRate(true);
-                        setEditTaxRateValue(taxRate.toString());
-                      }}
-                    >
-                      {taxRate}%
-                    </span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Total Summary - Horizontal Layout */}
-            <div className="grid grid-cols-4 gap-4">
-              {/* Subtotal Box */}
-              <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-br from-green-500 to-green-600 text-white">
-                <CardContent className="p-4 text-center">
-                  <div className="text-xs font-medium opacity-90 mb-1">Subtotal</div>
-                  <div className="text-lg font-bold">{formatCurrencyValue(getSubtotal())}</div>
-                </CardContent>
-              </Card>
-
-              {/* Discount Box */}
-              <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-                <CardContent className="p-4 text-center">
-                  <div className="text-xs font-medium opacity-90 mb-1">Discount</div>
-                  <div className="text-lg font-bold">
-                    {(getItemDiscountTotal() + getGlobalDiscountAmount()) > 0 
-                      ? `-${formatCurrencyValue(getItemDiscountTotal() + getGlobalDiscountAmount())}`
-                      : formatCurrencyValue(0)
-                    }
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Tax Box */}
-              <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-                <CardContent className="p-4 text-center">
-                  <div className="text-xs font-medium opacity-90 mb-1">
-                    {getTaxBreakdown().length > 0 ? 
-                      `Tax (${getTotalTaxRate()}%)` : 
-                      'Tax (0%)'
-                    }
-                  </div>
-                  <div className="text-lg font-bold">{formatCurrencyValue(getTaxAmount())}</div>
-                </CardContent>
-              </Card>
-
-              {/* Total Box */}
-              <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-                <CardContent className="p-4 text-center">
-                  <div className="text-xs font-medium opacity-90 mb-1">TOTAL</div>
-                  <div className="text-xl font-bold">{formatCurrencyValue(getGrandTotal())}</div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Payment Methods */}
-            <Card className="rounded-2xl shadow-lg border-0">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center">
-                  <CreditCard className="w-5 h-5 mr-2" />
-                  Payment Method
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  <Button
-                    variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-                    onClick={() => setPaymentMethod('cash')}
-                    className="rounded-xl"
-                  >
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Cash
-                  </Button>
-                  <Button
-                    variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                    onClick={() => setPaymentMethod('card')}
-                    className="rounded-xl"
-                  >
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Card
-                  </Button>
-                  <Button
-                    variant={paymentMethod === 'mobile' ? 'default' : 'outline'}
-                    onClick={() => setPaymentMethod('mobile')}
-                    className="rounded-xl"
-                  >
-                    <Smartphone className="w-4 h-4 mr-2" />
-                    Mobile
-                  </Button>
-                  <Button
-                    variant={paymentMethod === 'qr' ? 'default' : 'outline'}
-                    onClick={() => setPaymentMethod('qr')}
-                    className="rounded-xl"
-                  >
-                    <QrCode className="w-4 h-4 mr-2" />
-                    QR Code
-                  </Button>
-                </div>
-
-                {paymentMethod === 'cash' && (
                   <div className="space-y-3">
-                    <div>
-                      <Label className="text-sm">Amount Received</Label>
-                      <Input
-                        type="number"
-                        value={amountReceived}
-                        onChange={(e) => setAmountReceived(parseFloat(e.target.value) || 0)}
-                        placeholder="Enter amount received"
-                        className="rounded-xl h-12 text-lg text-center"
-                        step="0.01"
-                      />
-                    </div>
-                    {amountReceived > 0 && (
-                      <div className="bg-green-50 rounded-xl p-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-green-700">Change Due:</span>
-                          <div className="flex items-center space-x-2">
-                            {isChangeEditable ? (
-                              <Input
-                                type="number"
-                                value={changeAmount}
-                                onChange={(e) => setChangeAmount(parseFloat(e.target.value) || 0)}
-                                className="w-20 h-8 text-sm text-center"
-                                step="0.01"
-                              />
-                            ) : (
-                              <span className="text-lg font-bold text-green-800">
-                                {formatCurrencyValue(getChange())}
-                              </span>
+                    {cart.map((item, index) => (
+                      <div 
+                        key={item.id} 
+                        className="border border-gray-200 rounded-lg p-3 hover:border-green-400 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">{index + 1}</span>
+                              <span className="font-medium text-sm text-gray-900">{item.name}</span>
+                            </div>
+                            {item.variantName && item.variantName !== 'Default' && (
+                              <div className="text-xs text-gray-500 ml-4">{item.variantName}</div>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                if (!isChangeEditable) {
-                                  setChangeAmount(getChange());
-                                }
-                                setIsChangeEditable(!isChangeEditable);
-                              }}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Edit3 className="w-3 h-3" />
-                            </Button>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-semibold text-sm">{formatCurrencyValue(item.price * item.quantity)}</div>
+                            {item.discount && item.discount > 0 && (
+                              <div className="text-xs text-gray-400 line-through">
+                                {formatCurrencyValue(item.price * item.quantity / (1 - item.discount / 100))}
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeFromCart(item.id)}
+                            className="h-6 w-6 ml-2 text-gray-400 hover:text-red-500"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        
+                        {/* Quantity and Discount Controls */}
+                        <div className="flex items-center gap-4 mt-2 ml-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">Quantity</span>
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => setAbsoluteQuantity(item.id, parseInt(e.target.value) || 1)}
+                              className="w-16 h-7 text-center text-sm"
+                              min="1"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">Discount(%)</span>
+                            <Input
+                              type="number"
+                              value={item.discount || 0}
+                              onChange={(e) => updateItemDiscount(item.id, parseFloat(e.target.value) || 0, 'percentage')}
+                              className="w-16 h-7 text-center text-sm"
+                              min="0"
+                              max="100"
+                            />
                           </div>
                         </div>
-                        {amountReceived > getGrandTotal() && selectedCustomerId && (
-                          <div className="text-xs text-blue-600 mt-1">
-                            Overpayment will be added as credit to customer ledger
-                          </div>
-                        )}
                       </div>
-                    )}
+                    ))}
                   </div>
                 )}
+              </div>
 
-                {/* Quick Amount Buttons for Cash */}
-                {paymentMethod === 'cash' && (
-                  <div className="grid grid-cols-3 gap-2 mt-3">
-                    {[5, 10, 20, 50, 100].map((amount) => (
-                      <Button
-                        key={amount}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setAmountReceived(amountReceived + amount)}
-                        className="rounded-lg text-xs"
-                      >
-                        +{formatCurrencyValue(amount)}
-                      </Button>
-                    ))}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAmountReceived(getGrandTotal())}
-                      className="rounded-lg text-xs col-span-1 bg-blue-50 text-blue-600 border-blue-200"
+              {/* Footer - Totals and Actions */}
+              <div className="border-t border-gray-200 p-4 bg-gray-50">
+                {/* Quick Actions */}
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-medium">Add</span>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="link" 
+                      size="sm" 
+                      className="text-orange-600 h-auto p-0"
+                      onClick={() => {
+                        setEditingGlobalDiscount(true);
+                        setEditGlobalDiscountValue('');
+                      }}
                     >
-                      Exact
+                      Discount
+                    </Button>
+                    <Button variant="link" size="sm" className="text-orange-600 h-auto p-0">
+                      Coupon Code
+                    </Button>
+                    <Button variant="link" size="sm" className="text-orange-600 h-auto p-0">
+                      Note
                     </Button>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </div>
 
-            {/* Process Sale Button */}
-            <Button
-              onClick={processSale}
-              disabled={cart.length === 0 || processSaleMutation.isPending || registerStatus !== 'open'}
-              className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:opacity-50"
-            >
-              {processSaleMutation.isPending ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Processing...
+                {/* Totals */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span className="font-medium">{formatCurrencyValue(getSubtotal())}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Tax</span>
+                    <span className="font-medium">{formatCurrencyValue(getTaxAmount())}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Payable Amount</span>
+                    <span>{formatCurrencyValue(getGrandTotal())}</span>
+                  </div>
                 </div>
-              ) : registerStatus !== 'open' ? (
-                <div className="flex items-center">
-                  <AlertCircle className="w-6 h-6 mr-2" />
-                  Register Closed
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-12 text-orange-600 border-orange-600 hover:bg-orange-50"
+                    onClick={() => {
+                      if (cart.length > 0) {
+                        const holdId = `HOLD-${Date.now()}`;
+                        const newHeldInvoice = {
+                          id: holdId,
+                          cart: [...cart],
+                          customer: selectedCustomerId ? customers?.find(c => c.id === selectedCustomerId) : undefined,
+                          timestamp: new Date()
+                        };
+                        setHeldInvoices(prev => [...prev, newHeldInvoice]);
+                        setCart([]);
+                        setSelectedCustomerId(null);
+                        toast({
+                          title: "Order Held",
+                          description: `Order ${holdId} saved for later`,
+                        });
+                      }
+                    }}
+                    disabled={cart.length === 0}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Hold Order
+                  </Button>
+                  <Button
+                    className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => {
+                      if (cart.length > 0) {
+                        setShowPaymentDialog(true);
+                      } else {
+                        toast({
+                          title: "Empty Cart",
+                          description: "Add items to cart before proceeding",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    disabled={cart.length === 0 || registerStatus !== 'open'}
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Proceed
+                  </Button>
                 </div>
-              ) : (
-                <div className="flex items-center">
-                  <Check className="w-6 h-6 mr-2" />
-                  Complete Sale
-                </div>
-              )}
-            </Button>
+              </div>
+            </div>
           </div>
-        </div>
         )}
 
         {/* Payment Dialog */}
