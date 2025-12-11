@@ -153,9 +153,10 @@ export default function POSTerminal() {
 
   // Layout management state
   const [posLayout, setPosLayout] = useState<'grid' | 'search'>('grid');
+  // Initialize fullscreen from actual browser state (not localStorage)
   const [isFullscreen, setIsFullscreen] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('pos-fullscreen') === 'true';
+      return !!document.fullscreenElement;
     }
     return false;
   });
@@ -386,7 +387,12 @@ export default function POSTerminal() {
         break;
       case 'escape':
         e.preventDefault();
-        resetAll();
+        // If in fullscreen, exit fullscreen instead of resetting
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(console.error);
+        } else {
+          resetAll();
+        }
         break;
       case 'f2':
         e.preventDefault();
@@ -896,14 +902,42 @@ export default function POSTerminal() {
     }
   }, [selectedRegisterId, registerStatus, cashDrawerBalance]);
 
-  // Persist fullscreen state to localStorage
-  useEffect(() => {
-    localStorage.setItem('pos-fullscreen', isFullscreen.toString());
-  }, [isFullscreen]);
+  // Fullscreen state is not persisted to localStorage because browser fullscreen
+  // is transient and doesn't persist across page reloads
 
-  // Toggle fullscreen mode
-  const toggleFullscreen = () => {
-    setIsFullscreen(prev => !prev);
+  // Listen for browser fullscreen changes (e.g., when user presses ESC)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!document.fullscreenElement;
+      // Always sync state to match browser fullscreen status
+      setIsFullscreen(isCurrentlyFullscreen);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Toggle fullscreen mode using browser Fullscreen API (only for grid layout)
+  const toggleFullscreen = async () => {
+    if (posLayout !== 'grid') {
+      return; // Only allow fullscreen in grid layout
+    }
+    
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (err) {
+      console.error('Fullscreen error:', err);
+      // Fallback to simple state toggle if browser API fails
+      setIsFullscreen(prev => !prev);
+    }
   };
 
   // Register opening balance validation
@@ -2930,52 +2964,25 @@ export default function POSTerminal() {
 
             {/* Right Side - Order Panel */}
             <div className="w-80 lg:w-96 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden">
-              {/* Compact Header with Fullscreen Toggle */}
-              <div className={`flex items-center justify-between ${isFullscreen ? 'p-2' : 'p-3'} border-b border-gray-100 bg-gray-50`}>
-                {isFullscreen ? (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={toggleFullscreen}
-                        className="h-7 w-7"
-                        title="Exit Fullscreen"
-                        data-testid="button-fullscreen-toggle"
-                      >
-                        <Minimize2 className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => setLocation('/')}
-                        className="h-7 w-7"
-                        title="Go to Dashboard"
-                      >
-                        <Home className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {selectedRegister?.name || 'Register'}
-                    </Badge>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-sm font-semibold text-gray-800">Current Order</span>
-                    <div className="flex items-center gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={toggleFullscreen}
-                        className="h-8 w-8"
-                        title="Enter Fullscreen"
-                        data-testid="button-fullscreen-toggle"
-                      >
-                        <Maximize2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </>
-                )}
+              {/* Header */}
+              <div className="flex items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
+                <div className="flex items-center gap-2">
+                  {isFullscreen && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => setLocation('/')}
+                      className="h-7 w-7"
+                      title="Go to Dashboard"
+                    >
+                      <Home className="w-4 h-4" />
+                    </Button>
+                  )}
+                  <span className="text-sm font-semibold text-gray-800">Current Order</span>
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  {selectedRegister?.name || 'Register'}
+                </Badge>
               </div>
 
               {/* Customer Selection */}
@@ -3162,35 +3169,46 @@ export default function POSTerminal() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-10 text-orange-600 border-orange-600 hover:bg-orange-50"
+                      onClick={() => {
+                        if (cart.length > 0) {
+                          const holdId = `HOLD-${Date.now()}`;
+                          const newHeldInvoice = {
+                            id: holdId,
+                            cart: [...cart],
+                            customer: selectedCustomerId ? customers?.find(c => c.id === selectedCustomerId) : undefined,
+                            timestamp: new Date()
+                          };
+                          setHeldInvoices(prev => [...prev, newHeldInvoice]);
+                          setCart([]);
+                          setSelectedCustomerId(null);
+                          toast({
+                            title: "Order Held",
+                            description: `Order ${holdId} saved for later`,
+                          });
+                        }
+                      }}
+                      disabled={cart.length === 0}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-1" />
+                      Hold
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-10 text-blue-600 border-blue-600 hover:bg-blue-50"
+                      onClick={() => setShowHoldInvoicesDialog(true)}
+                      data-testid="button-view-held-orders"
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      Held ({heldInvoices.length})
+                    </Button>
+                  </div>
                   <Button
-                    variant="outline"
-                    className="flex-1 h-12 text-orange-600 border-orange-600 hover:bg-orange-50"
-                    onClick={() => {
-                      if (cart.length > 0) {
-                        const holdId = `HOLD-${Date.now()}`;
-                        const newHeldInvoice = {
-                          id: holdId,
-                          cart: [...cart],
-                          customer: selectedCustomerId ? customers?.find(c => c.id === selectedCustomerId) : undefined,
-                          timestamp: new Date()
-                        };
-                        setHeldInvoices(prev => [...prev, newHeldInvoice]);
-                        setCart([]);
-                        setSelectedCustomerId(null);
-                        toast({
-                          title: "Order Held",
-                          description: `Order ${holdId} saved for later`,
-                        });
-                      }
-                    }}
-                    disabled={cart.length === 0}
-                  >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Hold Order
-                  </Button>
-                  <Button
-                    className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white"
+                    className="w-full h-12 bg-green-600 hover:bg-green-700 text-white"
                     onClick={() => {
                       if (cart.length > 0) {
                         setShowPaymentDialog(true);
@@ -3205,7 +3223,7 @@ export default function POSTerminal() {
                     disabled={cart.length === 0 || registerStatus !== 'open'}
                   >
                     <Check className="w-4 h-4 mr-2" />
-                    Proceed
+                    Proceed to Payment
                   </Button>
                 </div>
               </div>
@@ -4273,6 +4291,118 @@ export default function POSTerminal() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Customer Selection Dialog */}
+        <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
+          <DialogContent 
+            className="max-w-lg rounded-2xl max-h-[80vh] overflow-hidden flex flex-col"
+            data-testid="dialog-customer-selection"
+          >
+            <DialogHeader>
+              <DialogTitle className="flex items-center" data-testid="dialog-title-customer-selection">
+                <Users className="w-5 h-5 mr-2" />
+                Select Customer
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {/* Walk-in Customer Option */}
+              <div 
+                onClick={() => {
+                  setSelectedCustomerId(null);
+                  setShowCustomerDialog(false);
+                }}
+                className={`p-3 rounded-xl cursor-pointer border transition-all ${
+                  !selectedCustomerId 
+                    ? 'border-orange-400 bg-orange-50' 
+                    : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
+                }`}
+                data-testid="button-customer-select-walkin"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                      <User className="w-5 h-5 text-gray-500" />
+                    </div>
+                    <div>
+                      <div className="font-medium" data-testid="text-walkin-customer-name">Walk-in Customer</div>
+                      <div className="text-xs text-gray-500">No customer account</div>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
+                    Cash Only
+                  </Badge>
+                </div>
+              </div>
+              
+              {/* Customer List */}
+              {customers.map((customer: any) => (
+                <div 
+                  key={customer.id}
+                  onClick={() => {
+                    setSelectedCustomerId(customer.id);
+                    setShowCustomerDialog(false);
+                  }}
+                  className={`p-3 rounded-xl cursor-pointer border transition-all ${
+                    selectedCustomerId === customer.id 
+                      ? 'border-orange-400 bg-orange-50' 
+                      : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
+                  }`}
+                  data-testid={`button-customer-select-${customer.id}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <User className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium" data-testid={`text-customer-name-${customer.id}`}>{customer.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {customer.phone || customer.email || 'No contact info'}
+                        </div>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">Credit OK</Badge>
+                  </div>
+                </div>
+              ))}
+              
+              {customers.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Users className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No customers found</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={() => {
+                      setShowCustomerDialog(false);
+                      setShowAddCustomerDialog(true);
+                    }}
+                    data-testid="button-add-customer-from-dialog"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add New Customer
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Fixed Fullscreen Toggle Button - Bottom Right */}
+        {posLayout === 'grid' && (
+          <Button
+            variant="default"
+            size="icon"
+            onClick={toggleFullscreen}
+            className="fixed bottom-4 right-4 z-50 h-12 w-12 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg"
+            title={isFullscreen ? "Exit Fullscreen (ESC)" : "Enter Fullscreen"}
+            data-testid="button-fullscreen-fixed"
+          >
+            {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+          </Button>
+        )}
       </div>
     </div>
     </PosLayout>
