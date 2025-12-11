@@ -1549,6 +1549,11 @@ export default function POSTerminal() {
           </tbody>
         </table>
 
+        <div class="flex" style="background-color: #f5f5f5; padding: 4px 8px; margin: 4px 0;">
+          <span><strong>Total Items:</strong> ${cart.length}</span>
+          <span class="right"><strong>Total Qty:</strong> ${cart.reduce((sum, item) => sum + item.quantity, 0)}</span>
+        </div>
+
         <div class="divider"></div>
         
         <div>
@@ -1730,6 +1735,11 @@ export default function POSTerminal() {
             `).join('')}
           </tbody>
         </table>
+
+        <div class="flex" style="background-color: #f5f5f5; padding: 4px 8px; margin: 4px 0;">
+          <span><strong>Total Items:</strong> ${lastInvoice.items.length}</span>
+          <span class="right"><strong>Total Qty:</strong> ${lastInvoice.items.reduce((sum, item) => sum + item.quantity, 0)}</span>
+        </div>
 
         <div class="divider"></div>
         
