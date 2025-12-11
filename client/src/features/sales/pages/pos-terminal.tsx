@@ -17,7 +17,8 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { 
   Search, ShoppingCart, Minus, Plus, Trash2, CreditCard, DollarSign, 
   Smartphone, Percent, Calculator, Receipt, Printer, QrCode, 
-  User, Edit3, Edit, X, Check, Tag, Gift, AlertCircle, CheckCircle, Settings, Package, RotateCcw, Eye, Home
+  User, Users, Edit3, Edit, X, Check, Tag, Gift, AlertCircle, CheckCircle, Settings, Package, RotateCcw, Eye, Home,
+  Maximize2, Minimize2
 } from "lucide-react";
 
 interface CartItem {
@@ -152,9 +153,16 @@ export default function POSTerminal() {
 
   // Layout management state
   const [posLayout, setPosLayout] = useState<'grid' | 'search'>('grid');
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('pos-fullscreen') === 'true';
+    }
+    return false;
+  });
   
   // Category filter state for Grid View
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  
   
   // Kitchen order state
   const [orderType, setOrderType] = useState<'sale' | 'dine-in' | 'takeaway' | 'delivery'>('sale');
@@ -800,13 +808,29 @@ export default function POSTerminal() {
     }
   }, [categories, selectedCategoryId]);
 
-  // Filter products by selected category for Grid View
+  // Filter products by selected category and search query for Grid View
   const filteredProducts = React.useMemo(() => {
-    if (!selectedCategoryId) return products;
-    return products.filter((product: any) => 
-      product.category?.id === selectedCategoryId
-    );
-  }, [products, selectedCategoryId]);
+    let result = products;
+    
+    // Filter by category
+    if (selectedCategoryId) {
+      result = result.filter((product: any) => 
+        product.category?.id === selectedCategoryId
+      );
+    }
+    
+    // Filter by search query (for grid view only when posLayout is 'grid')
+    if (posLayout === 'grid' && searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter((product: any) => 
+        product.name?.toLowerCase().includes(query) ||
+        product.sku?.toLowerCase().includes(query) ||
+        product.barcode?.toLowerCase().includes(query)
+      );
+    }
+    
+    return result;
+  }, [products, selectedCategoryId, searchQuery, posLayout]);
 
   // Filter customer ledger for selected customer
   const customerLedger = customerLedgerData?.filter(entry => entry.customerId === selectedCustomerId) || [];
@@ -871,6 +895,16 @@ export default function POSTerminal() {
       localStorage.setItem('posRegisterState', JSON.stringify(registerState));
     }
   }, [selectedRegisterId, registerStatus, cashDrawerBalance]);
+
+  // Persist fullscreen state to localStorage
+  useEffect(() => {
+    localStorage.setItem('pos-fullscreen', isFullscreen.toString());
+  }, [isFullscreen]);
+
+  // Toggle fullscreen mode
+  const toggleFullscreen = () => {
+    setIsFullscreen(prev => !prev);
+  };
 
   // Register opening balance validation
   const openRegister = (registerId: number, openingBalance: number) => {
@@ -1821,7 +1855,8 @@ export default function POSTerminal() {
     <PosLayout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className={`max-w-7xl mx-auto ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
-        {/* Stunning Modern Header */}
+        {/* Stunning Modern Header - Hidden in Fullscreen Mode */}
+        {!isFullscreen && (
         <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-3xl shadow-2xl border border-slate-200/50 p-8 mb-6 backdrop-blur-sm">
           {/* Simplified Header - Only Action Buttons */}
 
@@ -1902,6 +1937,7 @@ export default function POSTerminal() {
           </div>
 
         </div>
+        )}
 
         {/* Traditional POS Layout - Full Width */}
         {posLayout === 'search' ? (
@@ -2786,9 +2822,39 @@ export default function POSTerminal() {
           </div>
         ) : (
           // Grid Layout with Sidebar - Restaurant POS Style
-          <div className="flex gap-4 h-[calc(100vh-140px)]">
+          <div className={`flex gap-4 ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-140px)]'}`}>
             {/* Left Side - Categories & Products */}
             <div className="flex-1 flex flex-col min-w-0">
+              {/* Search Bar for Grid View - Filters products directly */}
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Input
+                    type="text"
+                    placeholder="Search products by name, barcode, or SKU..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 pr-10 py-3 w-full rounded-xl border-gray-200 focus:border-orange-400 focus:ring-orange-400"
+                    data-testid="input-grid-product-search"
+                  />
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                {searchQuery && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    Found {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} matching "{searchQuery}"
+                  </div>
+                )}
+              </div>
+
               {/* Category Tabs */}
               <div className="flex items-center gap-2 pb-4 overflow-x-auto scrollbar-hide">
                 {categories.map((category: any) => (
@@ -2864,59 +2930,118 @@ export default function POSTerminal() {
 
             {/* Right Side - Order Panel */}
             <div className="w-80 lg:w-96 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden">
-              {/* Customer Selection Header */}
-              <div className="p-4 border-b border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-gray-700">+ Add Customer</span>
-                  <div className="flex items-center gap-2">
+              {/* Compact Header with Fullscreen Toggle */}
+              <div className={`flex items-center justify-between ${isFullscreen ? 'p-2' : 'p-3'} border-b border-gray-100 bg-gray-50`}>
+                {isFullscreen ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={toggleFullscreen}
+                        className="h-7 w-7"
+                        title="Exit Fullscreen"
+                        data-testid="button-fullscreen-toggle"
+                      >
+                        <Minimize2 className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => setLocation('/')}
+                        className="h-7 w-7"
+                        title="Go to Dashboard"
+                      >
+                        <Home className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {selectedRegister?.name || 'Register'}
+                    </Badge>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm font-semibold text-gray-800">Current Order</span>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={toggleFullscreen}
+                        className="h-8 w-8"
+                        title="Enter Fullscreen"
+                        data-testid="button-fullscreen-toggle"
+                      >
+                        <Maximize2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Customer Selection */}
+              <div className="p-3 border-b border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Customer</span>
+                  <div className="flex items-center gap-1">
                     <Button 
                       variant="ghost" 
                       size="icon"
                       onClick={() => setShowAddCustomerDialog(true)}
-                      className="h-8 w-8"
+                      className="h-7 w-7"
+                      title="Add New Customer"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-3.5 h-3.5" />
                     </Button>
                     <Button 
                       variant="ghost" 
                       size="icon"
-                      className="h-8 w-8"
+                      onClick={() => setShowCustomerDialog(true)}
+                      className="h-7 w-7"
+                      title="Select Customer"
                     >
-                      <QrCode className="w-4 h-4" />
+                      <Users className="w-3.5 h-3.5" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => {
-                        setSelectedCustomerId(null);
-                        setCart([]);
-                      }}
-                      className="h-8 w-8"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </Button>
+                    {selectedCustomerId && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => setSelectedCustomerId(null)}
+                        className="h-7 w-7"
+                        title="Clear Customer (Walk-in)"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 
-                {/* Customer Display */}
-                <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded-lg">
+                {/* Customer Display - Clickable for Walk-in */}
+                <div 
+                  className="text-sm p-2.5 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => setShowCustomerDialog(true)}
+                >
                   {selectedCustomerId ? (
                     (() => {
                       const customer = customers.find(c => c.id === selectedCustomerId);
                       return customer ? (
-                        <div>
-                          <div className="font-medium text-gray-900">{customer.name}</div>
-                          {customer.phone && <div className="text-xs text-gray-500">{customer.phone}</div>}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-900">{customer.name}</div>
+                            {customer.phone && <div className="text-xs text-gray-500">{customer.phone}</div>}
+                          </div>
+                          <Badge variant="secondary" className="text-xs">Credit OK</Badge>
                         </div>
                       ) : null;
                     })()
                   ) : (
-                    <div>
-                      <div className="font-medium text-gray-900">Walk-in Customer</div>
-                      <div className="text-xs text-orange-600 flex items-center gap-1 mt-1">
-                        <AlertCircle className="w-3 h-3" />
-                        Full payment required
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-gray-900">Walk-in Customer</div>
+                        <div className="text-xs text-gray-500">Click to select a customer</div>
                       </div>
+                      <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
+                        Cash Only
+                      </Badge>
                     </div>
                   )}
                 </div>
@@ -2981,7 +3106,7 @@ export default function POSTerminal() {
                             <Input
                               type="number"
                               value={item.discount || 0}
-                              onChange={(e) => updateItemDiscount(item.id, parseFloat(e.target.value) || 0, 'percentage')}
+                              onChange={(e) => applyItemDiscount(item.id, parseFloat(e.target.value) || 0, 'percentage')}
                               className="w-16 h-7 text-center text-sm"
                               min="0"
                               max="100"
