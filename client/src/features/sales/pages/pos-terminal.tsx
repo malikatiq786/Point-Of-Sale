@@ -135,6 +135,7 @@ export default function POSTerminal() {
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
+  const [customerDialogSearch, setCustomerDialogSearch] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
   const [lastInvoice, setLastInvoice] = useState<InvoiceData | null>(null);
   
@@ -4305,7 +4306,10 @@ export default function POSTerminal() {
         </Dialog>
 
         {/* Customer Selection Dialog */}
-        <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
+        <Dialog open={showCustomerDialog} onOpenChange={(open) => {
+          setShowCustomerDialog(open);
+          if (!open) setCustomerDialogSearch('');
+        }}>
           <DialogContent 
             className="max-w-lg rounded-2xl max-h-[80vh] overflow-hidden flex flex-col"
             data-testid="dialog-customer-selection"
@@ -4317,12 +4321,36 @@ export default function POSTerminal() {
               </DialogTitle>
             </DialogHeader>
             
+            {/* Customer Search Bar */}
+            <div className="relative mb-2">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                type="text"
+                placeholder="Search by name or phone..."
+                value={customerDialogSearch}
+                onChange={(e) => setCustomerDialogSearch(e.target.value)}
+                className="pl-9 pr-8 py-2 w-full rounded-lg border-gray-200 focus:border-orange-400 focus:ring-orange-400"
+                data-testid="input-customer-dialog-search"
+              />
+              {customerDialogSearch && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6"
+                  onClick={() => setCustomerDialogSearch('')}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+            
             <div className="flex-1 overflow-y-auto space-y-2">
               {/* Walk-in Customer Option */}
               <div 
                 onClick={() => {
                   setSelectedCustomerId(null);
                   setShowCustomerDialog(false);
+                  setCustomerDialogSearch('');
                 }}
                 className={`p-3 rounded-xl cursor-pointer border transition-all ${
                   !selectedCustomerId 
@@ -4348,12 +4376,23 @@ export default function POSTerminal() {
               </div>
               
               {/* Customer List */}
-              {customers.map((customer: any) => (
+              {customers
+                .filter((customer: any) => {
+                  if (!customerDialogSearch) return true;
+                  const search = customerDialogSearch.toLowerCase();
+                  return (
+                    customer.name?.toLowerCase().includes(search) ||
+                    customer.phone?.toLowerCase().includes(search) ||
+                    customer.email?.toLowerCase().includes(search)
+                  );
+                })
+                .map((customer: any) => (
                 <div 
                   key={customer.id}
                   onClick={() => {
                     setSelectedCustomerId(customer.id);
                     setShowCustomerDialog(false);
+                    setCustomerDialogSearch('');
                   }}
                   className={`p-3 rounded-xl cursor-pointer border transition-all ${
                     selectedCustomerId === customer.id 
@@ -4379,25 +4418,47 @@ export default function POSTerminal() {
                 </div>
               ))}
               
-              {customers.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <Users className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No customers found</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mt-2"
-                    onClick={() => {
-                      setShowCustomerDialog(false);
-                      setShowAddCustomerDialog(true);
-                    }}
-                    data-testid="button-add-customer-from-dialog"
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add New Customer
-                  </Button>
-                </div>
-              )}
+              {/* No customers or no search results */}
+              {(() => {
+                const filteredCustomers = customers.filter((customer: any) => {
+                  if (!customerDialogSearch) return true;
+                  const search = customerDialogSearch.toLowerCase();
+                  return (
+                    customer.name?.toLowerCase().includes(search) ||
+                    customer.phone?.toLowerCase().includes(search) ||
+                    customer.email?.toLowerCase().includes(search)
+                  );
+                });
+                
+                if (filteredCustomers.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-gray-500">
+                      <Users className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">
+                        {customerDialogSearch 
+                          ? `No customers found matching "${customerDialogSearch}"`
+                          : 'No customers found'
+                        }
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2"
+                        onClick={() => {
+                          setShowCustomerDialog(false);
+                          setCustomerDialogSearch('');
+                          setShowAddCustomerDialog(true);
+                        }}
+                        data-testid="button-add-customer-from-dialog"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add New Customer
+                      </Button>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
           </DialogContent>
         </Dialog>
