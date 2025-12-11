@@ -1888,7 +1888,7 @@ export default function POSTerminal() {
   return (
     <PosLayout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className={`max-w-7xl mx-auto ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
+      <div className={`${isFullscreen ? 'w-full px-4' : 'max-w-7xl mx-auto'} ${registerStatus !== 'open' ? 'pointer-events-none opacity-50' : ''}`}>
         {/* Stunning Modern Header - Hidden in Fullscreen Mode */}
         {!isFullscreen && (
         <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-3xl shadow-2xl border border-slate-200/50 p-8 mb-6 backdrop-blur-sm">
@@ -2963,7 +2963,7 @@ export default function POSTerminal() {
             </div>
 
             {/* Right Side - Order Panel */}
-            <div className="w-80 lg:w-96 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="w-[340px] flex-shrink-0 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
                 <div className="flex items-center gap-2">
@@ -3055,7 +3055,7 @@ export default function POSTerminal() {
               </div>
 
               {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex-1 overflow-y-auto p-3 min-h-0">
                 {cart.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
                     <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-50" />
@@ -3126,16 +3126,16 @@ export default function POSTerminal() {
                 )}
               </div>
 
-              {/* Footer - Totals and Actions */}
-              <div className="border-t border-gray-200 p-4 bg-gray-50">
+              {/* Footer - Totals and Actions (always visible) */}
+              <div className="flex-shrink-0 border-t border-gray-200 p-3 bg-gray-50">
                 {/* Quick Actions */}
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-medium">Add</span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium">Add</span>
                   <div className="flex gap-2">
                     <Button 
                       variant="link" 
                       size="sm" 
-                      className="text-orange-600 h-auto p-0"
+                      className="text-orange-600 h-auto p-0 text-xs"
                       onClick={() => {
                         setEditingGlobalDiscount(true);
                         setEditGlobalDiscountValue('');
@@ -3143,17 +3143,17 @@ export default function POSTerminal() {
                     >
                       Discount
                     </Button>
-                    <Button variant="link" size="sm" className="text-orange-600 h-auto p-0">
+                    <Button variant="link" size="sm" className="text-orange-600 h-auto p-0 text-xs">
                       Coupon Code
                     </Button>
-                    <Button variant="link" size="sm" className="text-orange-600 h-auto p-0">
+                    <Button variant="link" size="sm" className="text-orange-600 h-auto p-0 text-xs">
                       Note
                     </Button>
                   </div>
                 </div>
 
                 {/* Totals */}
-                <div className="space-y-2 mb-4">
+                <div className="space-y-1 mb-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal</span>
                     <span className="font-medium">{formatCurrencyValue(getSubtotal())}</span>
@@ -3173,7 +3173,7 @@ export default function POSTerminal() {
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      className="flex-1 h-10 text-orange-600 border-orange-600 hover:bg-orange-50"
+                      className="flex-1 h-9 text-orange-600 border-orange-600 hover:bg-orange-50"
                       onClick={() => {
                         if (cart.length > 0) {
                           const holdId = `HOLD-${Date.now()}`;
@@ -3199,7 +3199,7 @@ export default function POSTerminal() {
                     </Button>
                     <Button
                       variant="outline"
-                      className="flex-1 h-10 text-blue-600 border-blue-600 hover:bg-blue-50"
+                      className="flex-1 h-9 text-blue-600 border-blue-600 hover:bg-blue-50"
                       onClick={() => setShowHoldInvoicesDialog(true)}
                       data-testid="button-view-held-orders"
                     >
@@ -3208,7 +3208,7 @@ export default function POSTerminal() {
                     </Button>
                   </div>
                   <Button
-                    className="w-full h-12 bg-green-600 hover:bg-green-700 text-white"
+                    className="w-full h-10 bg-green-600 hover:bg-green-700 text-white"
                     onClick={() => {
                       if (cart.length > 0) {
                         setShowPaymentDialog(true);
