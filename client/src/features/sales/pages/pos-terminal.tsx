@@ -3573,6 +3573,11 @@ export default function POSTerminal() {
                   </tbody>
                 </table>
 
+                <div className="flex justify-between bg-gray-100 dark:bg-gray-800 px-2 py-1.5 rounded-md text-sm font-medium my-2">
+                  <span className="text-purple-600 dark:text-purple-400">Total Items: {lastInvoice.items.length}</span>
+                  <span className="text-teal-600 dark:text-teal-400">Total Qty: {lastInvoice.items.reduce((sum, item) => sum + item.quantity, 0)}</span>
+                </div>
+
                 <div className="divider"></div>
                 
                 <div className="space-y-1">
