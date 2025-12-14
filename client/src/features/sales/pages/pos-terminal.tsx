@@ -2966,9 +2966,9 @@ export default function POSTerminal() {
                       >
                         {/* Product Image */}
                         <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 mb-3 flex items-center justify-center">
-                          {product.baseProduct?.image || product.image ? (
+                          {(product.image || product.variants?.[0]?.image) ? (
                             <img 
-                              src={product.baseProduct?.image || product.image} 
+                              src={product.image || product.variants?.[0]?.image} 
                               alt={product.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -2978,7 +2978,7 @@ export default function POSTerminal() {
                               }}
                             />
                           ) : null}
-                          <Package className={`w-8 h-8 text-gray-400 ${product.baseProduct?.image || product.image ? 'hidden' : ''}`} />
+                          <Package className={`w-8 h-8 text-gray-400 ${(product.image || product.variants?.[0]?.image) ? 'hidden' : ''}`} />
                         </div>
                         
                         {/* Product Name */}
