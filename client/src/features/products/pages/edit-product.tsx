@@ -12,8 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Package, Save, Plus, Minus, List, Warehouse, RefreshCw } from "lucide-react";
 import { generateProductBarcode } from '@/utils/barcode';
-import { ObjectUploader } from '@/components/ObjectUploader';
-import type { UploadResult } from '@uppy/core';
+import { LocalImageUploader } from '@/components/LocalImageUploader';
 import { Link, useLocation } from "wouter";
 
 export default function EditProduct() {
@@ -665,71 +664,12 @@ export default function EditProduct() {
                               </button>
                             </div>
                           )}
-                          <ObjectUploader
-                            maxNumberOfFiles={1}
-                            maxFileSize={5485760}
+                          <LocalImageUploader
+                            onUploadComplete={(imagePath) => {
+                              updateVariant(index, 'image', imagePath);
+                            }}
                             buttonClassName="px-4 py-2"
-                            onGetUploadParameters={async () => {
-                              try {
-                                console.log("Requesting upload URL...");
-                                const response = await fetch('/api/objects/upload', {
-                                  method: 'POST',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                  },
-                                  credentials: 'include',
-                                  body: JSON.stringify({})
-                                });
-                                
-                                if (!response.ok) {
-                                  throw new Error(`HTTP error! status: ${response.status}`);
-                                }
-                                
-                                const data = await response.json();
-                                console.log("Upload URL response:", data);
-                                
-                                if (!data.uploadURL) {
-                                  throw new Error('No upload URL received from server');
-                                }
-                                
-                                return {
-                                  method: 'PUT' as const,
-                                  url: data.uploadURL
-                                };
-                              } catch (error) {
-                                console.error("Failed to get upload URL:", error);
-                                throw error;
-                              }
-                            }}
-                            onComplete={(result: UploadResult) => {
-                              console.log("Upload result:", result);
-                              if (result.successful && result.successful.length > 0) {
-                                const uploadURL = result.successful[0].uploadURL;
-                                console.log("Original upload URL:", uploadURL);
-                                
-                                // Convert the upload URL to serving URL format
-                                // Extract the object ID from the upload URL
-                                const urlParts = uploadURL.split('/');
-                                const uploadsIndex = urlParts.findIndex(part => part === 'uploads');
-                                if (uploadsIndex !== -1 && uploadsIndex < urlParts.length - 1) {
-                                  const objectId = urlParts[uploadsIndex + 1].split('?')[0];
-                                  const servingURL = `/api/objects/uploads/${objectId}`;
-                                  console.log("Serving URL:", servingURL);
-                                  updateVariant(index, 'image', servingURL);
-                                } else {
-                                  // Fallback to original URL if parsing fails
-                                  updateVariant(index, 'image', uploadURL);
-                                }
-                                
-                                toast({
-                                  title: "Success",
-                                  description: "Image uploaded successfully",
-                                });
-                              }
-                            }}
-                          >
-                            📷 Upload Image
-                          </ObjectUploader>
+                          />
                         </div>
                       </div>
                     </div>
