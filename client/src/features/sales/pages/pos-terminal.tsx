@@ -731,7 +731,8 @@ export default function POSTerminal() {
               brand: product.brand,
               unit: product.unit,
               isVariant: true,
-              baseProduct: product
+              baseProduct: product,
+              image: variant.image || product.image
             });
           });
         } else {
@@ -752,7 +753,8 @@ export default function POSTerminal() {
             brand: product.brand,
             unit: product.unit,
             isVariant: false,
-            baseProduct: product
+            baseProduct: product,
+            image: product.image
           });
         }
       });
@@ -2966,9 +2968,9 @@ export default function POSTerminal() {
                       >
                         {/* Product Image */}
                         <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 mb-3 flex items-center justify-center">
-                          {(product.image || product.variants?.[0]?.image) ? (
+                          {product.image ? (
                             <img 
-                              src={product.image || product.variants?.[0]?.image} 
+                              src={product.image} 
                               alt={product.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -2978,7 +2980,7 @@ export default function POSTerminal() {
                               }}
                             />
                           ) : null}
-                          <Package className={`w-8 h-8 text-gray-400 ${(product.image || product.variants?.[0]?.image) ? 'hidden' : ''}`} />
+                          <Package className={`w-8 h-8 text-gray-400 ${product.image ? 'hidden' : ''}`} />
                         </div>
                         
                         {/* Product Name */}
