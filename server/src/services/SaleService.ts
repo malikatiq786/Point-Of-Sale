@@ -5,6 +5,9 @@ import { CogsTrackingService } from './CogsTrackingService';
 import { validateInput, saleCreateSchema } from '../validators';
 import { formatCurrency, generateId } from '../utils';
 import { SaleRequest, DatabaseResult, ActivityLog } from '../types/index';
+import { db } from '../../db';
+import { stock, products, productVariants } from '@shared/schema';
+import { eq, sql } from 'drizzle-orm';
 
 export class SaleService {
   private saleRepository: SaleRepository;
@@ -53,9 +56,21 @@ export class SaleService {
       // Create the sale
       const sale = await this.saleRepository.createSaleWithItems(saleInfo, items);
 
-      // Update product stock for each item and track COGS
+      // Update product/variant stock for each item and track COGS
       for (const item of items) {
-        await this.productRepository.decreaseStock(item.productId, item.quantity);
+        console.log(`Processing stock decrease for product ${item.productId}, variant ${item.variantId}, qty: ${item.quantity}`);
+        
+        if (item.variantId) {
+          // Decrease stock from stock table for the variant
+          await this.decreaseVariantStock(item.variantId, item.quantity);
+          // Sync product total stock from all its variants
+          await this.syncProductStockFromVariants(item.productId);
+          console.log(`Variant ${item.variantId} stock decreased by ${item.quantity}, product ${item.productId} synced`);
+        } else {
+          // No variant, decrease product stock directly
+          await this.productRepository.decreaseStock(item.productId, item.quantity);
+          console.log(`Product ${item.productId} stock decreased by ${item.quantity}`);
+        }
         
         // Track COGS for this sale item (WAC-based cost tracking)
         try {
@@ -321,6 +336,71 @@ export class SaleService {
         success: false,
         error: 'Failed to fetch sales count',
       };
+    }
+  }
+
+  // Decrease variant stock in the stock table
+  private async decreaseVariantStock(variantId: number, quantity: number): Promise<void> {
+    try {
+      // Get current stock entries for this variant
+      const stockEntries = await db.select()
+        .from(stock)
+        .where(eq(stock.productVariantId, variantId));
+
+      if (stockEntries.length === 0) {
+        console.warn(`No stock entries found for variant ${variantId}, creating default entry`);
+        return;
+      }
+
+      // Decrease stock from the first warehouse that has enough stock
+      let remainingQty = quantity;
+      for (const entry of stockEntries) {
+        if (remainingQty <= 0) break;
+        
+        const currentQty = parseFloat(entry.quantity || '0');
+        const decreaseAmount = Math.min(currentQty, remainingQty);
+        
+        if (decreaseAmount > 0) {
+          await db.update(stock)
+            .set({ quantity: (currentQty - decreaseAmount).toString() })
+            .where(eq(stock.id, entry.id));
+          
+          remainingQty -= decreaseAmount;
+          console.log(`Decreased stock entry ${entry.id} by ${decreaseAmount}, new qty: ${currentQty - decreaseAmount}`);
+        }
+      }
+
+      if (remainingQty > 0) {
+        console.warn(`Could not fully decrease stock for variant ${variantId}, remaining: ${remainingQty}`);
+      }
+    } catch (error) {
+      console.error(`Error decreasing variant ${variantId} stock:`, error);
+      throw error;
+    }
+  }
+
+  // Sync product total stock from all its variants
+  private async syncProductStockFromVariants(productId: number): Promise<void> {
+    try {
+      // Calculate total stock from all variants
+      const result = await db.execute(sql`
+        SELECT COALESCE(SUM(CAST(s.quantity AS DECIMAL)), 0) as total_stock
+        FROM product_variants pv
+        LEFT JOIN stock s ON pv.id = s.product_variant_id
+        WHERE pv.product_id = ${productId}
+      `);
+
+      const totalStock = Math.floor(parseFloat((result.rows[0] as any)?.total_stock || '0'));
+
+      // Update product stock
+      await db.update(products)
+        .set({ stock: totalStock })
+        .where(eq(products.id, productId));
+
+      console.log(`Synced product ${productId} stock to ${totalStock}`);
+    } catch (error) {
+      console.error(`Error syncing product ${productId} stock:`, error);
+      throw error;
     }
   }
 }

@@ -1052,6 +1052,8 @@ export default function POSTerminal() {
       queryClient.invalidateQueries({ queryKey: ["/api/sales"] }); // Sales list and counter
       queryClient.invalidateQueries({ queryKey: ["/api/sales/count"] }); // Sales count
       queryClient.invalidateQueries({ queryKey: ["/api/customer-ledgers"] }); // Customer ledgers
+      queryClient.invalidateQueries({ queryKey: ["pos-products"] }); // Refresh product stock after sale
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] }); // Refresh product list
       
       // If there was a customer, invalidate their sales history too
       if (customerId) {
