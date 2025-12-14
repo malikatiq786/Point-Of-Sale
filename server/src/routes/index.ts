@@ -22,6 +22,7 @@ import { isAuthenticated } from '../../customAuth';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import multer from 'multer';
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -2481,6 +2482,36 @@ router.post('/objects/upload', async (req: any, res: any) => {
     console.error("Error getting upload URL:", error);
     res.status(500).json({ error: "Internal server error" });
   }
+});
+
+// Local file upload for product variant images
+const uploadStorage = multer.diskStorage({
+  destination: 'uploads/',
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, uniqueSuffix + ext);
+  }
+});
+const uploadMiddleware = multer({ 
+  storage: uploadStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
+
+router.post('/upload', isAuthenticated, uploadMiddleware.single('file'), (req: any, res: any) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  console.log('File uploaded:', req.file.filename);
+  res.json({ path: `/uploads/${req.file.filename}`, filename: req.file.filename });
 });
 
 export { router as apiRoutes };
