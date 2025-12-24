@@ -1201,14 +1201,8 @@ router.post('/purchases', isAuthenticated, async (req: any, res: any) => {
 
       await db.insert(schema.purchaseItems).values(purchaseItems);
 
-      // Update product stock levels
-      for (const item of items) {
-        await db.update(schema.products)
-          .set({ 
-            stock: sql`${schema.products.stock} + ${item.quantity}` 
-          })
-          .where(eq(schema.products.id, item.productId));
-      }
+      // NOTE: Stock is NOT updated here - it will be updated when purchase is APPROVED
+      // This prevents stock from being added for pending/rejected purchases
     }
     
     res.status(201).json(purchase);
