@@ -128,6 +128,62 @@ router.get('/products', isAuthenticated, async (req: any, res: any) => {
   }
 });
 
+// Lookup product variant by barcode
+router.get('/purchase/barcode/:code', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const barcode = req.params.code;
+    console.log(`Looking up variant by barcode: ${barcode}`);
+
+    // Search for variant with matching barcode
+    const variants = await db.select({
+      id: schema.productVariants.id,
+      variantName: schema.productVariants.variantName,
+      barcode: schema.productVariants.barcode,
+      purchasePrice: schema.productVariants.purchasePrice,
+      salePrice: schema.productVariants.salePrice,
+      stock: schema.productVariants.stock,
+      productId: schema.productVariants.productId,
+      productName: schema.products.name,
+      categoryName: schema.categories.name,
+    })
+    .from(schema.productVariants)
+    .innerJoin(schema.products, eq(schema.productVariants.productId, schema.products.id))
+    .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+    .where(eq(schema.productVariants.barcode, barcode))
+    .limit(1);
+
+    if (variants.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: `No product found with barcode: ${barcode}` 
+      });
+    }
+
+    const variant = variants[0];
+    console.log(`Found variant ${variant.id} (${variant.variantName}) for barcode ${barcode}`);
+    
+    res.json({
+      success: true,
+      variant: {
+        id: variant.id,
+        variantName: variant.variantName,
+        barcode: variant.barcode,
+        purchasePrice: variant.purchasePrice,
+        salePrice: variant.salePrice,
+        stock: variant.stock,
+      },
+      product: {
+        id: variant.productId,
+        name: variant.productName,
+        category: variant.categoryName,
+      }
+    });
+  } catch (error) {
+    console.error('Barcode lookup error:', error);
+    res.status(500).json({ success: false, message: 'Failed to lookup barcode' });
+  }
+});
+
 // Get products with variants for POS
 router.get('/products/pos/all', isAuthenticated, async (req: any, res: any) => {
   try {

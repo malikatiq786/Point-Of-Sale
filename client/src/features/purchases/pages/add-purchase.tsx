@@ -9,8 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Minus, Search, ShoppingCart, ArrowLeft } from "lucide-react";
+import { Plus, Minus, Search, ShoppingCart, ArrowLeft, Barcode } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useRef } from "react";
 
 interface PurchaseItem {
   productId: number;
@@ -31,6 +32,9 @@ export default function AddPurchase() {
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showProductSearch, setShowProductSearch] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [barcodeLoading, setBarcodeLoading] = useState(false);
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
   // Fetch variants for a specific product
   const fetchProductVariants = async (productId: number) => {
     if (productVariantsMap[productId]) {
@@ -86,6 +90,80 @@ export default function AddPurchase() {
       });
     },
   });
+
+  // Handle barcode scan
+  const handleBarcodeScan = async (barcode: string) => {
+    if (!barcode.trim()) return;
+    
+    setBarcodeLoading(true);
+    try {
+      const response = await apiRequest(`/api/purchase/barcode/${encodeURIComponent(barcode.trim())}`, { method: 'GET' });
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        toast({
+          title: "Barcode Not Found",
+          description: data.message || `No product found with barcode: ${barcode}`,
+          variant: "destructive",
+        });
+        setBarcodeInput("");
+        barcodeInputRef.current?.focus();
+        return;
+      }
+      
+      // Add the variant to items
+      const variant = data.variant;
+      const product = data.product;
+      
+      const existingItem = items.find(item => 
+        item.productId === product.id && item.productVariantId === variant.id
+      );
+      
+      if (existingItem) {
+        // Increment quantity
+        updateQuantity(product.id, variant.id, existingItem.quantity + 1);
+        toast({
+          title: "Quantity Updated",
+          description: `${product.name} - ${variant.variantName}: quantity increased to ${existingItem.quantity + 1}`,
+        });
+      } else {
+        // Add new item
+        const newItem: PurchaseItem = {
+          productId: product.id,
+          productName: product.name,
+          productVariantId: variant.id,
+          variantName: variant.variantName,
+          quantity: 1,
+          costPrice: parseFloat(variant.purchasePrice || '0'),
+          total: parseFloat(variant.purchasePrice || '0')
+        };
+        setItems(prev => [...prev, newItem]);
+        toast({
+          title: "Product Added",
+          description: `${product.name} - ${variant.variantName} added to purchase`,
+        });
+      }
+      
+      setBarcodeInput("");
+      barcodeInputRef.current?.focus();
+    } catch (error) {
+      console.error('Barcode scan error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to lookup barcode",
+        variant: "destructive",
+      });
+    } finally {
+      setBarcodeLoading(false);
+    }
+  };
+
+  const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleBarcodeScan(barcodeInput);
+    }
+  };
 
   const addVariant = (variant: any, product: any) => {
     const existingItem = items.find(item => 
@@ -300,23 +378,61 @@ export default function AddPurchase() {
           </CardContent>
         </Card>
 
-        {/* Product Search */}
+        {/* Barcode Scanner and Product Search */}
         <Card>
           <CardHeader>
             <CardTitle>Add Products</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {/* Barcode Scanner Input */}
+              <div className="p-4 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 dark:bg-blue-950 dark:border-blue-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <Barcode className="w-5 h-5 text-blue-600" />
+                  <Label className="font-medium text-blue-700 dark:text-blue-300">Barcode Scanner</Label>
+                </div>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      ref={barcodeInputRef}
+                      type="text"
+                      placeholder="Scan barcode or enter manually..."
+                      value={barcodeInput}
+                      onChange={(e) => setBarcodeInput(e.target.value)}
+                      onKeyDown={handleBarcodeKeyDown}
+                      className="pl-10"
+                      disabled={barcodeLoading}
+                      data-testid="input-barcode-scanner"
+                      autoFocus
+                    />
+                    <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  </div>
+                  <Button 
+                    type="button"
+                    onClick={() => handleBarcodeScan(barcodeInput)}
+                    disabled={barcodeLoading || !barcodeInput.trim()}
+                    data-testid="button-scan-barcode"
+                  >
+                    {barcodeLoading ? "Scanning..." : "Scan"}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Press Enter after scanning or click Scan button. Scanning same barcode will increase quantity.
+                </p>
+              </div>
+
+              {/* Manual Product Search */}
               <div className="relative">
                 <Input
                   type="text"
-                  placeholder="Search products to add..."
+                  placeholder="Or search products to add manually..."
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setShowProductSearch(e.target.value.length > 0);
                   }}
                   className="pl-10"
+                  data-testid="input-product-search"
                 />
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               </div>
