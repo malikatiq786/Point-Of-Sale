@@ -203,4 +203,51 @@ export class UserRepository extends BaseRepository<typeof users.$inferSelect> {
   async getUserPermissions(userId: string) {
     return this.findUserPermissions(userId);
   }
+
+  // Override findById for string IDs
+  async findById(userId: string) {
+    try {
+      const results = await db.select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      return results[0] || null;
+    } catch (error) {
+      console.error('Error finding user by ID:', error);
+      throw error;
+    }
+  }
+
+  // Override update for string IDs
+  async update(userId: string, userData: any) {
+    try {
+      const results = await db.update(users)
+        .set({
+          ...userData,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      return results[0] || null;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
+  }
+
+  // Override delete for string IDs
+  async delete(userId: string) {
+    try {
+      const results = await db.delete(users)
+        .where(eq(users.id, userId))
+        .returning();
+
+      return results.length > 0;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
+  }
 }
