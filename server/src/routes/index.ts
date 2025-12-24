@@ -1164,42 +1164,30 @@ router.post('/purchases', isAuthenticated, async (req: any, res: any) => {
 
     // Add purchase items
     if (items && items.length > 0) {
-      // First, create product variants for each product if they don't exist
-      for (const item of items) {
-        // Check if product variant exists, if not create one
-        const existingVariant = await db.select()
-          .from(schema.productVariants)
-          .where(eq(schema.productVariants.productId, item.productId))
-          .limit(1);
-        
-        if (existingVariant.length === 0) {
-          // Create a basic variant for this product
-          await db.insert(schema.productVariants).values({
-            productId: item.productId,
-            name: 'Default',
-            price: '0',
-            stock: 0
-          });
-        }
-      }
-
-      // Now get the variant IDs and create purchase items
+      // Create purchase items using the variant ID from the request
       const purchaseItems = [];
       for (const item of items) {
-        const [variant] = await db.select()
-          .from(schema.productVariants)
-          .where(eq(schema.productVariants.productId, item.productId))
-          .limit(1);
+        // Use the productVariantId sent from frontend - this is the specific variant selected
+        const variantId = item.productVariantId;
+        
+        if (!variantId) {
+          console.error(`Missing productVariantId for item in purchase ${purchase.id}`);
+          continue;
+        }
+        
+        console.log(`Adding purchase item: variant ${variantId}, quantity ${item.quantity}`);
         
         purchaseItems.push({
           purchaseId: purchase.id,
-          productVariantId: variant.id,
+          productVariantId: variantId,
           quantity: item.quantity,
           costPrice: item.costPrice.toString()
         });
       }
 
-      await db.insert(schema.purchaseItems).values(purchaseItems);
+      if (purchaseItems.length > 0) {
+        await db.insert(schema.purchaseItems).values(purchaseItems);
+      }
 
       // NOTE: Stock is NOT updated here - it will be updated when purchase is APPROVED
       // This prevents stock from being added for pending/rejected purchases
