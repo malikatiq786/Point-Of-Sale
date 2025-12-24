@@ -1,5 +1,6 @@
 import { UserRepository } from '../repositories/UserRepository';
 import { CreateUserRequest, UpdateUserRequest } from '../types';
+import bcrypt from 'bcryptjs';
 
 export class UserService {
   private userRepository: UserRepository;
@@ -44,13 +45,22 @@ export class UserService {
         return { success: false, error: 'User with this email already exists' };
       }
 
+      // Hash password if provided
+      let hashedPassword = null;
+      if (userData.password) {
+        if (userData.password.length < 6) {
+          return { success: false, error: 'Password must be at least 6 characters' };
+        }
+        hashedPassword = await bcrypt.hash(userData.password, 10);
+      }
+
       const user = await this.userRepository.create({
         name: userData.name,
         email: userData.email,
         firstName: userData.firstName,
         lastName: userData.lastName,
         roleId: userData.roleId,
-        password: userData.password || null,
+        password: hashedPassword,
       });
 
       return { success: true, data: user };

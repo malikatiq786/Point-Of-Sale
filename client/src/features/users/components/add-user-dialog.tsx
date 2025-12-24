@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, UserPlus } from "lucide-react";
+import { Plus, UserPlus, Eye, EyeOff } from "lucide-react";
 
 interface AddUserDialogProps {
   trigger?: React.ReactNode;
@@ -15,9 +15,12 @@ interface AddUserDialogProps {
 
 export default function AddUserDialog({ trigger }: AddUserDialogProps) {
   const [open, setOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    password: "",
+    confirmPassword: "",
     roleId: ""
   });
 
@@ -38,11 +41,11 @@ export default function AddUserDialog({ trigger }: AddUserDialogProps) {
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "User created successfully",
+        description: "User created successfully with login credentials",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setOpen(false);
-      setFormData({ name: "", email: "", roleId: "" });
+      setFormData({ name: "", email: "", password: "", confirmPassword: "", roleId: "" });
     },
     onError: (error: any) => {
       toast({
@@ -55,10 +58,28 @@ export default function AddUserDialog({ trigger }: AddUserDialogProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.roleId) {
+    if (!formData.name || !formData.email || !formData.roleId || !formData.password) {
       toast({
         title: "Error",
-        description: "Please fill in all fields",
+        description: "Please fill in all fields including password",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters",
         variant: "destructive",
       });
       return;
@@ -67,7 +88,8 @@ export default function AddUserDialog({ trigger }: AddUserDialogProps) {
     createUserMutation.mutate({
       name: formData.name,
       email: formData.email,
-      role_id: parseInt(formData.roleId),
+      password: formData.password,
+      roleId: parseInt(formData.roleId),
     });
   };
 
@@ -132,6 +154,42 @@ export default function AddUserDialog({ trigger }: AddUserDialogProps) {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter password (min 6 characters)"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  className="pr-10"
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Confirm password"
+                value={formData.confirmPassword}
+                onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                required
+              />
             </div>
           </div>
 

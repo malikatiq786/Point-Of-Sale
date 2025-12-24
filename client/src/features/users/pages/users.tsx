@@ -13,14 +13,57 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, Users, Shield, UserPlus, Settings } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Users, Shield, UserPlus, Settings, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
 
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest(`/api/users/${userId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete user");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "User Deleted",
+        description: "User has been deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteClick = (user: any) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (userToDelete) {
+      deleteUserMutation.mutate(userToDelete.id);
+    }
+  };
 
   // Fetch users with roles
   const { data: users = [], isLoading } = useQuery({
@@ -147,7 +190,13 @@ export default function UsersPage() {
                       )}
                       
                       {user.role?.name !== "Super Admin" && (
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteClick(user)}
+                          data-testid={`button-delete-user-${user.id}`}
+                        >
                           <Trash2 className="w-3 h-3 mr-1" />
                           Delete
                         </Button>
@@ -170,6 +219,34 @@ export default function UsersPage() {
         </CardContent>
       </Card>
 
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-red-600">
+              <AlertTriangle className="w-5 h-5 mr-2" />
+              Confirm Delete User
+            </DialogTitle>
+            <DialogDescription className="pt-4">
+              Are you sure you want to delete <strong>{userToDelete?.name}</strong> ({userToDelete?.email})?
+              <br /><br />
+              This action cannot be undone. The user will lose access to the system immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+              disabled={deleteUserMutation.isPending}
+            >
+              {deleteUserMutation.isPending ? "Deleting..." : "Delete User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </AppLayout>
   );
