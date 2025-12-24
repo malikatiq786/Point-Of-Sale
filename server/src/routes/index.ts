@@ -1312,18 +1312,28 @@ router.patch('/purchases/:id/status', isAuthenticated, async (req: any, res: any
       return res.status(400).json({ message: 'Invalid status' });
     }
     
+    // Get current purchase to check if it was already approved
+    const [existingPurchase] = await db
+      .select({ status: schema.purchases.status })
+      .from(schema.purchases)
+      .where(eq(schema.purchases.id, purchaseId))
+      .limit(1);
+    
+    if (!existingPurchase) {
+      return res.status(404).json({ message: 'Purchase not found' });
+    }
+    
+    const wasAlreadyApproved = existingPurchase.status === 'approved';
+    
     const [updatedPurchase] = await db
       .update(schema.purchases)
       .set({ status })
       .where(eq(schema.purchases.id, purchaseId))
       .returning();
     
-    if (!updatedPurchase) {
-      return res.status(404).json({ message: 'Purchase not found' });
-    }
-    
-    // If purchase is approved, update variant stocks directly
-    if (status === 'approved') {
+    // If purchase is approved AND wasn't already approved, update variant stocks
+    // This prevents duplicate stock updates if someone re-approves
+    if (status === 'approved' && !wasAlreadyApproved) {
       try {
         // Get purchase items
         const purchaseItems = await db
@@ -1333,23 +1343,26 @@ router.patch('/purchases/:id/status', isAuthenticated, async (req: any, res: any
         
         console.log(`Processing stock updates for ${purchaseItems.length} items in purchase ${purchaseId}`);
         
+        // Track product IDs that need syncing
+        const productIdsToSync = new Set<number>();
+        
         // Process each purchase item for stock update
         for (const item of purchaseItems) {
           if (item.productVariantId) {
             const quantity = parseFloat(item.quantity);
             const warehouseId = 1; // Default warehouse
             
-            console.log(`Updating variant ${item.productVariantId} stock by +${quantity}`);
+            console.log(`Upserting variant ${item.productVariantId} stock by +${quantity}`);
             
-            // Update variant stock directly
+            // Use UPSERT: Insert if not exists, or update if exists
             await db.execute(sql`
-              UPDATE stock 
-              SET quantity = quantity + ${quantity}
-              WHERE product_variant_id = ${item.productVariantId}
-                AND warehouse_id = ${warehouseId}
+              INSERT INTO stock (product_variant_id, warehouse_id, quantity)
+              VALUES (${item.productVariantId}, ${warehouseId}, ${quantity})
+              ON CONFLICT (product_variant_id, warehouse_id)
+              DO UPDATE SET quantity = stock.quantity + ${quantity}
             `);
             
-            // Get product ID from variant and sync product total
+            // Get product ID from variant for syncing
             const [variant] = await db
               .select({ productId: schema.productVariants.productId })
               .from(schema.productVariants)
@@ -1357,22 +1370,26 @@ router.patch('/purchases/:id/status', isAuthenticated, async (req: any, res: any
               .limit(1);
             
             if (variant) {
-              // Sync product total stock from variants
-              await db.execute(sql`
-                UPDATE products 
-                SET stock = (
-                  SELECT COALESCE(SUM(CAST(s.quantity AS INTEGER)), 0)
-                  FROM product_variants pv
-                  LEFT JOIN stock s ON pv.id = s.product_variant_id
-                  WHERE pv.product_id = ${variant.productId}
-                ),
-                updated_at = NOW()
-                WHERE id = ${variant.productId}
-              `);
-              
-              console.log(`✓ Updated variant ${item.productVariantId} and synced product ${variant.productId} total stock`);
+              productIdsToSync.add(variant.productId);
+              console.log(`✓ Upserted stock for variant ${item.productVariantId}`);
             }
           }
+        }
+        
+        // Sync all affected products' total stock from their variants
+        for (const productId of productIdsToSync) {
+          await db.execute(sql`
+            UPDATE products 
+            SET stock = (
+              SELECT COALESCE(SUM(CAST(s.quantity AS NUMERIC)), 0)
+              FROM product_variants pv
+              LEFT JOIN stock s ON pv.id = s.product_variant_id
+              WHERE pv.product_id = ${productId}
+            ),
+            updated_at = NOW()
+            WHERE id = ${productId}
+          `);
+          console.log(`✓ Synced product ${productId} total stock from variants`);
         }
         
         console.log(`Successfully processed stock updates for purchase ${purchaseId}`);
@@ -1380,6 +1397,8 @@ router.patch('/purchases/:id/status', isAuthenticated, async (req: any, res: any
         console.error(`Stock update failed for purchase ${purchaseId}:`, stockError);
         // Don't fail the approval if stock update fails, just log the error
       }
+    } else if (status === 'approved' && wasAlreadyApproved) {
+      console.log(`Purchase ${purchaseId} was already approved - skipping stock update to prevent duplicates`);
     }
     
     console.log(`Purchase ${purchaseId} status updated to: ${status}`);
