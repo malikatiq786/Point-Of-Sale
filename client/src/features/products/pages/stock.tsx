@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import Sidebar from "@/components/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Warehouse, AlertTriangle, Plus, Minus, Edit, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Warehouse, AlertTriangle, Plus, Minus, Edit, ChevronDown, ChevronUp, Package } from "lucide-react";
 
 export default function Stock() {
   const { user } = useAuth();
@@ -21,6 +21,10 @@ export default function Stock() {
   const [adjustment, setAdjustment] = useState({ type: "increase", quantity: "", reason: "", productName: "" });
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [isAddMode, setIsAddMode] = useState(false);
+  const [variantSearch, setVariantSearch] = useState("");
+  const [showVariantDropdown, setShowVariantDropdown] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
+  const variantSearchRef = useRef<HTMLInputElement>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -30,6 +34,23 @@ export default function Stock() {
     queryKey: ["/api/stock"],
     retry: false,
   });
+
+  // Fetch all product variants for searchable dropdown
+  const { data: allVariants = [] } = useQuery<any[]>({
+    queryKey: ["/api/product-variants/all"],
+    retry: false,
+  });
+
+  // Filter variants based on search input
+  const filteredVariants = allVariants.filter((variant: any) => {
+    if (!variantSearch) return false;
+    const searchLower = variantSearch.toLowerCase();
+    return (
+      variant.variantName?.toLowerCase().includes(searchLower) ||
+      variant.productName?.toLowerCase().includes(searchLower) ||
+      variant.barcode?.toLowerCase().includes(searchLower)
+    );
+  }).slice(0, 10);
 
   const filteredStock = stockItems.filter((stock: any) =>
     stock.productName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -134,15 +155,24 @@ export default function Stock() {
     setSelectedStock(null);
     setIsAddMode(true);
     setAdjustment({ type: "increase", quantity: "", reason: "", productName: "" });
+    setVariantSearch("");
+    setSelectedVariant(null);
+    setShowVariantDropdown(false);
     setShowAdjustDialog(true);
+  };
+
+  const handleSelectVariant = (variant: any) => {
+    setSelectedVariant(variant);
+    setVariantSearch(`${variant.productName} - ${variant.variantName}`);
+    setShowVariantDropdown(false);
   };
 
   const handleSubmitAdjustment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adjustment.quantity || !adjustment.reason || (isAddMode && !adjustment.productName)) {
+    if (!adjustment.quantity || !adjustment.reason || (isAddMode && !selectedVariant)) {
       toast({
         title: "Error",
-        description: "Please fill in all fields",
+        description: isAddMode ? "Please select a product variant and fill in all fields" : "Please fill in all fields",
         variant: "destructive",
       });
       return;
@@ -152,17 +182,19 @@ export default function Stock() {
       ? parseInt(adjustment.quantity) 
       : -parseInt(adjustment.quantity);
 
-    if (isAddMode) {
-      // For add mode, we only have product name, so backend will look up by name
+    if (isAddMode && selectedVariant) {
+      // For add mode, use the selected variant
       adjustStockMutation.mutate({
         warehouseId: 1,
         quantityChange,
         reason: adjustment.reason,
         items: [{
-          productName: adjustment.productName,
+          productVariantId: selectedVariant.id,
+          productId: selectedVariant.productId,
+          productName: `${selectedVariant.productName} - ${selectedVariant.variantName}`,
           quantity: quantityChange,
-          previousQuantity: 0,
-          newQuantity: quantityChange
+          previousQuantity: parseInt(selectedVariant.stock || '0'),
+          newQuantity: parseInt(selectedVariant.stock || '0') + quantityChange
         }]
       });
     } else {
@@ -173,8 +205,9 @@ export default function Stock() {
         quantityChange,
         reason: adjustment.reason,
         items: [{
+          productVariantId: selectedStock?.productVariantId,
           productId: selectedStock?.productVariantId || selectedStock?.id,
-          productName: selectedStock?.productName,
+          productName: `${selectedStock?.productName} - ${selectedStock?.variantName}`,
           quantity: quantityChange,
           previousQuantity: currentQuantity,
           newQuantity: currentQuantity + quantityChange
@@ -383,14 +416,81 @@ export default function Stock() {
           <form onSubmit={handleSubmitAdjustment} className="space-y-4">
             {isAddMode ? (
               <div className="space-y-2">
-                <Label>Product Name</Label>
-                <Input
-                  type="text"
-                  value={adjustment.productName}
-                  onChange={(e) => setAdjustment({ ...adjustment, productName: e.target.value })}
-                  placeholder="Enter product name"
-                  required
-                />
+                <Label>Search Product Variant</Label>
+                <div className="relative">
+                  <div className="relative">
+                    <Input
+                      ref={variantSearchRef}
+                      type="text"
+                      value={variantSearch}
+                      onChange={(e) => {
+                        setVariantSearch(e.target.value);
+                        setShowVariantDropdown(e.target.value.length > 0);
+                        if (e.target.value !== `${selectedVariant?.productName} - ${selectedVariant?.variantName}`) {
+                          setSelectedVariant(null);
+                        }
+                      }}
+                      onFocus={() => variantSearch && setShowVariantDropdown(true)}
+                      placeholder="Search by product name, variant name, or barcode..."
+                      className="pl-10"
+                      data-testid="input-variant-search"
+                    />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  </div>
+                  
+                  {showVariantDropdown && filteredVariants.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredVariants.map((variant: any) => (
+                        <div
+                          key={variant.id}
+                          className="p-3 cursor-pointer hover-elevate border-b last:border-b-0"
+                          onClick={() => handleSelectVariant(variant)}
+                          data-testid={`variant-option-${variant.id}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Package className="w-4 h-4 text-gray-400" />
+                              <div>
+                                <div className="font-medium text-sm">
+                                  {variant.productName} - <span className="text-primary">{variant.variantName}</span>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {variant.barcode && `Barcode: ${variant.barcode}`}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Badge variant="outline" className="text-xs">
+                                Stock: {variant.stock || 0}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {showVariantDropdown && variantSearch && filteredVariants.length === 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg p-4 text-center text-gray-500">
+                      No variants found matching "{variantSearch}"
+                    </div>
+                  )}
+                </div>
+                
+                {selectedVariant && (
+                  <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800 mt-2">
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-green-600" />
+                      <span className="font-medium text-green-800 dark:text-green-200">Selected:</span>
+                    </div>
+                    <div className="mt-1 text-sm text-green-700 dark:text-green-300">
+                      {selectedVariant.productName} - {selectedVariant.variantName}
+                    </div>
+                    <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                      Current Stock: {selectedVariant.stock || 0} units
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-gray-50 p-4 rounded-lg space-y-3">

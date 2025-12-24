@@ -1727,6 +1727,32 @@ router.get('/stock', isAuthenticated, inventoryController.getStock as any);
 // Product variants with barcodes for barcode management
 router.get('/product-variants/barcodes', isAuthenticated, inventoryController.getProductVariantsWithBarcodes as any);
 
+// Get all product variants for stock adjustment search
+router.get('/product-variants/all', isAuthenticated, async (req: any, res: any) => {
+  try {
+    const variants = await db.select({
+      id: schema.productVariants.id,
+      variantName: schema.productVariants.variantName,
+      barcode: schema.productVariants.barcode,
+      stock: schema.productVariants.stock,
+      purchasePrice: schema.productVariants.purchasePrice,
+      salePrice: schema.productVariants.salePrice,
+      productId: schema.productVariants.productId,
+      productName: schema.products.name,
+      categoryName: schema.categories.name,
+    })
+    .from(schema.productVariants)
+    .innerJoin(schema.products, eq(schema.productVariants.productId, schema.products.id))
+    .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+    .orderBy(schema.products.name, schema.productVariants.variantName);
+    
+    res.json(variants);
+  } catch (error) {
+    console.error('Get all product variants error:', error);
+    res.status(500).json({ message: 'Failed to fetch product variants' });
+  }
+});
+
 router.get('/stock/transfers', isAuthenticated, inventoryController.getStockTransfers as any);
 
 router.post('/stock/transfers', isAuthenticated, inventoryController.createStockTransfer as any);
