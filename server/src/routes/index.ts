@@ -1335,6 +1335,20 @@ router.patch('/purchases/:id/status', isAuthenticated, async (req: any, res: any
     // This prevents duplicate stock updates if someone re-approves
     if (status === 'approved' && !wasAlreadyApproved) {
       try {
+        // Get default warehouse (first available)
+        const [defaultWarehouse] = await db
+          .select({ id: schema.warehouses.id })
+          .from(schema.warehouses)
+          .limit(1);
+        
+        if (!defaultWarehouse) {
+          console.error('No warehouse found - cannot update stock');
+          throw new Error('No warehouse configured in system');
+        }
+        
+        const warehouseId = defaultWarehouse.id;
+        console.log(`Using warehouse ID ${warehouseId} for stock updates`);
+        
         // Get purchase items
         const purchaseItems = await db
           .select()
@@ -1350,7 +1364,6 @@ router.patch('/purchases/:id/status', isAuthenticated, async (req: any, res: any
         for (const item of purchaseItems) {
           if (item.productVariantId) {
             const quantity = parseFloat(item.quantity);
-            const warehouseId = 1; // Default warehouse
             
             console.log(`Upserting variant ${item.productVariantId} stock by +${quantity}`);
             
