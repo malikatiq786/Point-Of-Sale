@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import passport from 'passport';
-import { hashPassword } from './customAuth';
+import { hashPassword, getCurrentUserPermissions } from './customAuth';
 import { db } from './db';
 import { users, roles } from '@shared/schema';
 import { eq } from 'drizzle-orm';
@@ -158,10 +158,14 @@ router.get('/api/auth/user', async (req: Request, res: Response) => {
         .limit(1);
 
       if (userWithRole[0]) {
+        // Get user permissions
+        const userPermissions = await getCurrentUserPermissions(userId);
+        
         res.json({
           user: {
             ...userWithRole[0],
             role: userWithRole[0].roleName || 'user',
+            permissions: userPermissions,
           }
         });
       } else {

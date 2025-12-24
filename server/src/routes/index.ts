@@ -18,7 +18,7 @@ import { storage } from '../../storage';
 import { db } from '../../db';
 import * as schema from '../../../shared/schema';
 import { eq, sql, and, or, like, desc, count, inArray } from 'drizzle-orm';
-import { isAuthenticated } from '../../customAuth';
+import { isAuthenticated, requirePermission } from '../../customAuth';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -471,22 +471,22 @@ router.get('/units', isAuthenticated, async (req: any, res: any) => {
   }
 });
 
-// Sale routes
-router.post('/sales', isAuthenticated, saleController.processSale as any);
-router.get('/sales', isAuthenticated, saleController.getSales as any);
-router.get('/sales/count', isAuthenticated, saleController.getSalesCount as any);
-router.get('/sales/:id', isAuthenticated, saleController.getSaleById as any);
-router.get('/sales/:id/items', isAuthenticated, saleController.getSaleItems as any);
-router.post('/sales/bulk-items', isAuthenticated, saleController.getBulkSaleItems as any);
-router.get('/sales/date-range', isAuthenticated, saleController.getSalesByDateRange as any);
+// Sale routes (with permission checks)
+router.post('/sales', isAuthenticated, requirePermission('sales.create'), saleController.processSale as any);
+router.get('/sales', isAuthenticated, requirePermission('sales.view'), saleController.getSales as any);
+router.get('/sales/count', isAuthenticated, requirePermission('sales.view'), saleController.getSalesCount as any);
+router.get('/sales/:id', isAuthenticated, requirePermission('sales.view'), saleController.getSaleById as any);
+router.get('/sales/:id/items', isAuthenticated, requirePermission('sales.view'), saleController.getSaleItems as any);
+router.post('/sales/bulk-items', isAuthenticated, requirePermission('sales.view'), saleController.getBulkSaleItems as any);
+router.get('/sales/date-range', isAuthenticated, requirePermission('sales.view'), saleController.getSalesByDateRange as any);
 
-// Return routes
-router.post('/returns', isAuthenticated, returnController.createReturn as any);
-router.get('/returns', isAuthenticated, returnController.getReturns as any);
-router.get('/returns/:id', isAuthenticated, returnController.getReturnById as any);
-router.put('/returns/:id/status', isAuthenticated, returnController.updateReturnStatus as any);
-router.get('/returns/date-range', isAuthenticated, returnController.getReturnsByDateRange as any);
-router.post('/returns/bulk-items', isAuthenticated, returnController.getBulkReturnItems as any);
+// Return routes (with permission checks)
+router.post('/returns', isAuthenticated, requirePermission('returns.create'), returnController.createReturn as any);
+router.get('/returns', isAuthenticated, requirePermission('returns.view'), returnController.getReturns as any);
+router.get('/returns/:id', isAuthenticated, requirePermission('returns.view'), returnController.getReturnById as any);
+router.put('/returns/:id/status', isAuthenticated, requirePermission('returns.process'), returnController.updateReturnStatus as any);
+router.get('/returns/date-range', isAuthenticated, requirePermission('returns.view'), returnController.getReturnsByDateRange as any);
+router.post('/returns/bulk-items', isAuthenticated, requirePermission('returns.view'), returnController.getBulkReturnItems as any);
 
 // In-memory storage for returns
 let returnsStorage: any[] = [
@@ -679,13 +679,13 @@ router.patch('/kitchen/orders/:id/status', isAuthenticated, async (req: any, res
   }
 });
 
-// User management routes
-router.get('/users', isAuthenticated, userController.getUsers as any);
-router.get('/users/:id', isAuthenticated, userController.getUserById as any);
-router.post('/users', isAuthenticated, userController.createUser as any);
-router.put('/users/:id', isAuthenticated, userController.updateUser as any);
-router.delete('/users/:id', isAuthenticated, userController.deleteUser as any);
-router.patch('/users/:id/role', isAuthenticated, userController.updateUserRole as any);
+// User management routes (with permission checks)
+router.get('/users', isAuthenticated, requirePermission('users.view'), userController.getUsers as any);
+router.get('/users/:id', isAuthenticated, requirePermission('users.view'), userController.getUserById as any);
+router.post('/users', isAuthenticated, requirePermission('users.create'), userController.createUser as any);
+router.put('/users/:id', isAuthenticated, requirePermission('users.edit'), userController.updateUser as any);
+router.delete('/users/:id', isAuthenticated, requirePermission('users.delete'), userController.deleteUser as any);
+router.patch('/users/:id/role', isAuthenticated, requirePermission('users.manage_roles'), userController.updateUserRole as any);
 
 // Password change route
 router.post('/auth/change-password', isAuthenticated, async (req: any, res: any) => {
@@ -1753,50 +1753,49 @@ router.get('/product-variants/all', isAuthenticated, async (req: any, res: any) 
   }
 });
 
-router.get('/stock/transfers', isAuthenticated, inventoryController.getStockTransfers as any);
+// Stock management routes (with permission checks)
+router.get('/stock/transfers', isAuthenticated, requirePermission('inventory.view'), inventoryController.getStockTransfers as any);
+router.post('/stock/transfers', isAuthenticated, requirePermission('inventory.transfer'), inventoryController.createStockTransfer as any);
+router.get('/stock/adjustments', isAuthenticated, requirePermission('inventory.view'), inventoryController.getStockAdjustments as any);
+router.post('/stock/adjustments', isAuthenticated, requirePermission('inventory.adjust'), inventoryController.adjustStock as any);
 
-router.post('/stock/transfers', isAuthenticated, inventoryController.createStockTransfer as any);
+// Customer routes (with permission checks)
+router.get('/customers', isAuthenticated, requirePermission('customers.view'), customerController.getCustomers as any);
+router.get('/customers/search', isAuthenticated, requirePermission('customers.view'), customerController.searchCustomers as any);
+router.get('/customers/:id', isAuthenticated, requirePermission('customers.view'), customerController.getCustomerById as any);
+router.get('/customers/:id/sales', isAuthenticated, requirePermission('customers.view', 'sales.view'), saleController.getCustomerSales as any);
+router.post('/customers', isAuthenticated, requirePermission('customers.create'), customerController.createCustomer as any);
+router.put('/customers/:id', isAuthenticated, requirePermission('customers.edit'), customerController.updateCustomer as any);
+router.delete('/customers/bulk-delete', isAuthenticated, requirePermission('customers.delete'), customerController.bulkDeleteCustomers as any);
+router.delete('/customers/:id', isAuthenticated, requirePermission('customers.delete'), customerController.deleteCustomer as any);
 
-router.get('/stock/adjustments', isAuthenticated, inventoryController.getStockAdjustments as any);
-router.post('/stock/adjustments', isAuthenticated, inventoryController.adjustStock as any);
+// Customer Ledger routes (with permission checks)
+router.get('/customer-ledgers', isAuthenticated, requirePermission('customers.view_ledger'), customerLedgerController.getAllEntries as any);
+router.get('/customer-ledgers/:customerId', isAuthenticated, requirePermission('customers.view_ledger'), customerLedgerController.getCustomerLedger as any);
+router.get('/customer-ledgers/:customerId/balance', isAuthenticated, requirePermission('customers.view_ledger'), customerLedgerController.getCustomerBalance as any);
+router.post('/customer-ledgers', isAuthenticated, requirePermission('customers.view_ledger'), customerLedgerController.createEntry as any);
 
-// Customer routes
-router.get('/customers', isAuthenticated, customerController.getCustomers as any);
-router.get('/customers/search', isAuthenticated, customerController.searchCustomers as any);
-router.get('/customers/:id', isAuthenticated, customerController.getCustomerById as any);
-router.get('/customers/:id/sales', isAuthenticated, saleController.getCustomerSales as any);
-router.post('/customers', isAuthenticated, customerController.createCustomer as any);
-router.put('/customers/:id', isAuthenticated, customerController.updateCustomer as any);
-router.delete('/customers/bulk-delete', isAuthenticated, customerController.bulkDeleteCustomers as any);
-router.delete('/customers/:id', isAuthenticated, customerController.deleteCustomer as any);
-
-// Customer Ledger routes
-router.get('/customer-ledgers', isAuthenticated, customerLedgerController.getAllEntries as any);
-router.get('/customer-ledgers/:customerId', isAuthenticated, customerLedgerController.getCustomerLedger as any);
-router.get('/customer-ledgers/:customerId/balance', isAuthenticated, customerLedgerController.getCustomerBalance as any);
-router.post('/customer-ledgers', isAuthenticated, customerLedgerController.createEntry as any);
-
-// Supplier Ledger routes
-router.get('/supplier-ledgers', isAuthenticated, supplierLedgerController.getAllEntries as any);
-router.get('/supplier-ledgers/:supplierId', isAuthenticated, supplierLedgerController.getSupplierLedger as any);
-router.get('/supplier-ledgers/:supplierId/balance', isAuthenticated, supplierLedgerController.getSupplierBalance as any);
-router.post('/supplier-ledgers', isAuthenticated, supplierLedgerController.createEntry as any);
+// Supplier Ledger routes (with permission checks)
+router.get('/supplier-ledgers', isAuthenticated, requirePermission('suppliers.view_ledger'), supplierLedgerController.getAllEntries as any);
+router.get('/supplier-ledgers/:supplierId', isAuthenticated, requirePermission('suppliers.view_ledger'), supplierLedgerController.getSupplierLedger as any);
+router.get('/supplier-ledgers/:supplierId/balance', isAuthenticated, requirePermission('suppliers.view_ledger'), supplierLedgerController.getSupplierBalance as any);
+router.post('/supplier-ledgers', isAuthenticated, requirePermission('suppliers.view_ledger'), supplierLedgerController.createEntry as any);
 
 // =========================================
-// 💸 EXPENSE MANAGEMENT ROUTES
+// 💸 EXPENSE MANAGEMENT ROUTES (with permission checks)
 // =========================================
 
 // Expense CRUD operations
-router.get('/expenses', isAuthenticated, expenseController.getExpenses);
-router.get('/expenses/:id', isAuthenticated, expenseController.getExpenseById);
-router.post('/expenses', isAuthenticated, expenseController.createExpense);
-router.put('/expenses/:id', isAuthenticated, expenseController.updateExpense);
-router.delete('/expenses/:id', isAuthenticated, expenseController.deleteExpense);
-router.post('/expenses/bulk-delete', isAuthenticated, expenseController.bulkDeleteExpenses);
+router.get('/expenses', isAuthenticated, requirePermission('expenses.view'), expenseController.getExpenses);
+router.get('/expenses/:id', isAuthenticated, requirePermission('expenses.view'), expenseController.getExpenseById);
+router.post('/expenses', isAuthenticated, requirePermission('expenses.create'), expenseController.createExpense);
+router.put('/expenses/:id', isAuthenticated, requirePermission('expenses.edit'), expenseController.updateExpense);
+router.delete('/expenses/:id', isAuthenticated, requirePermission('expenses.delete'), expenseController.deleteExpense);
+router.post('/expenses/bulk-delete', isAuthenticated, requirePermission('expenses.delete'), expenseController.bulkDeleteExpenses);
 
 // Expense Categories
-router.get('/expense-categories', isAuthenticated, expenseController.getCategories);
-router.post('/expense-categories', isAuthenticated, expenseController.createCategory);
+router.get('/expense-categories', isAuthenticated, requirePermission('expenses.view'), expenseController.getCategories);
+router.post('/expense-categories', isAuthenticated, requirePermission('expenses.approve'), expenseController.createCategory);
 router.put('/expense-categories/:id', isAuthenticated, expenseController.updateCategory);
 router.delete('/expense-categories/:id', isAuthenticated, expenseController.deleteCategory);
 

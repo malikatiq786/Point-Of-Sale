@@ -35,6 +35,7 @@ import {
   QrCode
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SidebarProps {
   user: any;
@@ -52,10 +53,12 @@ interface NavItem {
   href: string;
   icon: any;
   roles?: string[];
+  permissions?: string[];
 }
 
 export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) {
   const [location] = useLocation();
+  const { hasAnyPermission, canAccessModule } = useAuth();
   const [expandedSections, setExpandedSections] = useState<string[]>([
     "POINT OF SALE", 
     "INVENTORY", 
@@ -74,88 +77,88 @@ export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) 
     {
       title: "POINT OF SALE",
       items: [
-        { name: "Sales POS", href: "/pos", icon: ShoppingCart, roles: ["Super Admin", "Admin/Owner", "Manager", "Cashier"] },
-        { name: "Kitchen POS", href: "/kitchen-pos", icon: ChefHat, roles: ["Super Admin", "Admin/Owner", "Manager", "Kitchen Staff"] },
-        { name: "Sales History", href: "/sales", icon: Receipt, roles: ["Super Admin", "Admin/Owner", "Manager", "Cashier"] },
-        { name: "Returns", href: "/returns", icon: RotateCcw, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Sales POS", href: "/pos", icon: ShoppingCart, permissions: ["sales.create", "pos.access"] },
+        { name: "Kitchen POS", href: "/kitchen-pos", icon: ChefHat, permissions: ["kitchen.access"] },
+        { name: "Sales History", href: "/sales", icon: Receipt, permissions: ["sales.view"] },
+        { name: "Returns", href: "/returns", icon: RotateCcw, permissions: ["returns.view", "returns.create"] },
       ]
     },
     {
       title: "INVENTORY",
       items: [
-        { name: "Products", href: "/products", icon: Package, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
-        { name: "Categories", href: "/categories", icon: Tags, roles: ["Super Admin", "Admin/Owner", "Manager"] },
-        { name: "Brands", href: "/brands", icon: Package, roles: ["Super Admin", "Admin/Owner", "Manager"] },
-        { name: "Units", href: "/units", icon: Package, roles: ["Super Admin", "Admin/Owner", "Manager"] },
-        { name: "Stock Management", href: "/stock", icon: Warehouse, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
-        { name: "Stock Transfers", href: "/stock-transfers", icon: Truck, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
-        { name: "Stock Adjustments", href: "/stock-adjustments", icon: Package, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
-        { name: "Barcode Management", href: "/barcodes", icon: QrCode, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
-        { name: "Inventory Valuation", href: "/inventory/valuation", icon: TrendingUp, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
-        { name: "Warehouses", href: "/warehouses", icon: Warehouse, roles: ["Super Admin", "Admin/Owner", "Manager", "Warehouse Staff"] },
+        { name: "Products", href: "/products", icon: Package, permissions: ["products.view"] },
+        { name: "Categories", href: "/categories", icon: Tags, permissions: ["categories.view", "categories.manage"] },
+        { name: "Brands", href: "/brands", icon: Package, permissions: ["brands.view", "brands.manage"] },
+        { name: "Units", href: "/units", icon: Package, permissions: ["units.view", "units.manage"] },
+        { name: "Stock Management", href: "/stock", icon: Warehouse, permissions: ["products.manage_stock"] },
+        { name: "Stock Transfers", href: "/stock-transfers", icon: Truck, permissions: ["inventory.manage_stock_transfers"] },
+        { name: "Stock Adjustments", href: "/stock-adjustments", icon: Package, permissions: ["inventory.manage_stock_adjustments"] },
+        { name: "Barcode Management", href: "/barcodes", icon: QrCode, permissions: ["products.view"] },
+        { name: "Inventory Valuation", href: "/inventory/valuation", icon: TrendingUp, permissions: ["reports.view_inventory"] },
+        { name: "Warehouses", href: "/warehouses", icon: Warehouse, permissions: ["inventory.manage_warehouses"] },
       ]
     },
     {
       title: "BUSINESS",
       items: [
-        { name: "Customers", href: "/customers", icon: Users, roles: ["Super Admin", "Admin/Owner", "Manager", "Cashier"] },
-        { name: "Suppliers", href: "/suppliers", icon: Truck, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
-        { name: "Purchases", href: "/purchases", icon: ShoppingBag, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
-        { name: "Customer Ledgers", href: "/customer-ledgers", icon: CreditCard, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
-        { name: "Supplier Ledgers", href: "/supplier-ledgers", icon: CreditCard, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
+        { name: "Customers", href: "/customers", icon: Users, permissions: ["customers.view"] },
+        { name: "Suppliers", href: "/suppliers", icon: Truck, permissions: ["suppliers.view"] },
+        { name: "Purchases", href: "/purchases", icon: ShoppingBag, permissions: ["purchases.view"] },
+        { name: "Customer Ledgers", href: "/customer-ledgers", icon: CreditCard, permissions: ["customers.view_ledger"] },
+        { name: "Supplier Ledgers", href: "/supplier-ledgers", icon: CreditCard, permissions: ["suppliers.view_ledger"] },
       ]
     },
     {
       title: "RESTAURANT MANAGEMENT",
       items: [
-        { name: "Restaurant Management", href: "/restaurant-management", icon: Globe, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Restaurant Management", href: "/restaurant-management", icon: Globe, permissions: ["kitchen.access"] },
       ]
     },
     {
       title: "FINANCIAL",
       items: [
-        { name: "Payments", href: "/payments", icon: CreditCard, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
-        { name: "Expenses", href: "/expenses", icon: DollarSign, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
-        { name: "Accounts", href: "/accounts", icon: CreditCard, roles: ["Super Admin", "Admin/Owner", "Accountant"] },
-        { name: "Transactions", href: "/transactions", icon: Receipt, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
-        { name: "Reports", href: "/reports", icon: PieChart, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
-        { name: "Profit & Loss Reports", href: "/reports/profit-loss", icon: TrendingUp, roles: ["Super Admin", "Admin/Owner", "Manager", "Accountant"] },
+        { name: "Payments", href: "/payments", icon: CreditCard, permissions: ["accounting.manage_payments"] },
+        { name: "Expenses", href: "/expenses", icon: DollarSign, permissions: ["expenses.view"] },
+        { name: "Accounts", href: "/accounts", icon: CreditCard, permissions: ["accounting.manage_accounts", "financial.manage_accounts"] },
+        { name: "Transactions", href: "/transactions", icon: Receipt, permissions: ["financial.manage_transactions"] },
+        { name: "Reports", href: "/reports", icon: PieChart, permissions: ["accounting.view_reports", "reports.view_sales", "reports.view_financial"] },
+        { name: "Profit & Loss Reports", href: "/reports/profit-loss", icon: TrendingUp, permissions: ["accounting.view_reports", "reports.view_financial"] },
       ]
     },
     {
       title: "APPROVAL MANAGEMENT",
       items: [
-        { name: "Pending Approvals", href: "/expenses?approvalStatus=pending", icon: AlertCircle, roles: ["Super Admin", "Admin/Owner", "Manager"] },
-        { name: "Approval History", href: "/expenses?approvalStatus=approved", icon: CheckCircle, roles: ["Super Admin", "Admin/Owner", "Manager"] },
-        { name: "Rejected Expenses", href: "/expenses?approvalStatus=rejected", icon: X, roles: ["Super Admin", "Admin/Owner", "Manager"] },
-        { name: "Approval Workflows", href: "/expense-workflows", icon: FileText, roles: ["Super Admin", "Admin/Owner"] },
+        { name: "Pending Approvals", href: "/expenses?approvalStatus=pending", icon: AlertCircle, permissions: ["expenses.approve"] },
+        { name: "Approval History", href: "/expenses?approvalStatus=approved", icon: CheckCircle, permissions: ["expenses.approve"] },
+        { name: "Rejected Expenses", href: "/expenses?approvalStatus=rejected", icon: X, permissions: ["expenses.approve"] },
+        { name: "Approval Workflows", href: "/expense-workflows", icon: FileText, permissions: ["expenses.approve"] },
       ]
     },
     {
       title: "HUMAN RESOURCES",
       items: [
-        { name: "Employees", href: "/employees", icon: UserCheck, roles: ["Super Admin", "Admin/Owner", "Manager"] },
-        { name: "Attendance", href: "/attendance", icon: Clock, roles: ["Super Admin", "Admin/Owner", "Manager"] },
-        { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["Super Admin", "Admin/Owner", "Accountant"] },
+        { name: "Employees", href: "/employees", icon: UserCheck, permissions: ["hr.manage_employees"] },
+        { name: "Attendance", href: "/attendance", icon: Clock, permissions: ["hr.manage_attendance"] },
+        { name: "Payroll", href: "/payroll", icon: Wallet, permissions: ["hr.manage_payroll"] },
       ]
     },
     {
       title: "BUSINESS SETUP",
       items: [
-        { name: "Business Profile", href: "/business-profile", icon: Store, roles: ["Super Admin", "Admin/Owner"] },
-        { name: "Branches", href: "/branches", icon: Store, roles: ["Super Admin", "Admin/Owner"] },
-        { name: "Registers", href: "/registers", icon: ShoppingCart, roles: ["Super Admin", "Admin/Owner", "Manager"] },
+        { name: "Business Profile", href: "/business-profile", icon: Store, permissions: ["business_setup.manage_profile"] },
+        { name: "Branches", href: "/branches", icon: Store, permissions: ["business_setup.manage_branches"] },
+        { name: "Registers", href: "/registers", icon: ShoppingCart, permissions: ["business_setup.manage_registers"] },
       ]
     },
     {
       title: "SYSTEM",
       items: [
-        { name: "Users", href: "/users", icon: Shield, roles: ["Super Admin"] },
-        { name: "Roles & Permissions", href: "/roles", icon: Shield, roles: ["Super Admin"] },
-        { name: "Activity Logs", href: "/activity-logs", icon: Receipt, roles: ["Super Admin", "Admin/Owner"] },
-        { name: "Notifications", href: "/notifications", icon: Receipt, roles: ["Super Admin", "Admin/Owner", "Manager"] },
-        { name: "Backups", href: "/backups", icon: Settings, roles: ["Super Admin"] },
-        { name: "Settings", href: "/settings", icon: Settings, roles: ["Super Admin", "Admin/Owner"] },
+        { name: "Users", href: "/users", icon: Shield, permissions: ["users.view", "users.manage_roles"] },
+        { name: "Roles & Permissions", href: "/roles", icon: Shield, permissions: ["users.manage_roles", "users.manage_permissions"] },
+        { name: "Activity Logs", href: "/activity-logs", icon: Receipt, permissions: ["users.view"] },
+        { name: "Notifications", href: "/notifications", icon: Receipt, permissions: ["dashboard.view"] },
+        { name: "Backups", href: "/backups", icon: Settings, permissions: ["settings.edit"] },
+        { name: "Settings", href: "/settings", icon: Settings, permissions: ["settings.view", "settings.edit"] },
       ]
     }
   ];
@@ -167,11 +170,18 @@ export default function Sidebar({ user, isOpen = true, onClose }: SidebarProps) 
     // Super Admin can see all modules
     if (userRole === "Super Admin") return true;
     
-    // If no role restrictions, show to everyone
-    if (!item.roles) return true;
+    // Check permissions first (newer system)
+    if (item.permissions && item.permissions.length > 0) {
+      return hasAnyPermission(...item.permissions);
+    }
     
-    // Check if user's role is in the allowed roles
-    return item.roles.includes(userRole || "");
+    // Fallback to role-based visibility (legacy)
+    if (item.roles && item.roles.length > 0) {
+      return item.roles.includes(userRole || "");
+    }
+    
+    // If no restrictions, show to everyone
+    return true;
   };
 
   const isActive = (href: string) => {

@@ -2,13 +2,66 @@ import bcrypt from 'bcryptjs';
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
-import type { Express, RequestHandler } from "express";
+import type { Express, RequestHandler, Request, Response, NextFunction } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { pool } from "./db";
-import { users, roles } from "@shared/schema";
+import { users, roles, permissions, rolePermissions } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
+
+// Cache for user permissions (in-memory, keyed by user ID)
+const permissionCache = new Map<string, { permissions: string[], expiresAt: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Get user permissions from database
+async function getUserPermissions(userId: string): Promise<string[]> {
+  // Check cache first
+  const cached = permissionCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.permissions;
+  }
+
+  try {
+    // Get user's role
+    const userResult = await db.select({ roleId: users.roleId })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    
+    if (!userResult[0]?.roleId) {
+      return [];
+    }
+
+    // Get role's permissions
+    const permissionResults = await db.select({ name: permissions.name })
+      .from(rolePermissions)
+      .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+      .where(eq(rolePermissions.roleId, userResult[0].roleId));
+
+    const userPermissions = permissionResults.map(p => p.name);
+
+    // Cache the result
+    permissionCache.set(userId, {
+      permissions: userPermissions,
+      expiresAt: Date.now() + CACHE_TTL
+    });
+
+    return userPermissions;
+  } catch (error) {
+    console.error('Error fetching user permissions:', error);
+    return [];
+  }
+}
+
+// Clear permission cache for a user
+export function clearPermissionCache(userId?: string) {
+  if (userId) {
+    permissionCache.delete(userId);
+  } else {
+    permissionCache.clear();
+  }
+}
 
 interface User {
   id: string;
@@ -135,6 +188,49 @@ export const isAuthenticated: RequestHandler = (req, res, next) => {
   }
   res.status(401).json({ message: "Not authenticated" });
 };
+
+// Permission checking middleware factory
+export const requirePermission = (...requiredPermissions: string[]): RequestHandler => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    // First check authentication
+    if (!req.isAuthenticated || !req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const user = req.user as any;
+    if (!user || !user.id) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    // Super Admin bypasses all permission checks
+    if (user.role === 'Super Admin') {
+      return next();
+    }
+
+    // Get user permissions
+    const userPermissions = await getUserPermissions(user.id);
+
+    // Check if user has at least one of the required permissions
+    const hasPermission = requiredPermissions.some(perm => 
+      userPermissions.includes(perm)
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({ 
+        message: "Access denied. You don't have permission to perform this action.",
+        required: requiredPermissions,
+        // Don't expose user's permissions in response for security
+      });
+    }
+
+    next();
+  };
+};
+
+// Get current user's permissions (for API response)
+export async function getCurrentUserPermissions(userId: string): Promise<string[]> {
+  return getUserPermissions(userId);
+}
 
 // Utility functions for password hashing
 export const hashPassword = async (password: string): Promise<string> => {

@@ -1,0 +1,96 @@
+Current Situation:
+- User Management module already exists
+- Roles and permissions structure also exists
+- BUT the system is NOT working properly
+- Users are not fully dynamic
+- Roles and permissions are not properly connected to system modules
+- Some users can access things they should not
+- Some restrictions are not enforced
+
+Core Requirement:
+I want the ENTIRE POS system to work strictly based on
+ROLE-BASED ACCESS CONTROL (RBAC).
+
+Expected Correct Behavior:
+
+1. User Management:
+- Users must be fully dynamic and stored in the database
+- Each user must have:
+   - role_id (or multiple roles if supported)
+   - assigned permissions
+- Login user context must be used everywhere in the app
+
+2. Roles:
+- Roles like:
+   - Super Admin
+   - Admin
+   - Manager
+   - Cashier
+   - Staff
+- Roles must define what a user CAN or CANNOT access
+
+3. Permissions:
+- Permissions must control:
+   - View
+   - Create
+   - Edit
+   - Delete
+   - Approve
+- Example:
+   - products.view
+   - products.create
+   - purchases.approve
+   - sales.refund
+   - users.manage
+
+4. System-wide Enforcement (VERY IMPORTANT):
+- EVERY module must respect role & permission checks:
+   - Dashboard
+   - Products
+   - Purchases
+   - Sales POS
+   - Returns
+   - Inventory
+   - Stock Management
+   - Reports
+   - User Management
+- No screen, button, or API should be accessible without permission
+
+5. UI-Level Control:
+- Hide buttons if user lacks permission:
+   - Add Product
+   - Edit
+   - Delete
+   - Approve Purchase
+   - Stock Adjust
+- Sidebar menu must show ONLY allowed modules
+
+6. Backend-Level Security:
+- Permissions must be checked on:
+   - APIs
+   - Controllers
+   - Actions
+- UI hiding alone is NOT enough
+
+7. Data Integrity & Safety:
+- Existing POS functionality MUST NOT break
+- Existing flows (sales, purchases, stock, reports) must continue working
+- Only ADD permission checks, do NOT remove existing logic
+- No dummy data
+- No hardcoded user IDs
+
+8. Maintainability:
+- Central permission checking logic
+- Easy to add new roles or permissions later
+- Clean, scalable enterprise architecture
+
+Action Required:
+- Analyze current user, role, and permission system
+- Fix missing connections between users, roles, and permissions
+- Enforce role-permission logic across the entire POS system
+- Ensure the system behaves like a real-world enterprise POS
+
+IMPORTANT:
+Do NOT change UI design.
+Do NOT remove existing features.
+Only improve and FIX access control and user management logic.

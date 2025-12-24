@@ -1,2 +1,2 @@
 // Export middleware functions
-export { isAuthenticated } from '../../customAuth';
+export { isAuthenticated, requirePermission, clearPermissionCache, getCurrentUserPermissions } from '../../customAuth';
